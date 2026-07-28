@@ -1,0 +1,51 @@
+# Roteiro de Desenvolvimento — RiftForge
+
+Baseado em `Core/documento_projeto_lol_analyzer.pdf`. Stack: backend Python, frontend web primeiro, desktop depois (reaproveitando o mesmo frontend, ex. via Tauri).
+
+## Fase 0 — Fundação
+- [x] Estrutura do repositório (`backend/`, `frontend/`), `.gitignore`, `.env.example`, README.
+- [ ] Registrar o projeto no Riot Developer Portal e gerar a Development Key.
+
+## Fase 1 — Camada de dados estáticos (Data Dragon)
+- [ ] Adapter isolando as chamadas ao Data Dragon (sem rate limit, sem auth).
+- [ ] Versionamento explícito do patch em cada dado salvo.
+- [ ] Cache local + teste automatizado de schema.
+
+## Fase 2 — Camada de dados dinâmicos (Riot API)
+- [ ] Integração com Cassiopeia ou RiotWatcher para Match-V5/League-V4.
+- [ ] Rate limiting embutido via a biblioteca escolhida.
+- [ ] Coleta de partidas segmentada por elo, rota e região.
+
+## Fase 3 — Banco próprio + job de agregação
+- [ ] Modelar tabelas: win rate / pick rate / ban rate / KDA por campeão × elo × rota × patch.
+- [ ] Job periódico que popula o banco a partir da Riot API.
+
+## Fase 4 — Backend/API (proxy)
+- [ ] Endpoints REST que servem o frontend, lendo só do banco próprio.
+- [ ] Rate limiting por usuário; configuração via env vars.
+
+## Fase 5 — Frontend Web (MVP)
+- [ ] Placar de força dos campeões com filtros por elo/rota/patch.
+- [ ] Deploy inicial do MVP.
+
+## Fase 6 — Progressão de chave Riot (em paralelo, a partir da Fase 5)
+- [ ] Pedir Personal Key assim que o MVP estiver minimamente funcional.
+- [ ] Domínio próprio, Termos de Uso e Política de Privacidade.
+- [ ] Submeter pedido de Production Key cedo (~2 semanas de fila).
+
+## Fase 7 — Segurança e conformidade
+- [ ] HTTPS obrigatório, criptografia em repouso.
+- [ ] Minimização de dados (PUUID), RSO/OAuth se vincular contas.
+- [ ] Logs sem dados sensíveis; política de retenção/exclusão (LGPD).
+
+## Fase 8 — Testes e monitoramento contínuo
+- [ ] Testes de schema no CI, monitoramento de deprecação de endpoints, alertas de 429.
+
+## Fase 9 — Lançamento público
+- [ ] Deploy final após aprovação da Production Key.
+
+## Fase 10 — Evolução para Desktop
+- [ ] Empacotar o frontend web com Tauri, reaproveitando o backend/API existente.
+
+## Fase 11 — Backlog de melhorias futuras
+- Comparador de matchups, recomendação de build, filtro por região, histórico de tendência por patch, notificações de mudança de tier, Live Client Data API, cache distribuído (Redis).

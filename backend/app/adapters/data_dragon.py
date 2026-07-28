@@ -1,0 +1,28 @@
+"""Adapter for Riot's Data Dragon (static data: champions, items, versions).
+
+No auth, no rate limit — isolated here so a Data Dragon schema change only
+requires updates in this one file.
+"""
+
+import httpx
+
+from app.core.config import get_settings
+
+
+class DataDragonAdapter:
+    def __init__(self, base_url: str | None = None) -> None:
+        self._base_url = base_url or get_settings().data_dragon_base_url
+
+    async def get_latest_version(self) -> str:
+        async with httpx.AsyncClient(base_url=self._base_url) as client:
+            response = await client.get("/api/versions.json")
+            response.raise_for_status()
+            versions: list[str] = response.json()
+        return versions[0]
+
+    async def get_champions(self, version: str, locale: str = "en_US") -> dict:
+        url = f"/cdn/{version}/data/{locale}/champion.json"
+        async with httpx.AsyncClient(base_url=self._base_url) as client:
+            response = await client.get(url)
+            response.raise_for_status()
+        return response.json()["data"]
