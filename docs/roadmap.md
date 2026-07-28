@@ -25,7 +25,7 @@ Baseado em `Core/documento_projeto_lol_analyzer.pdf`. Stack: backend Python, fro
 - [x] Rate limiting por IP (slowapi): 10/min nos endpoints que fazem proxy direto da Riot, 60/min padrão nos demais; limites configuráveis via env vars.
 
 ## Fase 5 — Frontend Web (MVP)
-- [ ] Placar de força dos campeões com filtros por elo/rota/patch.
+- [x] Placar de força dos campeões com filtros por elo/rota/patch, cruzando com nome/imagem do Data Dragon.
 - [ ] Deploy inicial do MVP.
 
 ## Fase 6 — Progressão de chave Riot (em paralelo, a partir da Fase 5)
