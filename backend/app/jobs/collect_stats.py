@@ -79,19 +79,24 @@ def collect(
     puuid_limit: int = 5,
     matches_per_summoner: int = 3,
 ) -> dict:
+    print("Conectando ao banco...", flush=True)
     init_db()
+
     riot = RiotApiAdapter()
     queue_id = QUEUE_IDS[queue]
 
+    print(f"Buscando invocadores {tier} {division} na Riot API...", flush=True)
     entries = riot.get_league_entries(queue, tier, division)
     puuids = [entry["puuid"] for entry in entries[:puuid_limit]]
+    print(f"{len(puuids)} invocador(es) encontrado(s).", flush=True)
 
     processed_match_ids: set[str] = set()
     champion_name_by_key: dict[str, str] | None = None
 
     session = SessionLocal()
     try:
-        for puuid in puuids:
+        for i, puuid in enumerate(puuids, start=1):
+            print(f"[{i}/{len(puuids)}] buscando histórico de partidas...", flush=True)
             match_ids = riot.get_match_ids_by_puuid(
                 puuid, count=matches_per_summoner, queue=queue_id
             )
@@ -100,6 +105,7 @@ def collect(
                     continue
                 processed_match_ids.add(match_id)
 
+                print(f"  processando partida {match_id}...", flush=True)
                 match = riot.get_match(match_id)
                 info = match["info"]
                 patch = ".".join(info["gameVersion"].split(".")[:2])
@@ -132,7 +138,9 @@ def collect(
 
                 _bump_segment_total(session, patch=patch, tier=tier, delta=1)
 
-        session.commit()
+            # Commit incrementally so Ctrl+C or a mid-run crash doesn't lose
+            # progress already fetched from the (rate-limited) Riot API.
+            session.commit()
     finally:
         session.close()
 

@@ -15,7 +15,7 @@ _is_sqlite = settings.database_url.startswith("sqlite")
 # string (port 6543) for DATABASE_URL in that environment.
 engine = create_engine(
     settings.database_url,
-    connect_args={"check_same_thread": False} if _is_sqlite else {},
+    connect_args={"check_same_thread": False} if _is_sqlite else {"connect_timeout": 10},
     poolclass=NullPool if not _is_sqlite else None,
 )
 SessionLocal = sessionmaker(bind=engine, expire_on_commit=False)

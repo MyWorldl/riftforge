@@ -20,7 +20,7 @@ class RiotApiAdapter:
         settings = get_settings()
         self._platform_region = platform_region or settings.riot_platform_region
         self._continent_region = continent_region or settings.riot_continent_region
-        self._client = LolWatcher(api_key or settings.riot_api_key)
+        self._client = LolWatcher(api_key or settings.riot_api_key, timeout=15)
 
     def get_league_entries(self, queue: str, tier: str, division: str) -> list[dict]:
         return self._client.league.entries(self._platform_region, queue, tier, division)
