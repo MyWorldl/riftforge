@@ -1,20 +1,32 @@
 """Adapter for the Riot Games API (Match-V5 / League-V4 — real match data).
 
-Requires an API key and is rate-limited. Wiring this up to Cassiopeia or
-RiotWatcher (for built-in rate limiting) is Fase 2 of the roadmap — this
-class only defines the interface the rest of the app will depend on, so the
-eventual implementation is swappable without touching callers.
+Wraps RiotWatcher, which has a built-in rate limiter, so the rest of the app
+depends only on this interface — swapping the underlying client (e.g. for
+Cassiopeia later) means changing this one file.
 """
+
+from riotwatcher import LolWatcher
 
 from app.core.config import get_settings
 
 
 class RiotApiAdapter:
-    def __init__(self, api_key: str | None = None) -> None:
-        self._api_key = api_key or get_settings().riot_api_key
+    def __init__(
+        self,
+        api_key: str | None = None,
+        platform_region: str | None = None,
+        continent_region: str | None = None,
+    ) -> None:
+        settings = get_settings()
+        self._platform_region = platform_region or settings.riot_platform_region
+        self._continent_region = continent_region or settings.riot_continent_region
+        self._client = LolWatcher(api_key or settings.riot_api_key)
 
-    async def get_league_entries(self, queue: str, tier: str, division: str) -> list[dict]:
-        raise NotImplementedError("Fase 2: integrar Cassiopeia/RiotWatcher para League-V4")
+    def get_league_entries(self, queue: str, tier: str, division: str) -> list[dict]:
+        return self._client.league.entries(self._platform_region, queue, tier, division)
 
-    async def get_match(self, match_id: str) -> dict:
-        raise NotImplementedError("Fase 2: integrar Cassiopeia/RiotWatcher para Match-V5")
+    def get_match_ids_by_puuid(self, puuid: str, count: int = 20) -> list[str]:
+        return self._client.match.matchlist_by_puuid(self._continent_region, puuid, count=count)
+
+    def get_match(self, match_id: str) -> dict:
+        return self._client.match.by_id(self._continent_region, match_id)

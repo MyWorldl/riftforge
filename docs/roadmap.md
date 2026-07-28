@@ -12,9 +12,9 @@ Baseado em `Core/documento_projeto_lol_analyzer.pdf`. Stack: backend Python, fro
 - [ ] Cache local + teste automatizado de schema.
 
 ## Fase 2 — Camada de dados dinâmicos (Riot API)
-- [ ] Integração com Cassiopeia ou RiotWatcher para Match-V5/League-V4.
-- [ ] Rate limiting embutido via a biblioteca escolhida.
-- [ ] Coleta de partidas segmentada por elo, rota e região.
+- [x] Integração com RiotWatcher para League-V4 (entries) e Match-V5 (by_id).
+- [x] Rate limiting embutido via a biblioteca escolhida (RiotWatcher).
+- [ ] Coleta de partidas segmentada por elo, rota e região (agregação fica na Fase 3).
 
 ## Fase 3 — Banco próprio + job de agregação
 - [ ] Modelar tabelas: win rate / pick rate / ban rate / KDA por campeão × elo × rota × patch.
