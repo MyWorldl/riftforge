@@ -7,21 +7,21 @@ Baseado em `Core/documento_projeto_lol_analyzer.pdf`. Stack: backend Python, fro
 - [ ] Registrar o projeto no Riot Developer Portal e gerar a Development Key.
 
 ## Fase 1 — Camada de dados estáticos (Data Dragon)
-- [ ] Adapter isolando as chamadas ao Data Dragon (sem rate limit, sem auth).
-- [ ] Versionamento explícito do patch em cada dado salvo.
-- [ ] Cache local + teste automatizado de schema.
+- [x] Adapter isolando as chamadas ao Data Dragon (sem rate limit, sem auth).
+- [x] Versionamento explícito do patch em cada dado salvo.
+- [x] Cache local + teste automatizado de schema.
 
 ## Fase 2 — Camada de dados dinâmicos (Riot API)
 - [x] Integração com RiotWatcher para League-V4 (entries) e Match-V5 (by_id).
 - [x] Rate limiting embutido via a biblioteca escolhida (RiotWatcher).
-- [ ] Coleta de partidas segmentada por elo, rota e região (agregação fica na Fase 3).
+- [x] Coleta de partidas segmentada por elo, rota e região (feita na Fase 3).
 
 ## Fase 3 — Banco próprio + job de agregação
-- [ ] Modelar tabelas: win rate / pick rate / ban rate / KDA por campeão × elo × rota × patch.
-- [ ] Job periódico que popula o banco a partir da Riot API.
+- [x] Modelar tabelas: win rate / pick rate / ban rate / KDA por campeão × elo × rota × patch.
+- [x] Job periódico que popula o banco a partir da Riot API (`app/jobs/collect_stats.py`).
 
 ## Fase 4 — Backend/API (proxy)
-- [ ] Endpoints REST que servem o frontend, lendo só do banco próprio.
+- [x] Endpoint `/stats/champions` servindo o placar de força lido só do banco próprio.
 - [ ] Rate limiting por usuário; configuração via env vars.
 
 ## Fase 5 — Frontend Web (MVP)

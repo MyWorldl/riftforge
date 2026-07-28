@@ -25,8 +25,12 @@ class RiotApiAdapter:
     def get_league_entries(self, queue: str, tier: str, division: str) -> list[dict]:
         return self._client.league.entries(self._platform_region, queue, tier, division)
 
-    def get_match_ids_by_puuid(self, puuid: str, count: int = 20) -> list[str]:
-        return self._client.match.matchlist_by_puuid(self._continent_region, puuid, count=count)
+    def get_match_ids_by_puuid(
+        self, puuid: str, count: int = 20, queue: int | None = None
+    ) -> list[str]:
+        return self._client.match.matchlist_by_puuid(
+            self._continent_region, puuid, count=count, queue=queue
+        )
 
     def get_match(self, match_id: str) -> dict:
         return self._client.match.by_id(self._continent_region, match_id)

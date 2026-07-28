@@ -13,11 +13,14 @@ class DataDragonAdapter:
     def __init__(self, base_url: str | None = None) -> None:
         self._base_url = base_url or get_settings().data_dragon_base_url
 
-    async def get_latest_version(self) -> str:
+    async def get_versions(self) -> list[str]:
         async with httpx.AsyncClient(base_url=self._base_url) as client:
             response = await client.get("/api/versions.json")
             response.raise_for_status()
-            versions: list[str] = response.json()
+        return response.json()
+
+    async def get_latest_version(self) -> str:
+        versions = await self.get_versions()
         return versions[0]
 
     async def get_champions(self, version: str, locale: str = "en_US") -> dict:
