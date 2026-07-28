@@ -1,6 +1,10 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from riotwatcher import ApiError
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
+from slowapi.util import get_remote_address
 
 from app.adapters.data_dragon import DataDragonAdapter
 from app.adapters.riot_api import RiotApiAdapter
@@ -19,6 +23,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Rate limiting por IP: protege a cota da Riot API contra abuso de um único
+# usuário/bot (política do documento base, seção 7). Limites configuráveis
+# via env var em vez de hardcoded.
+limiter = Limiter(key_func=get_remote_address, default_limits=[settings.rate_limit_default])
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
+
 data_dragon = DataDragonAdapter()
 riot_api = RiotApiAdapter()
 
@@ -36,8 +48,12 @@ async def list_champions() -> dict:
 
 
 @app.get("/riot/league-entries")
+@limiter.limit(settings.rate_limit_riot_proxy)
 def get_league_entries(
-    queue: str = "RANKED_SOLO_5x5", tier: str = "GOLD", division: str = "I"
+    request: Request,
+    queue: str = "RANKED_SOLO_5x5",
+    tier: str = "GOLD",
+    division: str = "I",
 ) -> list[dict]:
     try:
         return riot_api.get_league_entries(queue, tier, division)
@@ -46,7 +62,8 @@ def get_league_entries(
 
 
 @app.get("/riot/matches/{match_id}")
-def get_match(match_id: str) -> dict:
+@limiter.limit(settings.rate_limit_riot_proxy)
+def get_match(request: Request, match_id: str) -> dict:
     try:
         return riot_api.get_match(match_id)
     except ApiError as exc:

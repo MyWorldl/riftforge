@@ -17,6 +17,10 @@ class Settings(BaseSettings):
     app_env: str = "development"
     cors_origins: str = "http://localhost:5173"
 
+    # Rate limiting por IP (protege a cota da Riot API e o backend contra abuso).
+    rate_limit_default: str = "60/minute"
+    rate_limit_riot_proxy: str = "10/minute"
+
 
 @lru_cache
 def get_settings() -> Settings:

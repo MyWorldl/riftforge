@@ -22,7 +22,7 @@ Baseado em `Core/documento_projeto_lol_analyzer.pdf`. Stack: backend Python, fro
 
 ## Fase 4 — Backend/API (proxy)
 - [x] Endpoint `/stats/champions` servindo o placar de força lido só do banco próprio.
-- [ ] Rate limiting por usuário; configuração via env vars.
+- [x] Rate limiting por IP (slowapi): 10/min nos endpoints que fazem proxy direto da Riot, 60/min padrão nos demais; limites configuráveis via env vars.
 
 ## Fase 5 — Frontend Web (MVP)
 - [ ] Placar de força dos campeões com filtros por elo/rota/patch.
