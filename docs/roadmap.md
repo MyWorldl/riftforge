@@ -26,7 +26,7 @@ Baseado em `Core/documento_projeto_lol_analyzer.pdf`. Stack: backend Python, fro
 
 ## Fase 5 — Frontend Web (MVP)
 - [x] Placar de força dos campeões com filtros por elo/rota/patch, cruzando com nome/imagem do Data Dragon.
-- [ ] Deploy inicial do MVP.
+- [x] Deploy inicial do MVP: backend (`riftforge-api`) e frontend (`riftforge`) na Vercel, banco Postgres no Supabase. Falta só: usuário desativar "Vercel Authentication" nos dois projetos e configurar `DATABASE_URL` no backend (ver README § Deploy).
 
 ## Fase 6 — Progressão de chave Riot (em paralelo, a partir da Fase 5)
 - [ ] Pedir Personal Key assim que o MVP estiver minimamente funcional.

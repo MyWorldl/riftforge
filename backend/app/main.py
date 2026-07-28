@@ -47,6 +47,18 @@ async def list_champions() -> dict:
     return {"patch": version, "champions": champions}
 
 
+def _ensure_riot_proxy_enabled() -> None:
+    """The Riot API key must never back a publicly-open product (Development
+    Key ToS, doc seção 4). These proxy endpoints are for local debugging
+    only — disabled whenever no real key is configured."""
+    if settings.riot_api_key in ("changeme", ""):
+        raise HTTPException(
+            status_code=501,
+            detail="Endpoints /riot/* desativados nesta instância (sem RIOT_API_KEY configurada). "
+            "Use /stats/champions, que lê do banco próprio.",
+        )
+
+
 @app.get("/riot/league-entries")
 @limiter.limit(settings.rate_limit_riot_proxy)
 def get_league_entries(
@@ -55,6 +67,7 @@ def get_league_entries(
     tier: str = "GOLD",
     division: str = "I",
 ) -> list[dict]:
+    _ensure_riot_proxy_enabled()
     try:
         return riot_api.get_league_entries(queue, tier, division)
     except ApiError as exc:
@@ -64,6 +77,7 @@ def get_league_entries(
 @app.get("/riot/matches/{match_id}")
 @limiter.limit(settings.rate_limit_riot_proxy)
 def get_match(request: Request, match_id: str) -> dict:
+    _ensure_riot_proxy_enabled()
     try:
         return riot_api.get_match(match_id)
     except ApiError as exc:
