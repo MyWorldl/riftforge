@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="75%">
+      <stop offset="0%" stop-color="#2c2050"/>
+      <stop offset="60%" stop-color="#160f2e"/>
+      <stop offset="100%" stop-color="#0a0716"/>
+    </radialGradient>
+    <linearGradient id="wing" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%" stop-color="#b39dff"/>
+      <stop offset="55%" stop-color="#f7a8d8"/>
+      <stop offset="100%" stop-color="#7fd6ff"/>
+    </linearGradient>
+    <radialGradient id="chest" cx="50%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#f5f0ff"/>
+      <stop offset="100%" stop-color="#9fd8ff" stop-opacity="0.5"/>
+    </radialGradient>
+    <filter id="glow" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur stdDeviation="3"/>
+    </filter>
+  </defs>
+
+  <rect width="100" height="100" rx="22" fill="url(#bg)"/>
+
+  <!-- halo suave atras da cabeca -->
+  <ellipse cx="50" cy="50" rx="27" ry="23" fill="#ffffff" opacity="0.16" filter="url(#glow)"/>
+
+  <!-- estrelinhas -->
+  <g fill="#ffffff">
+    <circle cx="17" cy="20" r="1.6" filter="url(#glow)"/>
+    <circle cx="86" cy="17" r="1.2" filter="url(#glow)"/>
+    <circle cx="50" cy="12" r="1.3" filter="url(#glow)"/>
+    <circle cx="90" cy="63" r="1.4" filter="url(#glow)"/>
+    <circle cx="10" cy="60" r="1.1" filter="url(#glow)"/>
+  </g>
+
+  <!-- asas -->
+  <path d="M58,53 C68,40 79,29 93,26 C89,40 90,50 83,53 C87,59 81,63 75,59 C77,67 69,67 65,59 Z" fill="url(#wing)"/>
+  <path d="M42,53 C32,40 21,29 7,26 C11,40 10,50 17,53 C13,59 19,63 25,59 C23,67 31,67 35,59 Z" fill="url(#wing)"/>
+
+  <!-- rabo -->
+  <path d="M67,80 C80,77 85,66 80,57 C87,65 86,78 73,85 Z" fill="#2c2450"/>
+
+  <!-- corpo -->
+  <path d="M50,85 C33,85 27,74 29,61 C30,49 39,43 50,43 C61,43 70,49 71,61 C73,74 67,85 50,85 Z" fill="#2c2450"/>
+
+  <!-- orelhas -->
+  <path d="M37,46 L33,30 L45,42 Z" fill="#2c2450"/>
+  <path d="M63,46 L67,30 L55,42 Z" fill="#2c2450"/>
+
+  <!-- peito clarinho -->
+  <ellipse cx="50" cy="75" rx="9" ry="11" fill="url(#chest)"/>
+
+  <!-- olhos fechados -->
+  <path d="M41,58 Q45,62 49,58" fill="none" stroke="#d9c9ff" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M51,58 Q55,62 59,58" fill="none" stroke="#d9c9ff" stroke-width="1.6" stroke-linecap="round"/>
+</svg>
