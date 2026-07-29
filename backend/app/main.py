@@ -87,7 +87,8 @@ def get_match(request: Request, match_id: str) -> dict:
 @app.get("/stats/champions")
 def get_champion_stats(tier: str = "GOLD", lane: str | None = None, patch: str | None = None) -> list[dict]:
     """Placar de força lido do banco próprio — nunca consulta a Riot em tempo
-    real por request do usuário. Os dados vêm do job em app/jobs/collect_stats.py."""
+    real por request do usuário. Os dados vêm dos jobs em
+    app/jobs/ingest_matches.py (coleta) e app/jobs/aggregate_stats.py (cálculo)."""
     session = SessionLocal()
     try:
         if patch is None:

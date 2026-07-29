@@ -1,6 +1,10 @@
 # Roteiro de Desenvolvimento — RiftForge
 
-Baseado em `Core/documento_projeto_lol_analyzer.pdf`. Stack: backend Python, frontend web primeiro, desktop depois (reaproveitando o mesmo frontend, ex. via Tauri).
+Baseado em `Core/Estrutura_roadmap/00_INDEX.md` (fonte de verdade atual — tem precedência sobre o PDF em caso de divergência, ver `Core/Estrutura_roadmap/10_REFERENCIAS.md` §7). Stack: backend Python, frontend web primeiro, desktop depois (reaproveitando o mesmo frontend, ex. via Tauri).
+
+**Nota (2026-07-29):** as Fases 0–10 abaixo cobrem a v0 (placar de força cru: win/pick/ban rate + KDA). O modelo de score em camadas com tiers God–E definido em `Core/Estrutura_roadmap/02_MODELO_SCORE_TIERS.md` ainda não foi implementado — ver gap detalhado em `Core/Estrutura_roadmap/17_ESTADO_IMPLEMENTADO.md` e priorização em `Core/Estrutura_roadmap/09_BACKLOG.md`.
+
+**A partir daqui, o trabalho novo é rastreado pelas fases do `Core/Estrutura_roadmap/09_BACKLOG.md` (numeração própria, não confundir com as Fases 0–10 abaixo)** — ver seção "Core — Fase 0" ao final deste arquivo para o progresso.
 
 ## Fase 0 — Fundação
 - [x] Estrutura do repositório (`backend/`, `frontend/`), `.gitignore`, `.env.example`, README.
@@ -18,7 +22,7 @@ Baseado em `Core/documento_projeto_lol_analyzer.pdf`. Stack: backend Python, fro
 
 ## Fase 3 — Banco próprio + job de agregação
 - [x] Modelar tabelas: win rate / pick rate / ban rate / KDA por campeão × elo × rota × patch.
-- [x] Job periódico que popula o banco a partir da Riot API (`app/jobs/collect_stats.py`).
+- [x] Job periódico que popula o banco a partir da Riot API. **Atualizado:** substituído por `app/jobs/ingest_matches.py` (partidas brutas, dedup persistida) + `app/jobs/aggregate_stats.py` (cálculo, sem chamar a Riot) — ver seção "Core — Fase 0" ao final deste arquivo.
 
 ## Fase 4 — Backend/API (proxy)
 - [x] Endpoint `/stats/champions` servindo o placar de força lido só do banco próprio.
@@ -54,3 +58,16 @@ Baseado em `Core/documento_projeto_lol_analyzer.pdf`. Stack: backend Python, fro
 
 ## Fase 11 — Backlog de melhorias futuras
 - Comparador de matchups, recomendação de build, filtro por região, histórico de tendência por patch, notificações de mudança de tier, Live Client Data API, cache distribuído (Redis).
+
+---
+
+## Core — Fase 0 (Fundação do modelo de score — numeração de `Core/Estrutura_roadmap/09_BACKLOG.md`)
+
+- [x] 0.1 (parcial) — Pipeline de ingestão: partidas brutas persistidas (`Match`/`MatchParticipant`/`MatchBan`), dedup entre execuções corrigida (checa `match_id` no banco antes do fetch). Ainda falta expansão "bola de neve" por participantes.
+- [ ] 0.2 — Identificação de rota com acurácia documentada (hoje usa `teamPosition` da Riot como está, rastreado via `resolution_method`, mas não validado contra os ~95% do Método playrate).
+- [x] 0.3 (núcleo) — Schema modelado pela tupla de análise: tabelas `patches`/`matches`/`match_participants`/`match_bans` seguindo `Core/Estrutura_roadmap/15_SCHEMA_DADOS.md`.
+- [x] 0.4 — Cache local do Data Dragon por versão (já existia via `target_patch_version` + adapter).
+- [x] 0.5 — Camada de acesso a dados (adapters já existiam desde a Fase 1/2 acima).
+- [ ] 0.6 — Cálculo de baselines (μ, σ) por rota/elo/patch — **próximo passo**, ver `Core/Estrutura_roadmap/17_ESTADO_IMPLEMENTADO.md` §9.
+
+Detalhe completo do que mudou: `Core/Estrutura_roadmap/17_ESTADO_IMPLEMENTADO.md`.

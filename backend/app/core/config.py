@@ -12,6 +12,13 @@ class Settings(BaseSettings):
 
     data_dragon_base_url: str = "https://ddragon.leagueoflegends.com"
 
+    # Trava o app numa versão específica do Data Dragon (ex: "14.15.1") em vez de
+    # sempre buscar a mais recente. None = comportamento padrão (usa a última versão
+    # publicada). Existe para permitir congelar o patch via env var sem tocar código,
+    # conforme "versão de patch alvo... nunca deve estar hardcoded" (documento base do
+    # projeto, seção 6).
+    target_patch_version: str | None = None
+
     database_url: str = "sqlite:///./riftforge.db"
 
     app_env: str = "development"

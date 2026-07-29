@@ -53,7 +53,12 @@ Comece com uma **Development Key** (expira a cada 24h, só para testes) em https
 - **Frontend**: projeto Vercel `riftforge` (Vite estático). URL estável: `https://riftforge-datadog-monitors.vercel.app`. `VITE_API_URL` já vem apontando para o backend acima via `frontend/.env.production` (é uma URL pública, não é segredo).
 - **Banco**: Postgres no Supabase, projeto `riftforge` (ref `nitayvxvoojpahwvtohz`), com as tabelas de `app/db/models.py` já criadas via migration.
 
-O app publicado só lê do banco (`/champions` e `/stats/champions`) — ele **não** roda o job de coleta nem carrega `RIOT_API_KEY`, mesmo com a Personal Key aprovada: chaves de desenvolvimento/pessoais não devem ficar em produto aberto ao público, só a Production Key justificaria isso (fora de escopo por ora — ver `docs/roadmap.md`). Rode `python -m app.jobs.collect_stats` localmente, apontando `DATABASE_URL` para o Supabase (connection string em modo *Transaction pooler*, porta 6543, pego no painel do Supabase → Project Settings → Database), para popular o banco que o site público lê.
+O app publicado só lê do banco (`/champions` e `/stats/champions`) — ele **não** roda o job de coleta nem carrega `RIOT_API_KEY`, mesmo com a Personal Key aprovada: chaves de desenvolvimento/pessoais não devem ficar em produto aberto ao público, só a Production Key justificaria isso (fora de escopo por ora — ver `docs/roadmap.md`). Rode localmente, apontando `DATABASE_URL` para o Supabase (connection string em modo *Transaction pooler*, porta 6543, pego no painel do Supabase → Project Settings → Database):
+
+```bash
+python -m app.jobs.ingest_matches --tier GOLD --division I   # grava partidas brutas (dedup persistida)
+python -m app.jobs.aggregate_stats                            # recalcula o placar a partir do banco, sem chamar a Riot
+```
 
 ## CI
 

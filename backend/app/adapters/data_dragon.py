@@ -20,6 +20,12 @@ class DataDragonAdapter:
         return response.json()
 
     async def get_latest_version(self) -> str:
+        # Respeita TARGET_PATCH_VERSION se configurado (ver core/config.py), para
+        # permitir congelar o app num patch específico sem reconsultar a API a
+        # cada request.
+        pinned = get_settings().target_patch_version
+        if pinned:
+            return pinned
         versions = await self.get_versions()
         return versions[0]
 
