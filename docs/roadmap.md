@@ -4,7 +4,7 @@ Baseado em `Core/documento_projeto_lol_analyzer.pdf`. Stack: backend Python, fro
 
 ## Fase 0 — Fundação
 - [x] Estrutura do repositório (`backend/`, `frontend/`), `.gitignore`, `.env.example`, README.
-- [ ] Registrar o projeto no Riot Developer Portal e gerar a Development Key.
+- [x] Registrar o projeto no Riot Developer Portal e gerar a Development Key.
 
 ## Fase 1 — Camada de dados estáticos (Data Dragon)
 - [x] Adapter isolando as chamadas ao Data Dragon (sem rate limit, sem auth).
@@ -29,7 +29,7 @@ Baseado em `Core/documento_projeto_lol_analyzer.pdf`. Stack: backend Python, fro
 - [x] Deploy inicial do MVP: backend (`riftforge-api`) e frontend (`riftforge`) na Vercel, banco Postgres no Supabase. Falta só: usuário desativar "Vercel Authentication" nos dois projetos e configurar `DATABASE_URL` no backend (ver README § Deploy).
 
 ## Fase 6 — Progressão de chave Riot (em paralelo, a partir da Fase 5)
-- [ ] Pedir Personal Key assim que o MVP estiver minimamente funcional.
+- [x] Pedir Personal Key assim que o MVP estiver minimamente funcional (App ID 864953, aprovada — não expira em 24h como a Development Key, mas ainda não pode ser exposta no backend público; segue usada só localmente pelo job).
 - [ ] Domínio próprio, Termos de Uso e Política de Privacidade.
 - [ ] Submeter pedido de Production Key cedo (~2 semanas de fila).
 
