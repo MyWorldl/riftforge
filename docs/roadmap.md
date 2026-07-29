@@ -42,7 +42,9 @@ Baseado em `Core/documento_projeto_lol_analyzer.pdf`. Stack: backend Python, fro
 - [ ] Política de retenção/exclusão (LGPD) — não se aplica ainda; nenhum dado pessoal é coletado.
 
 ## Fase 8 — Testes e monitoramento contínuo
-- [ ] Testes de schema no CI, monitoramento de deprecação de endpoints, alertas de 429.
+- [x] Testes de schema no CI (GitHub Actions, repo https://github.com/MyWorldl/riftforge): roda a cada push/PR em `backend/**` e semanalmente via cron, cobrindo Data Dragon e League-V4/Match-V5 (chave da Riot como secret só na CI).
+- [x] Monitoramento de deprecação de endpoints: coberto pela CI semanal acima — falha manda notificação do GitHub pro dono do repo.
+- [x] Alertas de 429: sem automação por ora (decisão consciente) — checagem manual via Vercel Runtime Logs, documentado no README § Operação.
 
 ## Fase 9 — Lançamento público
 - [ ] **Adiado** — Deploy final após aprovação da Production Key. Retomar quando houver interesse em abrir o app ao público em geral.

@@ -9,6 +9,10 @@ on:
     paths:
       - "backend/**"
       - ".github/workflows/backend-tests.yml"
+  schedule:
+    # Roda mesmo sem push novo, para pegar deprecações/mudanças de schema
+    # que a Riot ou a Data Dragon possam introduzir do lado deles.
+    - cron: "0 6 * * 1"
 
 jobs:
   test:
@@ -16,6 +20,8 @@ jobs:
     defaults:
       run:
         working-directory: backend
+    env:
+      RIOT_API_KEY: ${{ secrets.RIOT_API_KEY }}
     steps:
       - uses: actions/checkout@v4
 
