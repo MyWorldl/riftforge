@@ -30,19 +30,22 @@ Baseado em `Core/documento_projeto_lol_analyzer.pdf`. Stack: backend Python, fro
 
 ## Fase 6 — Progressão de chave Riot (em paralelo, a partir da Fase 5)
 - [x] Pedir Personal Key assim que o MVP estiver minimamente funcional (App ID 864953, aprovada — não expira em 24h como a Development Key, mas ainda não pode ser exposta no backend público; segue usada só localmente pelo job).
-- [ ] Domínio próprio, Termos de Uso e Política de Privacidade.
-- [ ] Submeter pedido de Production Key cedo (~2 semanas de fila).
+- [ ] **Adiado** — Domínio próprio, Termos de Uso e Política de Privacidade. Só necessário quando o app for abrir para o público em geral.
+- [ ] **Adiado** — Submeter pedido de Production Key. Enquanto o app ficar em uso pessoal/protótipo, a Personal Key já cobre a necessidade.
 
 ## Fase 7 — Segurança e conformidade
-- [ ] HTTPS obrigatório, criptografia em repouso.
-- [ ] Minimização de dados (PUUID), RSO/OAuth se vincular contas.
-- [ ] Logs sem dados sensíveis; política de retenção/exclusão (LGPD).
+- [x] HTTPS obrigatório — já garantido pela Vercel (frontend/backend) e Supabase (banco) por padrão.
+- [x] Criptografia em repouso — gerenciada pelo Supabase por padrão.
+- [x] Minimização de dados — o banco próprio (`champion_lane_stats`, `champion_ban_stats`, `segment_totals`) nunca armazena PUUID nem qualquer dado pessoal, só contagens agregadas por campeão/elo/rota/patch.
+- [ ] RSO/OAuth — não se aplica ainda; só necessário se o app passar a vincular contas de usuário (fora do escopo atual).
+- [x] Logs sem dados sensíveis — nenhum endpoint próprio expõe PUUID, API keys ou tokens.
+- [ ] Política de retenção/exclusão (LGPD) — não se aplica ainda; nenhum dado pessoal é coletado.
 
 ## Fase 8 — Testes e monitoramento contínuo
 - [ ] Testes de schema no CI, monitoramento de deprecação de endpoints, alertas de 429.
 
 ## Fase 9 — Lançamento público
-- [ ] Deploy final após aprovação da Production Key.
+- [ ] **Adiado** — Deploy final após aprovação da Production Key. Retomar quando houver interesse em abrir o app ao público em geral.
 
 ## Fase 10 — Evolução para Desktop
 - [ ] Empacotar o frontend web com Tauri, reaproveitando o backend/API existente.
