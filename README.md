@@ -8,7 +8,7 @@ Roteiro de fases: [docs/roadmap.md](docs/roadmap.md).
 ## Estrutura
 
 - `backend/` — API em Python (FastAPI). Isola todo acesso a Data Dragon e Riot API atrás de adapters, agrega dados de partidas em um banco próprio e serve o frontend.
-- `frontend/` — Web app (Vite + React + TypeScript).
+- `frontend/` — Web app (Vite + React + TypeScript). `frontend/src-tauri/` empacota esse mesmo código como app desktop (Tauri).
 
 ## Como rodar (desenvolvimento)
 
@@ -29,6 +29,18 @@ uvicorn app.main:app --reload
 cd frontend
 npm install
 npm run dev
+```
+
+## Desktop (Tauri)
+
+Reaproveita o mesmo código de `frontend/src/`. Requer Rust (via https://rustup.rs) e, no Windows, as Visual Studio C++ Build Tools (workload "Desktop development with C++").
+
+```bash
+cd frontend
+npm install
+npm run tauri dev     # janela nativa, fala com o backend local (localhost:8000)
+npm run tauri build   # gera instaladores em src-tauri/target/release/bundle/ (msi e nsis/exe),
+                       # já apontando para o backend publicado via .env.production
 ```
 
 ## Chave da Riot API

@@ -50,7 +50,7 @@ Baseado em `Core/documento_projeto_lol_analyzer.pdf`. Stack: backend Python, fro
 - [ ] **Adiado** — Deploy final após aprovação da Production Key. Retomar quando houver interesse em abrir o app ao público em geral.
 
 ## Fase 10 — Evolução para Desktop
-- [ ] Empacotar o frontend web com Tauri, reaproveitando o backend/API existente.
+- [x] Empacotar o frontend web com Tauri, reaproveitando o backend/API existente (`frontend/src-tauri/`). Build de release gera instaladores MSI e NSIS; em dev fala com o backend local, no build final usa o backend publicado (mesmo `.env.production` da web). Ver README § Desktop.
 
 ## Fase 11 — Backlog de melhorias futuras
 - Comparador de matchups, recomendação de build, filtro por região, histórico de tendência por patch, notificações de mudança de tier, Live Client Data API, cache distribuído (Redis).
