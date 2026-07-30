@@ -43,6 +43,14 @@ class Settings(BaseSettings):
     # um patch conhecido (02_MODELO_SCORE_TIERS.md §4.1) — controla o quão
     # "esticada" fica a curva logística que converte z-score em Nota_WR 0-100.
     performance_fator_logistico: float = 1.1
+    # EM ABERTO em 16_BASELINES_CALIBRACAO.md §5: validar se é adequado por
+    # elo — elos de baixa população (Grão-Mestre, Desafiante) podem nunca
+    # atingir esse volume mesmo com o campeão genuinamente forte
+    # (02_MODELO_SCORE_TIERS.md §11).
+    n_referencia_confianca: int = 5000
+    # Trava de segurança (02_MODELO_SCORE_TIERS.md §11): abaixo deste
+    # percentual de confiança, o tier fica provisório e limitado ao teto A.
+    confianca_minima_pct: float = 30.0
 
 
 @lru_cache

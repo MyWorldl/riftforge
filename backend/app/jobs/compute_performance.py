@@ -118,6 +118,7 @@ def compute() -> dict:
                         pick_rate=pick_rate,
                         ban_rate=ban_rate,
                         kda_avg=kda,
+                        z_wr=z_wr,
                         nota_wr=nota_wr,
                         nota_presenca=nota_presenca,
                         nota_kda=nota_kda,

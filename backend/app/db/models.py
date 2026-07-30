@@ -162,6 +162,7 @@ class ChampionPerformanceScore(Base):
     ban_rate: Mapped[float]
     kda_avg: Mapped[float]
 
+    z_wr: Mapped[float]  # persistido pro selo "Trap" (item 1.7): precisa de z_wr < -0.5
     nota_wr: Mapped[float]
     nota_presenca: Mapped[float]
     nota_kda: Mapped[float]
@@ -285,3 +286,47 @@ class ChampionMetaContext(Base):
     meta_score: Mapped[float]
 
     __table_args__ = (UniqueConstraint("patch", "tier", "lane", "champion_id"),)
+
+
+class ChampionScore(Base):
+    """Score final — combina as 4 camadas e atribui tier (Core
+    §02_MODELO_SCORE_TIERS.md §8-11). Corresponde a `champion_scores` em
+    Core §15_SCHEMA_DADOS.md §9.2.
+
+    Nomenclatura: a coluna do elo do jogador chama `elo_tier` aqui, **não**
+    `tier` como nas outras tabelas — porque "tier" nesta camada colide com
+    dois conceitos diferentes: o elo (Ouro, Prata...) e o tier de PODER do
+    campeão (God, S, A...). O tier de poder fica em `score_tier` para não
+    ambiguar os dois.
+
+    `kit_score` é nulo quando não existe `ChampionKitScore` pro patch exato
+    (ex: Kit só foi calculado pra versão mais recente do Data Dragon, mas
+    esta linha é de um patch histórico) — nesse caso o peso de Kit (25%) é
+    redistribuído proporcionalmente entre as camadas disponíveis, nunca
+    tratado como zero. `pesos_usados` registra quais camadas entraram e com
+    que peso, para auditoria."""
+
+    __tablename__ = "champion_scores"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    patch: Mapped[str]
+    elo_tier: Mapped[str]
+    lane: Mapped[str]
+    champion_id: Mapped[str]
+
+    performance_score: Mapped[float]
+    kit_score: Mapped[float | None]
+    build_score: Mapped[float]
+    meta_score: Mapped[float]
+    pesos_usados: Mapped[dict] = mapped_column(JSON)
+
+    score_final: Mapped[float]
+    score_tier: Mapped[str]
+    confianca: Mapped[float]
+    tier_provisorio: Mapped[bool]
+    trap_flag: Mapped[bool]
+
+    model_version: Mapped[str]
+    computed_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc))
+
+    __table_args__ = (UniqueConstraint("patch", "elo_tier", "lane", "champion_id"),)
