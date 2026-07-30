@@ -45,3 +45,10 @@ class DataDragonAdapter:
             response = await client.get(url)
             response.raise_for_status()
         return response.json()["data"][champion_id]
+
+    async def get_champion_name_by_riot_id(self, version: str, locale: str = "en_US") -> dict[int, str]:
+        """Maps Match-V5's numeric `championId` to Data Dragon's stable `id`
+        string — needed because `championName` in match payloads sometimes
+        diverges from ddragon's `id` (e.g. "Kai'Sa" vs "Kaisa")."""
+        champions = await self.get_champions(version, locale)
+        return {int(info["key"]): name for name, info in champions.items()}

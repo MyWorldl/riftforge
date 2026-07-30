@@ -36,16 +36,15 @@ from app.db.models import (
 from app.db.session import SessionLocal, init_db
 
 
-def _champion_name_by_riot_id(version_prefix: str) -> dict[int, str]:
-    data_dragon = DataDragonAdapter()
+def _resolve_champion_names(data_dragon: DataDragonAdapter, version_prefix: str) -> dict[int, str]:
     versions = asyncio.run(data_dragon.get_versions())
     version = next((v for v in versions if v.startswith(version_prefix)), versions[0])
-    champions = asyncio.run(data_dragon.get_champions(version))
-    return {int(info["key"]): name for name, info in champions.items()}
+    return asyncio.run(data_dragon.get_champion_name_by_riot_id(version))
 
 
 def aggregate() -> dict:
     init_db()
+    data_dragon = DataDragonAdapter()
     session = SessionLocal()
     try:
         patches = session.query(Patch).all()
@@ -58,7 +57,7 @@ def aggregate() -> dict:
         totals = {"patches": 0, "lane_rows": 0, "ban_rows": 0}
 
         for patch in patches:
-            name_by_id = _champion_name_by_riot_id(patch.version_label)
+            name_by_id = _resolve_champion_names(data_dragon, patch.version_label)
             patch_touched = False
 
             for tier in elo_tiers:

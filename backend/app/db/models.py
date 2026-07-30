@@ -208,3 +208,51 @@ class ChampionKitScore(Base):
     computed_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc))
 
     __table_args__ = (UniqueConstraint("patch", "champion_id"),)
+
+
+class ChampionBuildPatch(Base):
+    """Camada 3 do score — Sinergia de Build, nota **não-suavizada** por
+    patch (Core §02_MODELO_SCORE_TIERS.md §6.1). Corresponde a
+    `champion_build_patch` em Core §15_SCHEMA_DADOS.md §8.1. `b_patch` é o
+    valor consultado pela média móvel em `ChampionBuildScore`."""
+
+    __tablename__ = "champion_build_patch"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    patch: Mapped[str]
+    tier: Mapped[str]
+    lane: Mapped[str]
+    champion_id: Mapped[str]
+
+    n_builds_distintos: Mapped[int]
+    entropia_itens: Mapped[float]
+    nota_flex: Mapped[float]
+    wr_build_otimo: Mapped[float]
+    wr_build_medio: Mapped[float]
+    nota_dep: Mapped[float]
+    item_atual: Mapped[str | None]
+    delta_spike: Mapped[float]
+    nota_spike: Mapped[float]
+    b_patch: Mapped[float]
+
+    __table_args__ = (UniqueConstraint("patch", "tier", "lane", "champion_id"),)
+
+
+class ChampionBuildScore(Base):
+    """Camada 3 do score — Sinergia de Build, nota **suavizada** por média
+    móvel de 3 patches (Core §02_MODELO_SCORE_TIERS.md §6.2). Corresponde a
+    `champion_build_score` em Core §15_SCHEMA_DADOS.md §8.2 — é este valor
+    que o score final consome, não `ChampionBuildPatch.b_patch` diretamente."""
+
+    __tablename__ = "champion_build_scores"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    patch: Mapped[str]
+    tier: Mapped[str]
+    lane: Mapped[str]
+    champion_id: Mapped[str]
+
+    build_score: Mapped[float]
+    patches_disponiveis: Mapped[int]
+
+    __table_args__ = (UniqueConstraint("patch", "tier", "lane", "champion_id"),)

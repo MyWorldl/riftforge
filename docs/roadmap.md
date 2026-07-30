@@ -75,7 +75,8 @@ Baseado em `Core/Estrutura_roadmap/00_INDEX.md` (fonte de verdade atual — tem 
 - [x] 1.1 — Camada 1, Performance Real (Wilson + normalização): `app/jobs/compute_performance.py`, quarto estágio do pipeline. `Nota_WR`/`Nota_Presenca`/`Nota_KDA`/`performance_score` calculados e persistidos em `champion_performance_scores`. Testado contra dados reais (média geral ~47, ordenação bate com win rate observado). Ainda não exposto via API.
 - [x] 1.9 — Testes de contrato de schema do ddragon (já coberto desde a Fase 1 v0 por `backend/tests/test_schema.py`).
 - [x] 1.2 — Camada 2, Kit (versão automática): `app/jobs/compute_kit.py`. Confirmado na prática o risco de `13_ESTRATEGIA_DADOS_KIT.md` — `spells[].vars` vem vazio no Data Dragon atual, então `cc_score`/`mobilidade_score` ficam `None` (sem sinal numérico possível); `dano_score`/`resiliencia_score` usam `info.attack`/`info.magic`/`info.defense` (rating oficial da Riot); `alcance_score` por percentil real. 233 campeões processados, incluindo tratamento de campeões com `info` zerado (dado quebrado do ddragon).
-- [ ] 1.3 — Camada 3, Sinergia de Build — **próximo passo**, ver `Core/Estrutura_roadmap/17_ESTADO_IMPLEMENTADO.md` §9.
-- [ ] 1.4–1.8 — Meta, tiers, indicador de confiança, selo Trap, interface com filtro — não iniciados.
+- [x] 1.3 — Camada 3, Sinergia de Build: `app/jobs/compute_build.py`. Entropia de Shannon (flexibilidade), dependência de build ótimo (invertida) e power spike de item, suavizados por média móvel de 3 patches com redistribuição proporcional quando falta histórico (`champion_build_patch` + `champion_build_scores`). Validado matematicamente contra um caso real com os 3 patches disponíveis.
+- [ ] 1.4 — Camada 4, Contexto de Meta — **próximo passo**, ver `Core/Estrutura_roadmap/17_ESTADO_IMPLEMENTADO.md` §9.
+- [ ] 1.5–1.8 — Tiers, indicador de confiança, selo Trap, interface com filtro — não iniciados.
 
 Detalhe completo do que mudou: `Core/Estrutura_roadmap/17_ESTADO_IMPLEMENTADO.md`.
