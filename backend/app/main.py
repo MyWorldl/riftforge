@@ -9,6 +9,7 @@ from slowapi.util import get_remote_address
 from app.adapters.data_dragon import DataDragonAdapter
 from app.adapters.riot_api import RiotApiAdapter
 from app.core.config import get_settings
+from app.core.explain import explain_score
 from app.db.models import (
     ChampionBanStat,
     ChampionLaneStat,
@@ -146,7 +147,12 @@ def get_champion_scores(elo_tier: str = "GOLD", lane: str | None = None, patch: 
     tier God-E, indicador de confiança e selo Trap — lê só de
     `champion_scores` (saída de app/jobs/compute_scores.py), nunca consulta
     a Riot em tempo real. Sucessor de /stats/champions (item 1.8 do backlog:
-    a interface deve mostrar tier/confiança/Trap em vez do placar cru)."""
+    a interface deve mostrar tier/confiança/Trap em vez do placar cru).
+
+    Cada linha traz `explicacao` (item 3.1): a decomposição do score final
+    em contribuições por camada, calculada na hora a partir dos valores já
+    persistidos — matemática pura sobre dado que já está na linha, não uma
+    consulta a mais. Ver app/core/explain.py."""
     session = SessionLocal()
     try:
         if patch is None:
@@ -187,6 +193,15 @@ def get_champion_scores(elo_tier: str = "GOLD", lane: str | None = None, patch: 
                 "kit_score": row.kit_score,
                 "build_score": row.build_score,
                 "meta_score": row.meta_score,
+                "explicacao": explain_score(
+                    {
+                        "performance": row.performance_score,
+                        "kit": row.kit_score,
+                        "build": row.build_score,
+                        "meta": row.meta_score,
+                    },
+                    row.pesos_usados or {},
+                ),
             }
             for row in rows
         ]

@@ -5,6 +5,7 @@ import {
   fetchChampions,
   type ChampionMeta,
   type ChampionScoreRow,
+  type ScoreExplanation,
 } from './api/client'
 import './App.css'
 
@@ -30,8 +31,101 @@ function rowKey(row: ChampionScoreRow): string {
   return `${row.champion_id}-${row.lane}-${row.patch}`
 }
 
-function formatScore(value: number | null): string {
-  return value === null ? '—' : value.toFixed(1)
+const LAYER_LABELS: Record<string, string> = {
+  performance: 'Performance',
+  kit: 'Kit',
+  build: 'Build',
+  meta: 'Meta',
+}
+
+const LAYER_HINTS: Record<string, string> = {
+  performance: 'Win rate ajustado, presença (pick/ban) e KDA',
+  kit: 'Poder intrínseco do kit do campeão',
+  build: 'Flexibilidade de build, dependência do item certo e power spike',
+  meta: 'Saúde do metagame da rota e tendência entre patches',
+}
+
+function signed(value: number): string {
+  return `${value >= 0 ? '+' : '−'}${Math.abs(value).toFixed(1)}`
+}
+
+/** Frase em linguagem natural — o ponto do item 3.1 é o usuário entender
+ *  sem precisar ler a tabela de números. */
+function explanationHeadline(explanation: ScoreExplanation): string {
+  const layers = explanation.camadas
+  if (layers.length === 0) return 'Sem camadas disponíveis para explicar este score.'
+
+  const top = layers[0]
+  const bottom = layers[layers.length - 1]
+  const label = (c: typeof top) => LAYER_LABELS[c.camada] ?? c.camada
+
+  if (top.contribuicao <= 0) {
+    return `Nenhuma camada puxou para cima — ${label(bottom)} é o que mais segura o score.`
+  }
+  if (bottom.contribuicao >= 0) {
+    return `Todas as camadas puxam para cima — ${label(top)} é a que mais contribui.`
+  }
+  return `${label(top)} puxa para cima; ${label(bottom)} é o que mais segura.`
+}
+
+function ScoreExplanationPanel({ row }: { row: ChampionScoreRow }) {
+  const { explicacao } = row
+  const layers = explicacao.camadas
+  const maxAbs = Math.max(...layers.map((c) => Math.abs(c.contribuicao)), 0.01)
+
+  return (
+    <div className="explain">
+      <p className="explain-headline">{explanationHeadline(explicacao)}</p>
+
+      <div className="explain-rows">
+        <div className="explain-row explain-base">
+          <span className="explain-label">Base neutra</span>
+          <span className="explain-bar-cell" />
+          <span className="explain-value">{explicacao.base.toFixed(1)}</span>
+        </div>
+
+        {layers.map((c) => {
+          const positive = c.contribuicao >= 0
+          const width = `${(Math.abs(c.contribuicao) / maxAbs) * 100}%`
+          return (
+            <div className="explain-row" key={c.camada}>
+              <span className="explain-label" title={LAYER_HINTS[c.camada]}>
+                {LAYER_LABELS[c.camada] ?? c.camada}
+                <span className="explain-sub">
+                  nota {c.score.toFixed(1)} · peso {(c.peso * 100).toFixed(0)}%
+                </span>
+              </span>
+              <span className="explain-bar-cell">
+                <span className="explain-bar-half explain-bar-neg">
+                  {!positive && <span className="explain-bar bar-neg" style={{ width }} />}
+                </span>
+                <span className="explain-bar-half explain-bar-pos">
+                  {positive && <span className="explain-bar bar-pos" style={{ width }} />}
+                </span>
+              </span>
+              <span className={`explain-value ${positive ? 'value-pos' : 'value-neg'}`}>
+                {signed(c.contribuicao)}
+              </span>
+            </div>
+          )
+        })}
+
+        <div className="explain-row explain-total">
+          <span className="explain-label">Score final</span>
+          <span className="explain-bar-cell" />
+          <span className="explain-value">{row.score_final.toFixed(1)}</span>
+        </div>
+      </div>
+
+      {explicacao.camadas_ausentes.length > 0 && (
+        <p className="explain-missing">
+          Sem dado de{' '}
+          {explicacao.camadas_ausentes.map((c) => LAYER_LABELS[c] ?? c).join(', ')} para este patch — o
+          peso foi redistribuído entre as camadas acima, não contado como zero.
+        </p>
+      )}
+    </div>
+  )
 }
 
 function App() {
@@ -133,6 +227,7 @@ function App() {
       )}
 
       {scores && scores.length > 0 && (
+        <div className="table-scroll">
         <table className="stats-table">
           <thead>
             <tr>
@@ -181,19 +276,14 @@ function App() {
                         className="details-toggle"
                         onClick={() => setExpandedRow(expanded ? null : key)}
                       >
-                        {expanded ? 'Ocultar' : 'Camadas'}
+                        {expanded ? 'Ocultar' : 'Por quê?'}
                       </button>
                     </td>
                   </tr>
                   {expanded && (
                     <tr className="layer-row">
                       <td colSpan={8}>
-                        <div className="layer-breakdown">
-                          <span>Performance (40%): <strong>{formatScore(row.performance_score)}</strong></span>
-                          <span>Kit (25%): <strong>{formatScore(row.kit_score)}</strong>{row.kit_score === null && ' (sem dado pro patch)'}</span>
-                          <span>Build (25%): <strong>{formatScore(row.build_score)}</strong></span>
-                          <span>Meta (10%): <strong>{formatScore(row.meta_score)}</strong></span>
-                        </div>
+                        <ScoreExplanationPanel row={row} />
                       </td>
                     </tr>
                   )}
@@ -202,6 +292,7 @@ function App() {
             })}
           </tbody>
         </table>
+        </div>
       )}
 
       {scores && scores.length > 0 && (

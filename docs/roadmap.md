@@ -80,4 +80,12 @@ Baseado em `Core/Estrutura_roadmap/00_INDEX.md` (fonte de verdade atual — tem 
 - [x] 1.5/1.6/1.7 — SCORE final + tier (God-E) + indicador de confiança/trava de segurança + selo Trap: `app/jobs/compute_scores.py`, oitavo e último estágio do pipeline. **O pipeline analítico completo da v1 existe em código.** Validado: 0 linhas puladas por camada ausente, selo Trap disparou corretamente (1/135, conferido manualmente), fronteiras de tier testadas. Redistribuição de peso quando Kit não existe pro patch exato (caso de todas as 135 linhas do teste real, já que Kit só foi calculado pra versão mais recente do Data Dragon).
 - [x] 1.8 — Interface com filtro por rota e elo: endpoint `GET /scores/champions` (lê só de `champion_scores`, filtros `elo_tier`/`lane`/`patch`, `patch` opcional resolve pro mais recente via `patch_sequence`) + frontend trocado do placar cru v0 pela visão com tier (badge God-E), score final, confiança, marca de tier provisório e selo Trap, com detalhamento por camada (Performance/Kit/Build/Meta) expansível por linha. Validado no navegador contra dados reais do Supabase (filtro de rota, elo sem dados mostrando estado vazio correto, expansão de camadas batendo com os valores da API).
 
+## Core — Fase 3 (Diferenciais competitivos)
+
+- [x] 3.1 — Explicabilidade por camada (**principal diferencial do produto** segundo `09_BACKLOG.md` §Fase 3): `backend/app/core/explain.py` decompõe o score final em contribuições por camada — `contribuicao_i = peso_normalizado_i * (nota_i − 50)`, com `50 + Σ contribuições = score_final` como identidade exata. Exposto no campo `explicacao` de `GET /scores/champions` e renderizado no frontend como painel com frase em linguagem natural ("Performance puxa para cima; Build é o que mais segura"), barras divergentes por camada e a conta fechando de 50.0 até o score final. Camadas ausentes (ex: Kit sem dado pro patch) são declaradas explicitamente, com aviso de que o peso foi redistribuído.
+- [ ] 3.2 — Distinção visual entre poder estrutural (Kit+Build) e poder emprestado do meta.
+- [ ] 3.3 — Etiqueta de Skill Expression (floor/ceiling).
+- [ ] 3.4 — Histórico de evolução do campeão entre patches (gráfico).
+- [ ] 3.5 — Comparador de matchups dedicado.
+
 Detalhe completo do que mudou: `Core/Estrutura_roadmap/17_ESTADO_IMPLEMENTADO.md`.

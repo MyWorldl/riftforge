@@ -68,9 +68,17 @@
   border-radius: 4px;
 }
 
-.stats-table {
+/* A tabela é larga demais para telas estreitas. Ela rola dentro deste
+   container em vez de fazer a página inteira rolar na horizontal. */
+.table-scroll {
   width: 100%;
   max-width: 900px;
+  overflow-x: auto;
+}
+
+.stats-table {
+  width: 100%;
+  min-width: 640px;
   border-collapse: collapse;
   font-size: 15px;
 }
@@ -156,15 +164,118 @@
   border-bottom: 1px solid var(--border);
 }
 
-.layer-breakdown {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 18px;
-  font-size: 14px;
-  color: var(--text);
+.explain {
   background: var(--code-bg);
   border-radius: 6px;
-  padding: 10px 14px;
+  padding: 14px 16px;
+}
+
+.explain-headline {
+  font-size: 15px;
+  color: var(--text-h);
+  margin-bottom: 12px;
+}
+
+.explain-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 14px;
+}
+
+.explain-row {
+  display: grid;
+  grid-template-columns: minmax(140px, 1.2fr) minmax(120px, 2fr) 64px;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 0;
+}
+
+.explain-label {
+  display: flex;
+  flex-direction: column;
+  color: var(--text-h);
+}
+
+.explain-sub {
+  font-size: 12px;
+  color: var(--text);
+}
+
+/* Barra divergente: metade esquerda para contribuição negativa, direita
+   para positiva, com o eixo zero no centro — a leitura "puxou pra cima /
+   segurou" fica imediata, sem precisar ler o sinal do número. */
+.explain-bar-cell {
+  display: flex;
+  align-items: center;
+  min-height: 14px;
+}
+
+.explain-bar-half {
+  display: flex;
+  flex: 1;
+  height: 10px;
+  overflow: hidden;
+}
+
+.explain-bar-neg {
+  justify-content: flex-end;
+  border-right: 1px solid var(--border);
+}
+
+.explain-bar-pos {
+  justify-content: flex-start;
+}
+
+.explain-bar {
+  height: 100%;
+  border-radius: 2px;
+}
+
+.bar-pos {
+  background: var(--pos);
+}
+
+.bar-neg {
+  background: var(--neg);
+}
+
+.explain-value {
+  text-align: right;
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--text-h);
+}
+
+.value-pos {
+  color: var(--pos);
+}
+
+.value-neg {
+  color: var(--neg);
+}
+
+.explain-base,
+.explain-total {
+  color: var(--text);
+}
+
+.explain-total {
+  border-top: 1px solid var(--border);
+  margin-top: 4px;
+  padding-top: 8px;
+  font-weight: 600;
+}
+
+.explain-total .explain-label,
+.explain-total .explain-value {
+  color: var(--text-h);
+}
+
+.explain-missing {
+  margin-top: 12px;
+  font-size: 13px;
+  color: var(--text);
 }
 
 .table-footnote {

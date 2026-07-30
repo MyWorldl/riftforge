@@ -55,6 +55,19 @@ export function championImageUrl(ddragonPatch: string, imageFile: string): strin
   return `https://ddragon.leagueoflegends.com/cdn/${ddragonPatch}/img/champion/${imageFile}`
 }
 
+export interface LayerContribution {
+  camada: string
+  score: number
+  peso: number
+  contribuicao: number
+}
+
+export interface ScoreExplanation {
+  base: number
+  camadas: LayerContribution[]
+  camadas_ausentes: string[]
+}
+
 export interface ChampionScoreRow {
   champion_id: string
   lane: string
@@ -70,6 +83,7 @@ export interface ChampionScoreRow {
   kit_score: number | null
   build_score: number
   meta_score: number
+  explicacao: ScoreExplanation
 }
 
 export interface ChampionScoreFilters {
