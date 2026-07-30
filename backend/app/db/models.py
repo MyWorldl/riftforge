@@ -138,3 +138,36 @@ class Baseline(Base):
     amostra_confiavel: Mapped[bool]
 
     __table_args__ = (UniqueConstraint("patch", "tier", "lane"),)
+
+
+class ChampionPerformanceScore(Base):
+    """Camada 1 do score — Performance Real, 40% do peso final (Core
+    §02_MODELO_SCORE_TIERS.md §4). Ainda não é o score final: faltam Kit
+    (25%), Build (25%) e Meta (10%) — ver §8 do mesmo documento. Corresponde
+    a `champion_performance_agg` em Core §15_SCHEMA_DADOS.md §6.1, com chave
+    em string (patch/tier/lane) para casar com as tabelas de agregação v0."""
+
+    __tablename__ = "champion_performance_scores"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    patch: Mapped[str]
+    tier: Mapped[str]
+    lane: Mapped[str]
+    champion_id: Mapped[str]
+
+    n_matches: Mapped[int]
+    win_rate_raw: Mapped[float]
+    win_rate_adjusted: Mapped[float]
+    pick_rate: Mapped[float]
+    ban_rate: Mapped[float]
+    kda_avg: Mapped[float]
+
+    nota_wr: Mapped[float]
+    nota_presenca: Mapped[float]
+    nota_kda: Mapped[float]
+    performance_score: Mapped[float]
+
+    model_version: Mapped[str]
+    computed_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc))
+
+    __table_args__ = (UniqueConstraint("patch", "tier", "lane", "champion_id"),)

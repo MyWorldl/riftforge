@@ -39,6 +39,10 @@ class Settings(BaseSettings):
     # EM ABERTO em 16_BASELINES_CALIBRACAO.md §3/§8: nº mínimo de campeões no
     # grupo (rota, elo, patch) pra considerar o baseline confiável.
     baseline_min_champions: int = 5
+    # EM ABERTO em 16_BASELINES_CALIBRACAO.md §5: precisa de backtesting contra
+    # um patch conhecido (02_MODELO_SCORE_TIERS.md §4.1) — controla o quão
+    # "esticada" fica a curva logística que converte z-score em Nota_WR 0-100.
+    performance_fator_logistico: float = 1.1
 
 
 @lru_cache

@@ -72,7 +72,9 @@ Baseado em `Core/Estrutura_roadmap/00_INDEX.md` (fonte de verdade atual — tem 
 
 ## Core — Fase 1 (MVP do score)
 
-- [ ] 1.1 — Camada 1, Performance Real (Wilson + normalização) — **próximo passo**, ver `Core/Estrutura_roadmap/17_ESTADO_IMPLEMENTADO.md` §9.
-- [ ] 1.2–1.9 — Kit, Build, Meta, tiers, indicador de confiança, selo Trap, interface com filtro, testes de contrato — não iniciados.
+- [x] 1.1 — Camada 1, Performance Real (Wilson + normalização): `app/jobs/compute_performance.py`, quarto estágio do pipeline. `Nota_WR`/`Nota_Presenca`/`Nota_KDA`/`performance_score` calculados e persistidos em `champion_performance_scores`. Testado contra dados reais (média geral ~47, ordenação bate com win rate observado). Ainda não exposto via API.
+- [x] 1.9 — Testes de contrato de schema do ddragon (já coberto desde a Fase 1 v0 por `backend/tests/test_schema.py`).
+- [ ] 1.2 — Camada 2, Kit (versão automática) — **próximo passo**, ver `Core/Estrutura_roadmap/17_ESTADO_IMPLEMENTADO.md` §9.
+- [ ] 1.3–1.8 — Build, Meta, tiers, indicador de confiança, selo Trap, interface com filtro — não iniciados.
 
 Detalhe completo do que mudou: `Core/Estrutura_roadmap/17_ESTADO_IMPLEMENTADO.md`.
