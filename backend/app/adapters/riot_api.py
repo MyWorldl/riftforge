@@ -26,10 +26,17 @@ class RiotApiAdapter:
         return self._client.league.entries(self._platform_region, queue, tier, division)
 
     def get_match_ids_by_puuid(
-        self, puuid: str, count: int = 20, queue: int | None = None
+        self,
+        puuid: str,
+        count: int = 20,
+        queue: int | None = None,
+        start_time: int | None = None,
     ) -> list[str]:
+        """`start_time` (epoch em segundos) descarta partidas antigas já na
+        Riot, antes de gastar uma chamada por partida — ver
+        app/jobs/ingest_matches.py para o porquê."""
         return self._client.match.matchlist_by_puuid(
-            self._continent_region, puuid, count=count, queue=queue
+            self._continent_region, puuid, count=count, queue=queue, start_time=start_time
         )
 
     def get_match(self, match_id: str) -> dict:

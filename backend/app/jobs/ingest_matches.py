@@ -7,6 +7,15 @@ partidas de novo (ver Core/Estrutura_roadmap/17_ESTADO_IMPLEMENTADO.md §5).
 Agora cada match_id é checado no banco antes do fetch: partidas já
 ingeridas nem consomem cota da Riot de novo.
 
+**Janela de tempo (`--since-days`)**: sem ela, o histórico de cada
+invocador se estende por mais de um ano. Medido na prática numa coleta de
+1.545 partidas: elas caíram em **38 patches diferentes**, com só 24% no
+patch mais recente e 2,3% no atual do Data Dragon. Como a confiança do
+score é medida por `(patch, elo, rota, campeão)`, cada linha só enxerga a
+fatia do próprio patch — ou seja, ~76% da cota da Riot ia para patches que
+nenhuma consulta alcança. O corte é aplicado via `start_time` na própria
+Riot, então partida antiga nem consome chamada.
+
 Não implementa ainda expansão "bola de neve" por participantes
 (Core/Estrutura_roadmap/11_PIPELINE_INGESTAO.md §2.2) — cada execução
 cobre só o histórico dos invocadores retornados pelo seed de League-V4
@@ -19,8 +28,10 @@ Uso: python -m app.jobs.ingest_matches --tier GOLD --division I
 """
 
 import argparse
+import time
 
 from app.adapters.riot_api import RiotApiAdapter
+from app.core.config import get_settings
 from app.db.models import Match, MatchBan, MatchParticipant, Patch
 from app.db.session import SessionLocal, init_db
 
@@ -52,9 +63,15 @@ def ingest(
     division: str = "I",
     puuid_limit: int = 5,
     matches_per_summoner: int = 3,
+    since_days: int | None = None,
 ) -> dict:
     print("Conectando ao banco...", flush=True)
     init_db()
+
+    settings = get_settings()
+    if since_days is None:
+        since_days = settings.ingest_days_window
+    start_time = int(time.time()) - since_days * 86400
 
     riot = RiotApiAdapter()
     queue_id = QUEUE_IDS[queue]
@@ -62,7 +79,11 @@ def ingest(
     print(f"Buscando invocadores {tier} {division} na Riot API...", flush=True)
     entries = riot.get_league_entries(queue, tier, division)
     puuids = [entry["puuid"] for entry in entries[:puuid_limit]]
-    print(f"{len(puuids)} invocador(es) encontrado(s).", flush=True)
+    print(
+        f"{len(puuids)} invocador(es) encontrado(s). "
+        f"Coletando só partidas dos últimos {since_days} dias.",
+        flush=True,
+    )
 
     new_matches = 0
     skipped_existing = 0
@@ -71,7 +92,9 @@ def ingest(
     try:
         for i, puuid in enumerate(puuids, start=1):
             print(f"[{i}/{len(puuids)}] buscando histórico de partidas...", flush=True)
-            match_ids = riot.get_match_ids_by_puuid(puuid, count=matches_per_summoner, queue=queue_id)
+            match_ids = riot.get_match_ids_by_puuid(
+                puuid, count=matches_per_summoner, queue=queue_id, start_time=start_time
+            )
 
             for match_id in match_ids:
                 if _already_ingested(session, match_id):
@@ -149,6 +172,13 @@ def main() -> None:
     parser.add_argument("--division", default="I")
     parser.add_argument("--puuid-limit", type=int, default=5)
     parser.add_argument("--matches-per-summoner", type=int, default=3)
+    parser.add_argument(
+        "--since-days",
+        type=int,
+        default=None,
+        help="Janela de coleta em dias (padrão: ingest_days_window da config). "
+        "Partidas mais antigas são descartadas pela própria Riot, sem gastar chamada.",
+    )
     args = parser.parse_args()
 
     result = ingest(
@@ -157,6 +187,7 @@ def main() -> None:
         division=args.division,
         puuid_limit=args.puuid_limit,
         matches_per_summoner=args.matches_per_summoner,
+        since_days=args.since_days,
     )
     print(
         f"Ingestão concluída: {result['summoners']} invocadores, "

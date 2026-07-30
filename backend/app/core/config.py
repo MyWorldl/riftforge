@@ -21,6 +21,18 @@ class Settings(BaseSettings):
 
     database_url: str = "sqlite:///./riftforge.db"
 
+    # Janela de coleta, em dias. Só partidas mais recentes que isso são
+    # ingeridas. Existe porque o histórico de um invocador se estende por
+    # mais de um ano, mas o modelo só consome os 3 patches mais recentes
+    # (Build usa média móvel de 3 patches, Meta usa regressão sobre até 3)
+    # — sem o corte, a maior parte da cota da Riot é gasta em patches que
+    # nenhuma consulta alcança, e o dado ainda dilui a confiança por
+    # espalhar as partidas entre dezenas de patches.
+    # 42 = ~3 patches a ~14 dias cada. É aproximação: a cadência real de
+    # patch varia, então a janela é deliberadamente generosa (melhor pegar
+    # um patch a mais que perder o terceiro).
+    ingest_days_window: int = 42
+
     app_env: str = "development"
     cors_origins: str = "http://localhost:5173,https://riftforge-self.vercel.app"
 
