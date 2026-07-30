@@ -24,6 +24,7 @@ Uso: python -m app.jobs.aggregate_stats
 import asyncio
 
 from app.adapters.data_dragon import DataDragonAdapter
+from app.core.champions import resolve_champion_id
 from app.db.models import (
     ChampionBanStat,
     ChampionLaneStat,
@@ -74,9 +75,15 @@ def aggregate() -> dict:
                 match_ids = {p.match_id for p in participants}
                 session.add(SegmentTotal(patch=patch.version_label, tier=tier, total_matches=len(match_ids)))
 
+                # `match_bans` não guarda o nome do campeão, só o ID numérico.
+                # Sem este mapa, um campeão fora do Data Dragon daquele patch
+                # cairia no nome bruto nas lane stats e no ID numérico nos
+                # bans — duas identidades para o mesmo campeão.
+                raw_name_by_id = {p.riot_champion_id: p.champion_name for p in participants}
+
                 lane_agg: dict[tuple[str, str], dict] = {}
                 for p in participants:
-                    champion_name = name_by_id.get(p.riot_champion_id, p.champion_name)
+                    champion_name = resolve_champion_id(name_by_id, p.riot_champion_id, p.champion_name)
                     lane = p.resolved_position or "UNKNOWN"
                     row = lane_agg.setdefault(
                         (lane, champion_name),
@@ -99,9 +106,10 @@ def aggregate() -> dict:
                 bans = session.query(MatchBan).filter(MatchBan.match_id.in_(match_ids)).all()
                 ban_agg: dict[str, int] = {}
                 for b in bans:
-                    champion_name = name_by_id.get(b.riot_champion_id)
-                    if champion_name:
-                        ban_agg[champion_name] = ban_agg.get(champion_name, 0) + 1
+                    champion_name = resolve_champion_id(
+                        name_by_id, b.riot_champion_id, raw_name_by_id.get(b.riot_champion_id)
+                    )
+                    ban_agg[champion_name] = ban_agg.get(champion_name, 0) + 1
 
                 for champion_name, count in ban_agg.items():
                     session.add(

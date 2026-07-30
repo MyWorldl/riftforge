@@ -42,6 +42,7 @@ import math
 from collections import defaultdict
 
 from app.adapters.data_dragon import DataDragonAdapter
+from app.core.champions import resolve_champion_id
 from app.core.stats import percentile_rank
 from app.db.models import ChampionBuildPatch, ChampionBuildScore, Match, MatchParticipant, Patch
 from app.db.session import SessionLocal, init_db
@@ -170,7 +171,9 @@ def _compute_b_patch() -> int:
                 nota_spike = percentile_rank(spike_values, stats["delta_spike"])
                 b_patch = 0.40 * stats["nota_flex"] + 0.30 * nota_dep + 0.30 * nota_spike
 
-                champion_name = names.get(riot_champion_id, str(riot_champion_id))
+                champion_name = resolve_champion_id(
+                    names, riot_champion_id, by_champion[riot_champion_id][0].champion_name
+                )
 
                 session.add(
                     ChampionBuildPatch(
