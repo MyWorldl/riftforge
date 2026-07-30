@@ -54,3 +54,38 @@ export async function fetchChampionStats(filters: ChampionStatsFilters): Promise
 export function championImageUrl(ddragonPatch: string, imageFile: string): string {
   return `https://ddragon.leagueoflegends.com/cdn/${ddragonPatch}/img/champion/${imageFile}`
 }
+
+export interface ChampionScoreRow {
+  champion_id: string
+  lane: string
+  patch: string
+  elo_tier: string
+  n_matches: number
+  score_final: number
+  score_tier: string
+  confianca: number
+  tier_provisorio: boolean
+  trap_flag: boolean
+  performance_score: number
+  kit_score: number | null
+  build_score: number
+  meta_score: number
+}
+
+export interface ChampionScoreFilters {
+  eloTier: string
+  lane?: string
+  patch?: string
+}
+
+export async function fetchChampionScores(filters: ChampionScoreFilters): Promise<ChampionScoreRow[]> {
+  const params = new URLSearchParams({ elo_tier: filters.eloTier })
+  if (filters.lane) params.set('lane', filters.lane)
+  if (filters.patch) params.set('patch', filters.patch)
+
+  const response = await fetch(`${API_URL}/scores/champions?${params}`)
+  if (!response.ok) {
+    throw new Error(`Falha ao buscar scores: ${response.status}`)
+  }
+  return response.json()
+}

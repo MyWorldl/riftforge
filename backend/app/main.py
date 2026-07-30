@@ -9,7 +9,14 @@ from slowapi.util import get_remote_address
 from app.adapters.data_dragon import DataDragonAdapter
 from app.adapters.riot_api import RiotApiAdapter
 from app.core.config import get_settings
-from app.db.models import ChampionBanStat, ChampionLaneStat, SegmentTotal
+from app.db.models import (
+    ChampionBanStat,
+    ChampionLaneStat,
+    ChampionPerformanceScore,
+    ChampionScore,
+    Patch,
+    SegmentTotal,
+)
 from app.db.session import SessionLocal
 
 settings = get_settings()
@@ -128,6 +135,60 @@ def get_champion_stats(tier: str = "GOLD", lane: str | None = None, patch: str |
                 "kda": (row.kills + row.assists) / max(row.deaths, 1),
             }
             for row in query.all()
+        ]
+    finally:
+        session.close()
+
+
+@app.get("/scores/champions")
+def get_champion_scores(elo_tier: str = "GOLD", lane: str | None = None, patch: str | None = None) -> list[dict]:
+    """Placar com o modelo de score em camadas (Performance/Kit/Build/Meta),
+    tier God-E, indicador de confiança e selo Trap — lê só de
+    `champion_scores` (saída de app/jobs/compute_scores.py), nunca consulta
+    a Riot em tempo real. Sucessor de /stats/champions (item 1.8 do backlog:
+    a interface deve mostrar tier/confiança/Trap em vez do placar cru)."""
+    session = SessionLocal()
+    try:
+        if patch is None:
+            latest = (
+                session.query(ChampionScore.patch)
+                .join(Patch, Patch.version_label == ChampionScore.patch)
+                .filter(ChampionScore.elo_tier == elo_tier)
+                .order_by(Patch.patch_sequence.desc())
+                .first()
+            )
+            if latest is None:
+                return []
+            patch = latest[0]
+
+        query = session.query(ChampionScore).filter_by(elo_tier=elo_tier, patch=patch)
+        if lane:
+            query = query.filter_by(lane=lane)
+        rows = query.all()
+
+        n_matches_by_key = {
+            (r.patch, r.tier, r.lane, r.champion_id): r.n_matches
+            for r in session.query(ChampionPerformanceScore).filter_by(tier=elo_tier, patch=patch).all()
+        }
+
+        return [
+            {
+                "champion_id": row.champion_id,
+                "lane": row.lane,
+                "patch": row.patch,
+                "elo_tier": row.elo_tier,
+                "n_matches": n_matches_by_key.get((row.patch, row.elo_tier, row.lane, row.champion_id), 0),
+                "score_final": row.score_final,
+                "score_tier": row.score_tier,
+                "confianca": row.confianca,
+                "tier_provisorio": row.tier_provisorio,
+                "trap_flag": row.trap_flag,
+                "performance_score": row.performance_score,
+                "kit_score": row.kit_score,
+                "build_score": row.build_score,
+                "meta_score": row.meta_score,
+            }
+            for row in rows
         ]
     finally:
         session.close()

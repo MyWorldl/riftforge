@@ -1,14 +1,14 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { Fragment, useEffect, useState, type FormEvent } from 'react'
 import {
   championImageUrl,
-  fetchChampionStats,
+  fetchChampionScores,
   fetchChampions,
   type ChampionMeta,
-  type ChampionStat,
+  type ChampionScoreRow,
 } from './api/client'
 import './App.css'
 
-const TIERS = [
+const ELO_TIERS = [
   'IRON', 'BRONZE', 'SILVER', 'GOLD', 'PLATINUM',
   'EMERALD', 'DIAMOND', 'MASTER', 'GRANDMASTER', 'CHALLENGER',
 ]
@@ -22,8 +22,16 @@ const LANES = [
   { value: 'UTILITY', label: 'Suporte' },
 ]
 
-function formatPercent(value: number): string {
-  return `${(value * 100).toFixed(1)}%`
+const LANE_LABELS: Record<string, string> = Object.fromEntries(
+  LANES.filter((l) => l.value).map((l) => [l.value, l.label]),
+)
+
+function rowKey(row: ChampionScoreRow): string {
+  return `${row.champion_id}-${row.lane}-${row.patch}`
+}
+
+function formatScore(value: number | null): string {
+  return value === null ? '—' : value.toFixed(1)
 }
 
 function App() {
@@ -31,13 +39,14 @@ function App() {
   const [ddragonPatch, setDdragonPatch] = useState<string>('')
   const [metaError, setMetaError] = useState<string | null>(null)
 
-  const [tier, setTier] = useState('GOLD')
+  const [eloTier, setEloTier] = useState('GOLD')
   const [lane, setLane] = useState('')
   const [patchInput, setPatchInput] = useState('')
 
-  const [stats, setStats] = useState<ChampionStat[] | null>(null)
-  const [statsError, setStatsError] = useState<string | null>(null)
+  const [scores, setScores] = useState<ChampionScoreRow[] | null>(null)
+  const [scoresError, setScoresError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [expandedRow, setExpandedRow] = useState<string | null>(null)
 
   useEffect(() => {
     fetchChampions()
@@ -48,39 +57,40 @@ function App() {
       .catch((err: Error) => setMetaError(err.message))
   }, [])
 
-  const loadStats = (filters: { tier: string; lane: string; patch: string }) => {
+  const loadScores = (filters: { eloTier: string; lane: string; patch: string }) => {
     setLoading(true)
-    setStatsError(null)
-    fetchChampionStats({
-      tier: filters.tier,
+    setScoresError(null)
+    fetchChampionScores({
+      eloTier: filters.eloTier,
       lane: filters.lane || undefined,
       patch: filters.patch || undefined,
     })
-      .then((data) => setStats([...data].sort((a, b) => b.win_rate - a.win_rate)))
-      .catch((err: Error) => setStatsError(err.message))
+      .then((data) => setScores([...data].sort((a, b) => b.score_final - a.score_final)))
+      .catch((err: Error) => setScoresError(err.message))
       .finally(() => setLoading(false))
   }
 
   useEffect(() => {
-    loadStats({ tier, lane, patch: patchInput })
+    loadScores({ eloTier, lane, patch: patchInput })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault()
-    loadStats({ tier, lane, patch: patchInput })
+    setExpandedRow(null)
+    loadScores({ eloTier, lane, patch: patchInput })
   }
 
   return (
     <main id="center">
       <h1>RiftForge</h1>
-      <p>Placar de força dos campeões de League of Legends por elo, rota e patch.</p>
+      <p>Poder dos campeões de League of Legends por elo, rota e patch — score em camadas com tier God-E.</p>
 
       <form className="filters" onSubmit={handleSubmit}>
         <label>
           Elo
-          <select value={tier} onChange={(e) => setTier(e.target.value)}>
-            {TIERS.map((t) => (
+          <select value={eloTier} onChange={(e) => setEloTier(e.target.value)}>
+            {ELO_TIERS.map((t) => (
               <option key={t} value={t}>{t}</option>
             ))}
           </select>
@@ -111,57 +121,91 @@ function App() {
       </form>
 
       {metaError && <p className="error">Não foi possível carregar dados do Data Dragon: {metaError}</p>}
-      {statsError && <p className="error">Backend indisponível: {statsError}</p>}
+      {scoresError && <p className="error">Backend indisponível: {scoresError}</p>}
 
-      {!statsError && stats && stats.length === 0 && (
+      {!scoresError && scores && scores.length === 0 && (
         <p className="empty-state">
-          Sem dados agregados para esse filtro ainda. Rode o job de coleta
-          (<code>python -m app.jobs.collect_stats --tier {tier}</code>) para esse elo.
+          Sem score calculado para esse filtro ainda. Rode o pipeline completo
+          (<code>ingest_matches</code> → <code>aggregate_stats</code> → <code>compute_baselines</code> →{' '}
+          <code>compute_performance</code> → <code>compute_build</code> → <code>compute_meta</code> →{' '}
+          <code>compute_scores</code>) para o elo {eloTier}.
         </p>
       )}
 
-      {stats && stats.length > 0 && (
+      {scores && scores.length > 0 && (
         <table className="stats-table">
           <thead>
             <tr>
               <th>Campeão</th>
               <th>Rota</th>
               <th>Patch</th>
+              <th>Tier</th>
+              <th>Score</th>
+              <th>Confiança</th>
               <th>Partidas</th>
-              <th>Win rate</th>
-              <th>Pick rate</th>
-              <th>Ban rate</th>
-              <th>KDA</th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
-            {stats.map((row) => {
+            {scores.map((row) => {
               const meta = championsMeta?.[row.champion_id]
+              const key = rowKey(row)
+              const expanded = expandedRow === key
               return (
-                <tr key={`${row.champion_id}-${row.lane}-${row.patch}`}>
-                  <td className="champion-cell">
-                    {meta && ddragonPatch && (
-                      <img
-                        src={championImageUrl(ddragonPatch, meta.image.full)}
-                        alt=""
-                        width={32}
-                        height={32}
-                      />
-                    )}
-                    <span>{meta?.name ?? row.champion_id}</span>
-                  </td>
-                  <td>{row.lane}</td>
-                  <td>{row.patch}</td>
-                  <td>{row.games}</td>
-                  <td>{formatPercent(row.win_rate)}</td>
-                  <td>{formatPercent(row.pick_rate)}</td>
-                  <td>{formatPercent(row.ban_rate)}</td>
-                  <td>{row.kda.toFixed(2)}</td>
-                </tr>
+                <Fragment key={key}>
+                  <tr>
+                    <td className="champion-cell">
+                      {meta && ddragonPatch && (
+                        <img
+                          src={championImageUrl(ddragonPatch, meta.image.full)}
+                          alt=""
+                          width={32}
+                          height={32}
+                        />
+                      )}
+                      <span>{meta?.name ?? row.champion_id}</span>
+                      {row.trap_flag && <span className="trap-badge" title="Alta presença (pick/ban) com win rate abaixo do esperado">Trap</span>}
+                    </td>
+                    <td>{LANE_LABELS[row.lane] ?? row.lane}</td>
+                    <td>{row.patch}</td>
+                    <td>
+                      <span className={`tier-badge tier-${row.score_tier}`}>{row.score_tier}</span>
+                      {row.tier_provisorio && <span className="provisional-mark" title="Amostra pequena — tier provisório, teto em A">*</span>}
+                    </td>
+                    <td>{row.score_final.toFixed(1)}</td>
+                    <td>{row.confianca.toFixed(1)}%</td>
+                    <td>{row.n_matches}</td>
+                    <td>
+                      <button
+                        type="button"
+                        className="details-toggle"
+                        onClick={() => setExpandedRow(expanded ? null : key)}
+                      >
+                        {expanded ? 'Ocultar' : 'Camadas'}
+                      </button>
+                    </td>
+                  </tr>
+                  {expanded && (
+                    <tr className="layer-row">
+                      <td colSpan={8}>
+                        <div className="layer-breakdown">
+                          <span>Performance (40%): <strong>{formatScore(row.performance_score)}</strong></span>
+                          <span>Kit (25%): <strong>{formatScore(row.kit_score)}</strong>{row.kit_score === null && ' (sem dado pro patch)'}</span>
+                          <span>Build (25%): <strong>{formatScore(row.build_score)}</strong></span>
+                          <span>Meta (10%): <strong>{formatScore(row.meta_score)}</strong></span>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
               )
             })}
           </tbody>
         </table>
+      )}
+
+      {scores && scores.length > 0 && (
+        <p className="table-footnote">* tier provisório: amostra ainda abaixo do piso de confiança, travado no máximo em A.</p>
       )}
     </main>
   )

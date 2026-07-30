@@ -96,3 +96,80 @@
 .champion-cell img {
   border-radius: 4px;
 }
+
+.tier-badge {
+  display: inline-block;
+  min-width: 28px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 700;
+  font-size: 13px;
+  text-align: center;
+  color: #fff;
+}
+
+.tier-badge.tier-GOD { background: #d4a017; }
+.tier-badge.tier-S { background: #d0393e; }
+.tier-badge.tier-A { background: #aa3bff; }
+.tier-badge.tier-B { background: #2f7ed8; }
+.tier-badge.tier-C { background: #2fa84f; }
+.tier-badge.tier-D { background: #7a7a7a; }
+.tier-badge.tier-E { background: #4a4a4a; }
+
+.provisional-mark {
+  margin-left: 4px;
+  color: var(--text);
+  cursor: help;
+}
+
+.trap-badge {
+  margin-left: 8px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  color: #b3261e;
+  background: rgba(179, 38, 30, 0.12);
+  border: 1px solid rgba(179, 38, 30, 0.4);
+  cursor: help;
+}
+
+.details-toggle {
+  font: inherit;
+  font-size: 13px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.details-toggle:hover {
+  border-color: var(--accent-border);
+  color: var(--accent);
+}
+
+.layer-row td {
+  padding: 4px 12px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.layer-breakdown {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  font-size: 14px;
+  color: var(--text);
+  background: var(--code-bg);
+  border-radius: 6px;
+  padding: 10px 14px;
+}
+
+.table-footnote {
+  font-size: 13px;
+  color: var(--text);
+  width: 100%;
+  max-width: 900px;
+}
