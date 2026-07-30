@@ -76,7 +76,8 @@ Baseado em `Core/Estrutura_roadmap/00_INDEX.md` (fonte de verdade atual — tem 
 - [x] 1.9 — Testes de contrato de schema do ddragon (já coberto desde a Fase 1 v0 por `backend/tests/test_schema.py`).
 - [x] 1.2 — Camada 2, Kit (versão automática): `app/jobs/compute_kit.py`. Confirmado na prática o risco de `13_ESTRATEGIA_DADOS_KIT.md` — `spells[].vars` vem vazio no Data Dragon atual, então `cc_score`/`mobilidade_score` ficam `None` (sem sinal numérico possível); `dano_score`/`resiliencia_score` usam `info.attack`/`info.magic`/`info.defense` (rating oficial da Riot); `alcance_score` por percentil real. 233 campeões processados, incluindo tratamento de campeões com `info` zerado (dado quebrado do ddragon).
 - [x] 1.3 — Camada 3, Sinergia de Build: `app/jobs/compute_build.py`. Entropia de Shannon (flexibilidade), dependência de build ótimo (invertida) e power spike de item, suavizados por média móvel de 3 patches com redistribuição proporcional quando falta histórico (`champion_build_patch` + `champion_build_scores`). Validado matematicamente contra um caso real com os 3 patches disponíveis.
-- [ ] 1.4 — Camada 4, Contexto de Meta — **próximo passo**, ver `Core/Estrutura_roadmap/17_ESTADO_IMPLEMENTADO.md` §9.
-- [ ] 1.5–1.8 — Tiers, indicador de confiança, selo Trap, interface com filtro — não iniciados.
+- [x] 1.4 — Camada 4, Contexto de Meta: `app/jobs/compute_meta.py`. `Nota_Cobertura` (propriedade do grupo patch/tier/lane, compartilhada entre campeões) + `Nota_Tendencia` (regressão linear do performance_score por campeão, normalizada por percentil). **As 4 camadas do modelo de score existem em código.**
+- [ ] 1.5 — Atribuição de tier + indicador de confiança (combina as 4 camadas no SCORE final) — **próximo passo**, ver `Core/Estrutura_roadmap/17_ESTADO_IMPLEMENTADO.md` §9.
+- [ ] 1.6–1.8 — Trava de amostra fina, selo Trap, interface com filtro — não iniciados.
 
 Detalhe completo do que mudou: `Core/Estrutura_roadmap/17_ESTADO_IMPLEMENTADO.md`.

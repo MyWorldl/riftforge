@@ -256,3 +256,32 @@ class ChampionBuildScore(Base):
     patches_disponiveis: Mapped[int]
 
     __table_args__ = (UniqueConstraint("patch", "tier", "lane", "champion_id"),)
+
+
+class ChampionMetaContext(Base):
+    """Camada 4 do score — Contexto de Meta (Core
+    §02_MODELO_SCORE_TIERS.md §7). Corresponde a `champion_meta_context` em
+    Core §15_SCHEMA_DADOS.md §9.1.
+
+    `cobertura`/`nota_cobertura` são propriedade do GRUPO (patch, tier,
+    lane) — descrevem a saúde do metagame ao redor de todos os campeões
+    daquela rota, não algo exclusivo de um campeão — então todo campeão do
+    mesmo grupo recebe o mesmo valor (mesmo princípio já usado pro
+    percentil de ban rate na Camada 1)."""
+
+    __tablename__ = "champion_meta_context"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    patch: Mapped[str]
+    tier: Mapped[str]
+    lane: Mapped[str]
+    champion_id: Mapped[str]
+
+    cobertura: Mapped[float]
+    nota_cobertura: Mapped[float]
+    slope_performance: Mapped[float | None]
+    patches_usados_tendencia: Mapped[int]
+    nota_tendencia: Mapped[float]
+    meta_score: Mapped[float]
+
+    __table_args__ = (UniqueConstraint("patch", "tier", "lane", "champion_id"),)
