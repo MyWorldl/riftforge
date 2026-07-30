@@ -24,6 +24,8 @@ from collections import defaultdict
 from datetime import datetime, timezone
 
 from app.core.config import get_settings
+from app.core.stats import percentile_rank as _percentile_rank
+from app.core.stats import wilson_lower_bound
 from app.db.models import (
     Baseline,
     ChampionBanStat,
@@ -32,24 +34,12 @@ from app.db.models import (
     SegmentTotal,
 )
 from app.db.session import SessionLocal, init_db
-from app.jobs.compute_baselines import wilson_lower_bound
 
 MODEL_VERSION = "performance_v1"
 
 
 def _logistic_nota(z: float, fator: float) -> float:
     return 100 / (1 + math.exp(-fator * z))
-
-
-def _percentile_rank(values: list[float], value: float) -> float:
-    """Percentil por rank médio: empates recebem o percentil do meio do
-    grupo empatado, em vez de favorecer o maior ou o menor valor."""
-    n = len(values)
-    if n == 0:
-        return 0.0
-    less = sum(1 for v in values if v < value)
-    equal = sum(1 for v in values if v == value)
-    return (less + 0.5 * equal) / n * 100
 
 
 def compute() -> dict:

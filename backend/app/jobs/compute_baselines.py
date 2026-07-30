@@ -20,20 +20,9 @@ Uso: python -m app.jobs.compute_baselines
 import math
 
 from app.core.config import get_settings
+from app.core.stats import wilson_lower_bound
 from app.db.models import Baseline, ChampionLaneStat
 from app.db.session import SessionLocal, init_db
-
-
-def wilson_lower_bound(wins: int, n: int, z: float) -> float:
-    """Limite inferior do intervalo de Wilson para uma proporção — ver
-    Core/Estrutura_roadmap/02_MODELO_SCORE_TIERS.md §4.1 para a fórmula."""
-    if n == 0:
-        return 0.0
-    p = wins / n
-    denominator = 1 + z**2 / n
-    center = p + z**2 / (2 * n)
-    margin = z * math.sqrt(p * (1 - p) / n + z**2 / (4 * n**2))
-    return (center - margin) / denominator
 
 
 def _trimmed_mean_std(values: list[float], trim_pct: float) -> tuple[float, float]:

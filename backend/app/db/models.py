@@ -171,3 +171,40 @@ class ChampionPerformanceScore(Base):
     computed_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc))
 
     __table_args__ = (UniqueConstraint("patch", "tier", "lane", "champion_id"),)
+
+
+class ChampionKitScore(Base):
+    """Camada 2 do score — Poder Intrínseco do Kit, 25% do peso final (Core
+    §02_MODELO_SCORE_TIERS.md §5). Não varia por rota nem elo — só por
+    campeão e patch (o kit é propriedade do personagem). Corresponde a
+    `champion_kit_scores` em Core §15_SCHEMA_DADOS.md §7.1.
+
+    v1 automática: cc_score e mobilidade_score ficam None porque o Data
+    Dragon não expõe sinal numérico confiável pra esses eixos (os
+    coeficientes de escala em spells[].vars vêm vazios na versão atual da
+    API — risco descrito em Core §13_ESTRATEGIA_DADOS_KIT.md, confirmado na
+    prática). dano_score e resiliencia_score usam `info.attack`/
+    `info.defense` (classificação oficial 0-10 da própria Riot); alcance_score
+    é calculado por percentil dentro do roster. kit_score redistribui o peso
+    proporcionalmente entre os eixos disponíveis, nunca trata o ausente como
+    zero (mesmo princípio já usado na média móvel de Build, Core
+    §16_BASELINES_CALIBRACAO.md §7.1)."""
+
+    __tablename__ = "champion_kit_scores"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    patch: Mapped[str]
+    champion_id: Mapped[str]
+
+    cc_score: Mapped[float | None]
+    dano_score: Mapped[float | None]
+    mobilidade_score: Mapped[float | None]
+    alcance_score: Mapped[float | None]
+    resiliencia_score: Mapped[float | None]
+    kit_score: Mapped[float]
+
+    versao_calculo: Mapped[str]
+    eixos_disponiveis: Mapped[list] = mapped_column(JSON)
+    computed_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc))
+
+    __table_args__ = (UniqueConstraint("patch", "champion_id"),)

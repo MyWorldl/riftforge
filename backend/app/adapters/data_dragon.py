@@ -35,3 +35,13 @@ class DataDragonAdapter:
             response = await client.get(url)
             response.raise_for_status()
         return response.json()["data"]
+
+    async def get_champion_detail(self, version: str, champion_id: str, locale: str = "en_US") -> dict:
+        """Per-champion endpoint — the only one with full `spells[].range` and
+        `info` (Riot's own 0-10 attack/defense/magic rating). The summary
+        endpoint (`get_champions`) omits some of this detail."""
+        url = f"/cdn/{version}/data/{locale}/champion/{champion_id}.json"
+        async with httpx.AsyncClient(base_url=self._base_url) as client:
+            response = await client.get(url)
+            response.raise_for_status()
+        return response.json()["data"][champion_id]
