@@ -88,4 +88,16 @@ Baseado em `Core/Estrutura_roadmap/00_INDEX.md` (fonte de verdade atual — tem 
 - [ ] 3.4 — Histórico de evolução do campeão entre patches (gráfico).
 - [ ] 3.5 — Comparador de matchups dedicado.
 
+## Coleta em volume (2026-07-30)
+
+Primeira coleta real: **15 → ~5.100 partidas** (Gold I–IV), gerando 5.416 linhas de score. Três correções saíram de medição, não de suposição:
+
+- **Janela de tempo na ingestão** (`--since-days`, padrão 42): sem ela, as partidas caíam em 38 patches com só 24% no mais recente — ~76% da cota da Riot ia para patches que nenhuma consulta alcança.
+- **Camada 2 (Kit) ativada**: só existia para 16.15 (3,2% do dado), então 25% do peso do modelo nunca tinha influenciado score nenhum. Agora cobre 16.10–16.15 a 100%.
+- **Ingestão resiliente**: sessão por invocador (o Supabase derrubava a conexão em execuções longas) e falha isolada por invocador.
+
+Validado com o volume: a trava de segurança rebaixou 70 linhas da faixa S para A (ramo que nunca tinha rodado com dado real), o selo Trap saiu de 1 para 248, e o topo do quadro ficou plausível.
+
+**Limite conhecido:** todo tier segue provisório — a melhor combinação chega a 10,1% de confiança contra um piso de 30%. Chegar lá exige ~1,5 h de coleta *dentro* da janela de ~2 semanas do patch. Ver `Core/Estrutura_roadmap/17_ESTADO_IMPLEMENTADO.md` §rodada 12.
+
 Detalhe completo do que mudou: `Core/Estrutura_roadmap/17_ESTADO_IMPLEMENTADO.md`.
