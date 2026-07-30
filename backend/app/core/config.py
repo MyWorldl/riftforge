@@ -28,6 +28,18 @@ class Settings(BaseSettings):
     rate_limit_default: str = "60/minute"
     rate_limit_riot_proxy: str = "10/minute"
 
+    # Parâmetros de calibração do modelo de score (Core/Estrutura_roadmap/
+    # 02_MODELO_SCORE_TIERS.md, 16_BASELINES_CALIBRACAO.md) — nunca hardcoded
+    # no código de cálculo, conforme 05_BOAS_PRATICAS_CODIGO.md §7.
+    wilson_z: float = 1.96  # 95% de confiança — padrão estatístico, baixa prioridade de recalibração
+    # EM ABERTO em 16_BASELINES_CALIBRACAO.md §2/§8: percentual de corte da
+    # média/desvio aparados ainda não validado contra dados reais. 0.10 =
+    # remove 5% de cada ponta antes de calcular média/desvio do baseline.
+    baseline_trim_pct: float = 0.10
+    # EM ABERTO em 16_BASELINES_CALIBRACAO.md §3/§8: nº mínimo de campeões no
+    # grupo (rota, elo, patch) pra considerar o baseline confiável.
+    baseline_min_champions: int = 5
+
 
 @lru_cache
 def get_settings() -> Settings:

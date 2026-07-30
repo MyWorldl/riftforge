@@ -118,3 +118,23 @@ class SegmentTotal(Base):
     total_matches: Mapped[int] = mapped_column(default=0)
 
     __table_args__ = (UniqueConstraint("patch", "tier"),)
+
+
+class Baseline(Base):
+    """μ/σ of Wilson-adjusted win rate per (lane, tier, patch) — describes the
+    group, not an individual champion, so there's deliberately no champion key
+    (Core §15_SCHEMA_DADOS.md §10.1). Used to z-score each champion's win rate
+    against its direct peers (Core §02_MODELO_SCORE_TIERS.md §4.1)."""
+
+    __tablename__ = "baselines"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    patch: Mapped[str]
+    tier: Mapped[str]
+    lane: Mapped[str]
+    media_wr: Mapped[float]
+    desvio_wr: Mapped[float]
+    n_campeoes_amostra: Mapped[int]
+    amostra_confiavel: Mapped[bool]
+
+    __table_args__ = (UniqueConstraint("patch", "tier", "lane"),)

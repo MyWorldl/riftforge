@@ -68,6 +68,11 @@ Baseado em `Core/Estrutura_roadmap/00_INDEX.md` (fonte de verdade atual — tem 
 - [x] 0.3 (núcleo) — Schema modelado pela tupla de análise: tabelas `patches`/`matches`/`match_participants`/`match_bans` seguindo `Core/Estrutura_roadmap/15_SCHEMA_DADOS.md`.
 - [x] 0.4 — Cache local do Data Dragon por versão (já existia via `target_patch_version` + adapter).
 - [x] 0.5 — Camada de acesso a dados (adapters já existiam desde a Fase 1/2 acima).
-- [ ] 0.6 — Cálculo de baselines (μ, σ) por rota/elo/patch — **próximo passo**, ver `Core/Estrutura_roadmap/17_ESTADO_IMPLEMENTADO.md` §9.
+- [x] 0.6 — Cálculo de baselines (μ, σ) por rota/elo/patch: `app/jobs/compute_baselines.py`, win rate ajustado por Wilson + média/desvio aparados, flag de amostra insuficiente. Testado contra dados reais no Supabase.
+
+## Core — Fase 1 (MVP do score)
+
+- [ ] 1.1 — Camada 1, Performance Real (Wilson + normalização) — **próximo passo**, ver `Core/Estrutura_roadmap/17_ESTADO_IMPLEMENTADO.md` §9.
+- [ ] 1.2–1.9 — Kit, Build, Meta, tiers, indicador de confiança, selo Trap, interface com filtro, testes de contrato — não iniciados.
 
 Detalhe completo do que mudou: `Core/Estrutura_roadmap/17_ESTADO_IMPLEMENTADO.md`.
