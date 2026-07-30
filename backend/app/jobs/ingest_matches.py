@@ -87,11 +87,19 @@ def ingest(
 
     new_matches = 0
     skipped_existing = 0
+    failed_summoners = 0
 
-    session = SessionLocal()
-    try:
-        for i, puuid in enumerate(puuids, start=1):
-            print(f"[{i}/{len(puuids)}] buscando histórico de partidas...", flush=True)
+    for i, puuid in enumerate(puuids, start=1):
+        print(f"[{i}/{len(puuids)}] buscando histórico de partidas...", flush=True)
+
+        # Uma sessão por invocador, não uma para a execução inteira: uma
+        # coleta grande leva dezenas de minutos, e o Supabase derruba
+        # conexão de vida longa no meio do caminho ("server closed the
+        # connection unexpectedly") — aconteceu de verdade numa coleta de
+        # 150 invocadores. Escopar por invocador limita a vida da conexão
+        # a alguns segundos.
+        session = SessionLocal()
+        try:
             match_ids = riot.get_match_ids_by_puuid(
                 puuid, count=matches_per_summoner, queue=queue_id, start_time=start_time
             )
@@ -156,13 +164,27 @@ def ingest(
 
                 new_matches += 1
 
-            # Commit incrementally so Ctrl+C ou uma queda no meio não perde
-            # o trabalho já feito de partidas anteriores nesta execução.
+            # Commit por invocador: Ctrl+C ou uma queda no meio não perde o
+            # trabalho já feito nesta execução.
             session.commit()
-    finally:
-        session.close()
+        except Exception as exc:
+            # Uma falha pontual (conexão derrubada, timeout da Riot) não
+            # deve abortar uma coleta de dezenas de minutos — o invocador é
+            # pulado e a execução segue. Como a dedup é por match_id no
+            # banco, rodar de novo depois recupera o que faltou sem
+            # recontar nada.
+            session.rollback()
+            failed_summoners += 1
+            print(f"  ! invocador {i} falhou, seguindo: {type(exc).__name__}: {exc}", flush=True)
+        finally:
+            session.close()
 
-    return {"summoners": len(puuids), "new_matches": new_matches, "skipped_existing": skipped_existing}
+    return {
+        "summoners": len(puuids),
+        "new_matches": new_matches,
+        "skipped_existing": skipped_existing,
+        "failed_summoners": failed_summoners,
+    }
 
 
 def main() -> None:
@@ -191,7 +213,8 @@ def main() -> None:
     )
     print(
         f"Ingestão concluída: {result['summoners']} invocadores, "
-        f"{result['new_matches']} partidas novas, {result['skipped_existing']} já existiam no banco."
+        f"{result['new_matches']} partidas novas, {result['skipped_existing']} já existiam no banco"
+        + (f", {result['failed_summoners']} invocadores falharam." if result["failed_summoners"] else ".")
     )
 
 
