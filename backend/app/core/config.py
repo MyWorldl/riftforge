@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///./riftforge.db"
 
     app_env: str = "development"
-    cors_origins: str = "http://localhost:5173,https://riftforge-datadog-monitors.vercel.app"
+    cors_origins: str = "http://localhost:5173,https://riftforge-self.vercel.app"
 
     # Rate limiting por IP (protege a cota da Riot API e o backend contra abuso).
     rate_limit_default: str = "60/minute"
