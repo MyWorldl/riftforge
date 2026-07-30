@@ -1,0 +1,78 @@
+name: Coleta diária
+
+# Por que diária, e não avulsa: a confiança do score é medida por
+# (patch, elo, rota, campeão), e um patch dura ~14 dias (medido: 16.12=13d,
+# 16.13=21d, 16.14=14d). Partida de patch encerrado não recupera mais aquela
+# janela — se a coleta não acontecer durante a vida do patch, aquele patch
+# nunca sai de "tier provisório". Ver Core/Estrutura_roadmap/17_ESTADO_IMPLEMENTADO.md
+# §rodada 12.
+
+on:
+  schedule:
+    # 06:00 UTC = 03:00 BRT, fora do horário de pico.
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+    inputs:
+      puuid_limit:
+        description: "Invocadores por divisão"
+        required: false
+        default: "100"
+
+# Duas execuções simultâneas competiriam pela mesma cota da Riot e
+# atrapalhariam uma à outra sem coletar mais nada.
+concurrency:
+  group: coleta
+  cancel-in-progress: false
+
+jobs:
+  coletar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      RIOT_API_KEY: ${{ secrets.RIOT_API_KEY }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      PUUID_LIMIT: ${{ github.event.inputs.puuid_limit || '100' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Instalar dependências
+        run: pip install -r requirements.txt
+
+      # Divisões separadas porque o endpoint de League-V4 exige divisão
+      # explícita. Todas gravam elo_tier="GOLD" — o balde é o mesmo, o que
+      # a divisão faz é tornar a amostra representativa do ouro inteiro em
+      # vez de só a divisão mais alta.
+      - name: Coletar partidas (Gold I-IV)
+        run: |
+          for DIV in I II III IV; do
+            echo "::group::Gold $DIV"
+            python -m app.jobs.ingest_matches \
+              --tier GOLD --division "$DIV" \
+              --puuid-limit "$PUUID_LIMIT" --matches-per-summoner 20
+            echo "::endgroup::"
+          done
+
+      # Kit não depende de partida, só do Data Dragon. Roda para a versão
+      # mais recente porque é o patch que está ganhando dado agora; sem
+      # isso, as linhas do patch corrente ficariam sem a Camada 2 (25% do
+      # peso) e o peso seria redistribuído sem necessidade.
+      - name: Recalcular Camada 2 (Kit) do patch corrente
+        run: python -m app.jobs.compute_kit
+
+      # Todos os estágios são delete-and-recompute, então rodar o pipeline
+      # inteiro a cada coleta é idempotente e mantém o site em dia.
+      - name: Reprocessar pipeline
+        run: |
+          python -m app.jobs.aggregate_stats
+          python -m app.jobs.compute_baselines
+          python -m app.jobs.compute_performance
+          python -m app.jobs.compute_build
+          python -m app.jobs.compute_meta
+          python -m app.jobs.compute_scores
