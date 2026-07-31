@@ -27,14 +27,16 @@
 .top-bar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  /* Era space-between (título e abas em pontas opostas) — agora as abas
+     ficam coladas ao título à esquerda, com um respiro entre os dois. */
+  gap: 32px;
   padding: 16px 20px;
   border-bottom: 1px solid var(--border);
 }
 
 .top-bar .brand {
   font-family: var(--heading);
-  font-size: 20px;
+  font-size: 28px;
   font-weight: 700;
   color: var(--text-h);
   text-decoration: none;
@@ -60,6 +62,7 @@
 
 .nav-row {
   display: flex;
+  justify-content: center;
   gap: 4px;
   flex-wrap: wrap;
   padding: 0 20px;
