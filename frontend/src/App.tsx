@@ -448,6 +448,13 @@ function App() {
       {scores && scores.length > 0 && (
         <p className="table-footnote">* tier provisório: amostra ainda abaixo do piso de confiança, travado no máximo em A.</p>
       )}
+
+      <footer className="riot-disclaimer">
+        RiftForge não é endossado pela Riot Games e não reflete os pontos de vista ou opiniões da Riot
+        Games ou de qualquer pessoa oficialmente envolvida na produção ou gerenciamento de League of
+        Legends. League of Legends e Riot Games são marcas registradas ou marcas comerciais da Riot
+        Games, Inc.
+      </footer>
     </main>
   )
 }

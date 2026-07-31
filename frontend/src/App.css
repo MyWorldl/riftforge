@@ -440,3 +440,17 @@
   font-size: 12px;
   color: var(--text);
 }
+
+/* Aviso de não-afiliação (04_COMPLIANCE_LIMITES_API.md §3.2 — obrigatório
+   pelos Termos de Uso da Riot). Sempre visível, não condicionado a nada
+   carregar, porque a obrigação não depende de o app ter dado pra mostrar. */
+.riot-disclaimer {
+  width: 100%;
+  max-width: 900px;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text);
+}

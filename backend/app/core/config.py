@@ -33,6 +33,15 @@ class Settings(BaseSettings):
     # um patch a mais que perder o terceiro).
     ingest_days_window: int = 42
 
+    # Política de retenção de PUUID (Core §06_SEGURANCA_PRIVACIDADE.md §7,
+    # rodada 18). Mesmo valor de `ingest_days_window` de propósito: PUUID
+    # só serve pra viabilizar a expansão "bola de neve" a partir de
+    # partidas ainda dentro da janela de coleta ativa — uma vez fora dela,
+    # a mesma lógica que já decide "não vale mais buscar essa partida de
+    # novo" também decide "não vale mais guardar quem jogou ela". Ver
+    # app/jobs/purge_puuid.py.
+    puuid_retention_days: int = 42
+
     app_env: str = "development"
     cors_origins: str = "http://localhost:5173,https://riftforge-self.vercel.app"
 

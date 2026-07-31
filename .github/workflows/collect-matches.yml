@@ -83,3 +83,10 @@ jobs:
           python -m app.jobs.compute_build
           python -m app.jobs.compute_meta
           python -m app.jobs.compute_scores
+
+      # Política de retenção de PUUID (06_SEGURANCA_PRIVACIDADE.md §7, rodada
+      # 18): zera o vínculo com o jogador passada a janela de coleta ativa.
+      # Roda por último e não bloqueia o pipeline acima em caso de falha.
+      - name: Expurgar PUUID fora da janela de retenção
+        continue-on-error: true
+        run: python -m app.jobs.purge_puuid

@@ -44,7 +44,14 @@ class MatchParticipant(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     match_id: Mapped[str] = mapped_column(ForeignKey("matches.match_id"))
-    puuid: Mapped[str]
+    # Nulável desde a rodada 18 (política de retenção,
+    # Core/Estrutura_roadmap/06_SEGURANCA_PRIVACIDADE.md §7): PUUID só
+    # existe pra viabilizar a expansão "bola de neve" por participantes
+    # (11_PIPELINE_INGESTAO.md §2.2, ainda não construída) — passada a
+    # janela de coleta ativa, não há mais justificativa funcional pra
+    # retê-lo (princípio de minimização, §2 do mesmo doc). Ver
+    # app/jobs/purge_puuid.py.
+    puuid: Mapped[str | None]
     riot_champion_id: Mapped[int]
     champion_name: Mapped[str]
     team_id: Mapped[int]
