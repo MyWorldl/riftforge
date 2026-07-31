@@ -42,6 +42,15 @@
   text-decoration: none;
 }
 
+/* Empurra o grupo tema/config pro canto direito da barra — tudo antes
+   dele (título + League of Legends/Desktop) fica agrupado à esquerda. */
+.top-bar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
 .top-bar-tabs {
   display: flex;
   gap: 16px;
@@ -326,6 +335,18 @@
   border-color: var(--accent-border);
   color: var(--accent);
   background: var(--accent-bg);
+}
+
+/* Botão de "Configurações (em breve)" — visível como preview, mas sem
+   fingir que é clicável de verdade. */
+.icon-toggle:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.icon-toggle:disabled:hover {
+  border-color: var(--border);
+  color: var(--text);
 }
 
 .layer-row td {

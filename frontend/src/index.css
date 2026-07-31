@@ -80,6 +80,43 @@
   }
 }
 
+/* Alternância manual (rodada 21) — o script inline em index.html sempre
+   define um dos dois atributos antes da primeira pintura, então estas
+   regras (seletor com atributo, mais específico que o `:root` sozinho
+   acima) vencem o `prefers-color-scheme` sempre que o usuário escolheu
+   um tema explicitamente, em vez de só seguir o sistema. */
+:root[data-theme='dark'] {
+  --text: #9ca3af;
+  --text-h: #f3f4f6;
+  --bg: #16171d;
+  --border: #2e303a;
+  --code-bg: #1f2028;
+  --accent: #c084fc;
+  --accent-bg: rgba(192, 132, 252, 0.15);
+  --accent-border: rgba(192, 132, 252, 0.5);
+  --social-bg: rgba(47, 48, 58, 0.5);
+  --pos: #3fb950;
+  --neg: #f85149;
+  --shadow:
+    rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
+}
+
+:root[data-theme='light'] {
+  --text: #6b6375;
+  --text-h: #08060d;
+  --bg: #fff;
+  --border: #e5e4e7;
+  --code-bg: #f4f3ec;
+  --accent: #aa3bff;
+  --accent-bg: rgba(170, 59, 255, 0.1);
+  --accent-border: rgba(170, 59, 255, 0.5);
+  --social-bg: rgba(244, 243, 236, 0.5);
+  --pos: #1a7f37;
+  --neg: #b3261e;
+  --shadow:
+    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+}
+
 /* Era limitado a 1126px com borda lateral (efeito "cartão centralizado") —
    isso prendia a barra de navegação dentro do mesmo limite do conteúdo.
    Agora #root ocupa a largura inteira da janela (like OP.GG/op-style
