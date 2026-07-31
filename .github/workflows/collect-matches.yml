@@ -63,7 +63,14 @@ jobs:
       # mais recente porque é o patch que está ganhando dado agora; sem
       # isso, as linhas do patch corrente ficariam sem a Camada 2 (25% do
       # peso) e o peso seria redistribuído sem necessidade.
+      #
+      # continue-on-error: uma falha de rede transitória contra o Data
+      # Dragon (já aconteceu: httpx.ConnectTimeout num runner do GitHub)
+      # não pode travar o reprocessamento das partidas que a etapa anterior
+      # já coletou com sucesso — a Camada 2 fica com o Kit do dia anterior
+      # (não com dado nenhum), o resto do pipeline não fica pra trás.
       - name: Recalcular Camada 2 (Kit) do patch corrente
+        continue-on-error: true
         run: python -m app.jobs.compute_kit
 
       # Todos os estágios são delete-and-recompute, então rodar o pipeline
