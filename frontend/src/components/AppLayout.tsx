@@ -1,13 +1,76 @@
+import type { ReactNode } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import ThemeToggle from './ThemeToggle'
 
-const NAV_ITEMS: { to: string; label: string; end?: boolean }[] = [
-  { to: '/', label: 'Home', end: true },
-  { to: '/campeoes', label: 'Campeões' },
-  { to: '/classificacoes', label: 'Classificações' },
-  { to: '/jogador', label: 'Análise do Jogador' },
-  { to: '/patch-notes', label: 'Patch Notes' },
+function IconHome() {
+  return (
+    <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
+      <path d="M2 7.5 8 2l6 5.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+      <path d="M3.5 6.5V13.5a.5.5 0 0 0 .5.5h3v-4h2v4h3a.5.5 0 0 0 .5-.5V6.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+    </svg>
+  )
+}
+
+function IconShield() {
+  return (
+    <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
+      <path d="M8 1.5 13 3.5v4c0 3.5-2.2 5.8-5 7-2.8-1.2-5-3.5-5-7v-4L8 1.5Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" fill="none" />
+    </svg>
+  )
+}
+
+function IconTrophy() {
+  return (
+    <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
+      <path d="M4.5 2.5h7v3.5a3.5 3.5 0 0 1-7 0v-3.5Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" fill="none" />
+      <path d="M4.5 3.5h-2v1.5a2 2 0 0 0 2 2M11.5 3.5h2v1.5a2 2 0 0 1-2 2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" fill="none" />
+      <path d="M8 9.5v2M6 14.5h4M6.5 12.5h3l.5 2h-4l.5-2Z" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+    </svg>
+  )
+}
+
+function IconUser() {
+  return (
+    <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
+      <circle cx="8" cy="5.2" r="2.4" stroke="currentColor" strokeWidth="1.4" fill="none" />
+      <path d="M2.8 14c0-2.9 2.3-4.8 5.2-4.8s5.2 1.9 5.2 4.8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" fill="none" />
+    </svg>
+  )
+}
+
+function IconFileText() {
+  return (
+    <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
+      <path d="M4 1.5h6l2.5 2.5V14a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-12a.5.5 0 0 1 .5-.5Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" fill="none" />
+      <path d="M5.5 7.5h5M5.5 10h5M5.5 5h2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" fill="none" />
+    </svg>
+  )
+}
+
+const NAV_ITEMS: { to: string; label: string; icon: ReactNode; end?: boolean }[] = [
+  { to: '/', label: 'Home', icon: <IconHome />, end: true },
+  { to: '/campeoes', label: 'Campeões', icon: <IconShield /> },
+  { to: '/classificacoes', label: 'Classificações', icon: <IconTrophy /> },
+  { to: '/jogador', label: 'Análise do Jogador', icon: <IconUser /> },
+  { to: '/patch-notes', label: 'Patch Notes', icon: <IconFileText /> },
 ]
+
+function IconChevronDown() {
+  return (
+    <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
+      <path d="M3.5 6 8 10.5 12.5 6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+    </svg>
+  )
+}
+
+function IconDesktop() {
+  return (
+    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+      <rect x="1.5" y="2.5" width="13" height="8.5" rx="1" stroke="currentColor" strokeWidth="1.3" fill="none" />
+      <path d="M6 14h4M8 11v3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+    </svg>
+  )
+}
 
 function IconSettings() {
   return (
@@ -38,8 +101,18 @@ function AppLayout() {
       <header className="top-bar">
         <NavLink to="/" className="brand">RiftForge</NavLink>
         <nav className="top-bar-tabs">
-          <span className="top-bar-tab top-bar-tab-active">League of Legends</span>
-          <NavLink to="/desktop" className="top-bar-tab">Desktop</NavLink>
+          <span className="top-bar-game-selector">
+            League of Legends
+            <IconChevronDown />
+          </span>
+          <NavLink
+            to="/desktop"
+            className="top-bar-desktop-link"
+            title="Baixar o RiftForge para desktop"
+          >
+            <IconDesktop />
+            Desktop
+          </NavLink>
         </nav>
 
         <div className="top-bar-actions">
@@ -66,6 +139,7 @@ function AppLayout() {
             end={item.end}
             className={({ isActive }) => `nav-link ${isActive ? 'nav-link-active' : ''}`}
           >
+            {item.icon}
             {item.label}
           </NavLink>
         ))}

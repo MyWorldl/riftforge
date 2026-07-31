@@ -53,46 +53,74 @@
 
 .top-bar-tabs {
   display: flex;
-  gap: 16px;
-  font-size: 14px;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
 }
 
-.top-bar-tab {
+/* Não é um botão de verdade — só há um jogo hoje, então não há pra onde
+   clicar. A seta é só uma pista visual de que isso vira um seletor
+   quando existir mais de um jogo. */
+.top-bar-game-selector {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-h);
+}
+
+.top-bar-desktop-link {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
   color: var(--text);
   text-decoration: none;
-  padding: 4px 8px;
-  border-radius: 6px;
 }
 
-.top-bar-tab-active,
-.top-bar-tab:hover {
+.top-bar-desktop-link:hover {
   color: var(--accent);
+  border-color: var(--accent-border);
 }
 
 .nav-row {
   display: flex;
   justify-content: center;
-  gap: 4px;
+  gap: 8px;
   flex-wrap: wrap;
-  padding: 0 20px;
+  padding: 12px 20px;
   border-bottom: 1px solid var(--border);
 }
 
+/* Ícone + texto (opção A) com o item ativo virando uma pílula preenchida
+   (opção B) — mesmo padrão visual já usado em .icon-toggle-active, em
+   vez de reinventar uma cor de destaque nova. */
 .nav-link {
-  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
   font-size: 14px;
   color: var(--text);
   text-decoration: none;
-  border-bottom: 2px solid transparent;
+  border-radius: 999px;
+  border: 1px solid transparent;
 }
 
 .nav-link:hover {
   color: var(--text-h);
+  background: var(--code-bg);
 }
 
-.nav-link-active {
+.nav-link-active,
+.nav-link-active:hover {
   color: var(--accent);
-  border-bottom-color: var(--accent);
+  background: var(--accent-bg);
+  border-color: var(--accent-border);
 }
 
 .hero {
