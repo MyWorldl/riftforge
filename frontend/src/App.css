@@ -1,5 +1,9 @@
 /* Era `#center` — virou classe porque agora várias páginas (uma por
-   rota, nunca duas montadas ao mesmo tempo) usam o mesmo wrapper. */
+   rota, nunca duas montadas ao mesmo tempo) usam o mesmo wrapper.
+   max-width+margin:auto migrou de `#root` (index.css) pra cá: a barra de
+   navegação (.top-bar/.nav-row, fora deste elemento) agora ocupa a
+   largura inteira da janela, só o conteúdo da página mantém a largura de
+   leitura de antes. */
 .center {
   display: flex;
   flex-direction: column;
@@ -9,6 +13,8 @@
   text-align: left;
   flex: 1;
   width: 100%;
+  max-width: 1126px;
+  margin: 0 auto;
   box-sizing: border-box;
 }
 
@@ -588,10 +594,16 @@
 .riot-disclaimer {
   width: 100%;
   max-width: 900px;
-  margin-top: 24px;
+  /* Fica fora de `.center` (é irmão, dentro de `.app-shell`) — precisa do
+     próprio auto-centering agora que `.app-shell` ocupa a largura inteira
+     da janela, senão gruda na borda esquerda em telas largas. */
+  margin: 24px auto 0;
   padding-top: 16px;
+  padding-left: 20px;
+  padding-right: 20px;
   border-top: 1px solid var(--border);
   font-size: 12px;
   line-height: 1.5;
   color: var(--text);
+  box-sizing: border-box;
 }

@@ -80,12 +80,13 @@
   }
 }
 
+/* Era limitado a 1126px com borda lateral (efeito "cartão centralizado") —
+   isso prendia a barra de navegação dentro do mesmo limite do conteúdo.
+   Agora #root ocupa a largura inteira da janela (like OP.GG/op-style
+   sites), e é o conteúdo de cada página (.center em App.css) que carrega
+   o limite de 1126px — a barra de navegação (.top-bar/.nav-row) fica de
+   ponta a ponta. */
 #root {
-  width: 1126px;
-  max-width: 100%;
-  margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
   min-height: 100svh;
   display: flex;
   flex-direction: column;
