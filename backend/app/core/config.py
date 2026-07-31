@@ -55,11 +55,24 @@ class Settings(BaseSettings):
     # um patch conhecido (02_MODELO_SCORE_TIERS.md §4.1) — controla o quão
     # "esticada" fica a curva logística que converte z-score em Nota_WR 0-100.
     performance_fator_logistico: float = 1.1
-    # EM ABERTO em 16_BASELINES_CALIBRACAO.md §5: validar se é adequado por
-    # elo — elos de baixa população (Grão-Mestre, Desafiante) podem nunca
-    # atingir esse volume mesmo com o campeão genuinamente forte
+    # Recalibrado (rodada 18) a partir de margem de erro estatística real,
+    # não de um número redondo: n = z² × p(1-p) / e² (tamanho de amostra
+    # padrão pra estimar uma proporção). Com z=1,96 (95% de confiança) e
+    # p=0,5 (pior caso de variância), e=1% de margem de erro no win rate
+    # exige n≈9.604 — arredondado pra 10.000, o dobro do valor anterior
+    # (5000, que correspondia a ±1,4% de margem — já rigoroso, mas o
+    # usuário pediu "praticamente certeza": ±1% é o padrão de pesquisa
+    # eleitoral rigorosa).
+    #
+    # Consequência conhecida e aceita: com o volume de coleta atual (a
+    # melhor combinação campeão/rota chegava a ~507 partidas na rodada 12,
+    # ~5% de confiança nessa escala), nenhum campeão deve sair de tier
+    # provisório tão cedo. É a troca deliberada — o app fica mais honesto
+    # sobre incerteza em vez de mais otimista sobre tier. Ainda EM ABERTO
+    # por elo: elos de baixa população (Grão-Mestre, Desafiante) podem
+    # nunca atingir esse volume mesmo com o campeão genuinamente forte
     # (02_MODELO_SCORE_TIERS.md §11).
-    n_referencia_confianca: int = 5000
+    n_referencia_confianca: int = 10000
     # Trava de segurança (02_MODELO_SCORE_TIERS.md §11): abaixo deste
     # percentual de confiança, o tier fica provisório e limitado ao teto A.
     confianca_minima_pct: float = 30.0
