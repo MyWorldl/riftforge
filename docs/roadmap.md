@@ -43,7 +43,8 @@ Baseado em `Core/Estrutura_roadmap/00_INDEX.md` (fonte de verdade atual — tem 
 - [x] Minimização de dados — o banco próprio (`champion_lane_stats`, `champion_ban_stats`, `segment_totals`) nunca armazena PUUID nem qualquer dado pessoal, só contagens agregadas por campeão/elo/rota/patch.
 - [ ] RSO/OAuth — não se aplica ainda; só necessário se o app passar a vincular contas de usuário (fora do escopo atual).
 - [x] Logs sem dados sensíveis — nenhum endpoint próprio expõe PUUID, API keys ou tokens.
-- [ ] Política de retenção/exclusão (LGPD) — não se aplica ainda; nenhum dado pessoal é coletado.
+- [x] Política de retenção/exclusão de PUUID em `match_participants` (rodada 18): `puuid_retention_days` (42 dias, mesmo valor de `ingest_days_window`) + `app/jobs/purge_puuid.py`, rodando diariamente via GitHub Actions. Zera (não deleta) o campo passada a janela de coleta ativa — 10.590 linhas já zeradas em produção. Ver `Core/Estrutura_roadmap/17_ESTADO_IMPLEMENTADO.md` §rodada 18.
+- [x] Aviso de não-afiliação com a Riot Games visível na interface (rodapé, `frontend/src/App.tsx`) — item de compliance pendente desde a Fase 6/rodada 4, resolvido na rodada 18.
 
 ## Fase 8 — Testes e monitoramento contínuo
 - [x] Testes de schema no CI (GitHub Actions, repo https://github.com/MyWorldl/riftforge): roda a cada push/PR em `backend/**` e semanalmente via cron, cobrindo Data Dragon e League-V4/Match-V5 (chave da Riot como secret só na CI).
@@ -64,7 +65,7 @@ Baseado em `Core/Estrutura_roadmap/00_INDEX.md` (fonte de verdade atual — tem 
 ## Core — Fase 0 (Fundação do modelo de score — numeração de `Core/Estrutura_roadmap/09_BACKLOG.md`)
 
 - [x] 0.1 (parcial) — Pipeline de ingestão: partidas brutas persistidas (`Match`/`MatchParticipant`/`MatchBan`), dedup entre execuções corrigida (checa `match_id` no banco antes do fetch). Ainda falta expansão "bola de neve" por participantes.
-- [ ] 0.2 — Identificação de rota com acurácia documentada (hoje usa `teamPosition` da Riot como está, rastreado via `resolution_method`, mas não validado contra os ~95% do Método playrate).
+- [x] 0.2 — Identificação de rota validada (rodada 18): `app/jobs/validate_route_identification.py` compara `teamPosition` contra o Método 1 (Role+Lane, `raw_role`/`raw_lane`) em produção — 82,8% de concordância geral; investigação por campeão nas zonas de discordância (Jungle 58,3%, Top 79,8%) mostra que `teamPosition` corrige uma fraqueza conhecida do campo raw `lane`, não o contrário. `teamPosition` mantido como fonte de rota; Método 2 (playrate) não implementado — seria circular validar contra ele sem gabarito independente.
 - [x] 0.3 (núcleo) — Schema modelado pela tupla de análise: tabelas `patches`/`matches`/`match_participants`/`match_bans` seguindo `Core/Estrutura_roadmap/15_SCHEMA_DADOS.md`.
 - [x] 0.4 — Cache local do Data Dragon por versão (já existia via `target_patch_version` + adapter).
 - [x] 0.5 — Camada de acesso a dados (adapters já existiam desde a Fase 1/2 acima).
