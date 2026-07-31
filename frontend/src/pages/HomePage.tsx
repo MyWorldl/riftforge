@@ -1,17 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import heroImage from '../assets/hero.png'
-
-const REGIONS = [
-  { value: 'br1', label: 'Brasil' },
-  { value: 'na1', label: 'América do Norte' },
-  { value: 'lan', label: 'LAN' },
-  { value: 'las', label: 'LAS' },
-  { value: 'euw1', label: 'Europa Ocidental' },
-  { value: 'eun1', label: 'Europa Nórdica/Leste' },
-  { value: 'kr', label: 'Coreia' },
-  { value: 'jp1', label: 'Japão' },
-]
+import { REGIONS } from '../constants/regions'
 
 function HomePage() {
   const navigate = useNavigate()

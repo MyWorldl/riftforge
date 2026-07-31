@@ -127,4 +127,20 @@ páginas novas. Detalhe completo em `Core/Estrutura_roadmap/17_ESTADO_IMPLEMENTA
   score entre os dois patches mais recentes, derivado do próprio modelo —
   não reproduz o texto oficial da Riot (direitos autorais).
 
+## Ajustes de UX no Rankings (2026-07-31)
+
+Feedback do usuário sobre a página recém lançada. Detalhe completo em
+`Core/Estrutura_roadmap/17_ESTADO_IMPLEMENTADO.md` §rodada 20; resumo:
+
+- Título da página: "Classificações" → "Rankings" (rota mantida).
+- Filtro por região (BR/NA/EUW/KR — só as principais, decisão deliberada
+  pra não multiplicar demais a cota da Riot do job de coleta) e filtro
+  "Todos os tiers" (combina Desafiante/Grão-Mestre/Mestre).
+- Busca por nome de jogador (client-side, sobre os dados já carregados).
+- Coluna "Taxa de Vitória" combinando o que eram duas colunas separadas
+  (vitórias/derrotas e %) num formato só ("380/323 - 54%").
+- Colunas novas: Nível e ícone de invocador (Data Dragon), via Summoner-V4.
+- `rankings_top_n_per_tier` reduzido de 50 pra 20 pra compensar o job agora
+  cobrir 4 regiões em vez de 1 — mesmo tempo total, aproximadamente.
+
 Suite de testes: 51 → 56. `tsc -b`/`lint`/`build` do frontend limpos.

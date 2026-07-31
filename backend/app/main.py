@@ -205,26 +205,46 @@ def get_player_lookup(
         session.close()
 
 
+# Ordem de exibição quando `tier` não é passado ("Todos os tiers", rodada
+# 20) — Desafiante > Grão-Mestre > Mestre é a ordem real da Riot, não
+# alfabética.
+_TIER_ORDER = {"CHALLENGER": 0, "GRANDMASTER": 1, "MASTER": 2}
+
+
 @app.get("/rankings")
-def get_rankings(queue: str = "RANKED_SOLO_5x5", tier: str = "CHALLENGER") -> list[dict]:
-    """"Classificações" (rodada 19) — lê só de `player_rankings` (saída de
-    `app/jobs/collect_rankings.py`), nunca consulta a Riot em tempo real.
-    Ranking direto das ligas apex da própria Riot, não um conceito
-    inventado pelo app."""
+def get_rankings(
+    queue: str = "RANKED_SOLO_5x5",
+    tier: str | None = None,
+    region: str | None = None,
+) -> list[dict]:
+    """"Rankings" (rodada 19; região e "todos os tiers" na rodada 20) — lê
+    só de `player_rankings` (saída de `app/jobs/collect_rankings.py`),
+    nunca consulta a Riot em tempo real. Ranking direto das ligas apex da
+    própria Riot, não um conceito inventado pelo app.
+
+    `tier` omitido retorna os 3 tiers combinados, ordenados
+    Desafiante->Grão-Mestre->Mestre e por posição dentro de cada um —
+    não é um ranking global por LP, LP não é comparável entre tiers.
+    `region` omitido usa a região padrão do backend (`riot_platform_region`)."""
+    region = region or settings.riot_platform_region
     session = SessionLocal()
     try:
-        rows = (
-            session.query(PlayerRanking)
-            .filter_by(queue=queue, tier=tier)
-            .order_by(PlayerRanking.rank_position)
-            .all()
-        )
+        query = session.query(PlayerRanking).filter_by(queue=queue, region=region)
+        if tier:
+            query = query.filter_by(tier=tier)
+        rows = query.all()
+        rows.sort(key=lambda r: (_TIER_ORDER.get(r.tier, 99), r.rank_position))
+
         return [
             {
+                "tier": row.tier,
+                "region": row.region,
                 "rank_position": row.rank_position,
                 "puuid": row.puuid,
                 "game_name": row.game_name,
                 "tag_line": row.tag_line,
+                "summoner_level": row.summoner_level,
+                "profile_icon_id": row.profile_icon_id,
                 "league_points": row.league_points,
                 "wins": row.wins,
                 "losses": row.losses,

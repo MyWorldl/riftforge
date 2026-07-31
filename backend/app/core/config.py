@@ -58,12 +58,19 @@ class Settings(BaseSettings):
     # precisa ficar pequeno pra não estourar cota por usuário.
     player_lookup_recent_matches: int = 10
 
-    # Quantos jogadores por tier (Desafiante/Grão-Mestre/Mestre) o job de
-    # ranking resolve nome via Account-V1 (app/jobs/collect_rankings.py).
-    # As ligas apex somadas passam de ~2000 jogadores — resolver nome de
-    # todos gastaria cota à toa, já que ninguém rola até a posição 800 de
-    # um leaderboard.
-    rankings_top_n_per_tier: int = 50
+    # Quantos jogadores por tier por região (Desafiante/Grão-Mestre/Mestre)
+    # o job de ranking resolve nome/nível/ícone via Account-V1 + Summoner-V4
+    # (app/jobs/collect_rankings.py). Reduzido de 50 pra 20 na rodada 20
+    # (filtro por região) pra compensar a coleta agora cobrir várias regiões
+    # — sem isso, o tempo do job cresceria na mesma proporção do número de
+    # regiões, já que cada jogador resolvido custa 2 chamadas Riot.
+    rankings_top_n_per_tier: int = 20
+    # Regiões de plataforma cobertas pelo filtro de região do Rankings
+    # (rodada 20). Só as de maior audiência — cobrir as 8 do seletor da
+    # Home multiplicaria a cota da Riot por 8; escolha deliberada de manter
+    # o job rápido em vez de completo. String separada por vírgula, mesmo
+    # padrão de `cors_origins`.
+    rankings_platform_regions: str = "br1,na1,euw1,kr"
 
     # Parâmetros de calibração do modelo de score (Core/Estrutura_roadmap/
     # 02_MODELO_SCORE_TIERS.md, 16_BASELINES_CALIBRACAO.md) — nunca hardcoded

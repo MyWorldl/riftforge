@@ -340,29 +340,38 @@ class ChampionScore(Base):
 
 
 class PlayerRanking(Base):
-    """"Classificações" (rodada 19) — snapshot do ranking de jogadores das
-    ligas apex (Desafiante/Grão-Mestre/Mestre) direto da Riot, não um
-    conceito de classificação inventado pelo app (decisão explícita do
-    usuário). Populado por `app/jobs/collect_rankings.py`, delete-and-
-    recompute por (queue, tier) a cada execução — mesmo padrão idempotente
-    do resto do pipeline, nunca lido ao vivo da Riot pelo backend público.
+    """"Rankings" (rodada 19, filtro por região na rodada 20) — snapshot do
+    ranking de jogadores das ligas apex (Desafiante/Grão-Mestre/Mestre)
+    direto da Riot, não um conceito de classificação inventado pelo app
+    (decisão explícita do usuário). Populado por
+    `app/jobs/collect_rankings.py`, delete-and-recompute por
+    (queue, tier, region) a cada execução — mesmo padrão idempotente do
+    resto do pipeline, nunca lido ao vivo da Riot pelo backend público.
 
-    `game_name`/`tag_line` ficam nuláveis: o job só resolve o nome via
-    Account-V1 pro top N por tier (`rankings_top_n_per_tier`) — resolver
-    a liga inteira (~2000+ jogadores somados) gastaria cota à toa."""
+    `region` (rodada 20) é a região de plataforma (br1/na1/euw1/kr, ver
+    `settings.rankings_platform_regions`) — cada uma tem sua própria liga
+    apex, não é um filtro sobre o mesmo dado.
+
+    `game_name`/`tag_line`/`summoner_level`/`profile_icon_id` ficam
+    nuláveis: o job só resolve via Account-V1/Summoner-V4 pro top N por
+    tier por região (`rankings_top_n_per_tier`) — resolver a liga inteira
+    (~2000+ jogadores por região) gastaria cota à toa."""
 
     __tablename__ = "player_rankings"
 
     id: Mapped[int] = mapped_column(primary_key=True)
     queue: Mapped[str]
     tier: Mapped[str]
+    region: Mapped[str]
     puuid: Mapped[str]
     game_name: Mapped[str | None]
     tag_line: Mapped[str | None]
+    summoner_level: Mapped[int | None]
+    profile_icon_id: Mapped[int | None]
     league_points: Mapped[int]
     wins: Mapped[int]
     losses: Mapped[int]
     rank_position: Mapped[int]
     collected_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc))
 
-    __table_args__ = (UniqueConstraint("queue", "tier", "puuid"),)
+    __table_args__ = (UniqueConstraint("queue", "tier", "region", "puuid"),)

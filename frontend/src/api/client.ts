@@ -191,10 +191,14 @@ export interface PlayerLookupFilters {
 }
 
 export interface RankingRow {
+  tier: string
+  region: string
   rank_position: number
   puuid: string
   game_name: string | null
   tag_line: string | null
+  summoner_level: number | null
+  profile_icon_id: number | null
   league_points: number
   wins: number
   losses: number
@@ -202,18 +206,25 @@ export interface RankingRow {
 
 export interface RankingFilters {
   queue?: string
-  tier: string
+  tier?: string
+  region?: string
 }
 
 export async function fetchRankings(filters: RankingFilters): Promise<RankingRow[]> {
-  const params = new URLSearchParams({ tier: filters.tier })
+  const params = new URLSearchParams()
   if (filters.queue) params.set('queue', filters.queue)
+  if (filters.tier) params.set('tier', filters.tier)
+  if (filters.region) params.set('region', filters.region)
 
   const response = await fetch(`${API_URL}/rankings?${params}`)
   if (!response.ok) {
     throw new Error(`Falha ao buscar ranking: ${response.status}`)
   }
   return response.json()
+}
+
+export function profileIconUrl(ddragonPatch: string, profileIconId: number): string {
+  return `https://ddragon.leagueoflegends.com/cdn/${ddragonPatch}/img/profileicon/${profileIconId}.png`
 }
 
 export interface PatchDeltaRow {

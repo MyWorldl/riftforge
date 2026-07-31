@@ -87,14 +87,27 @@ class RiotApiAdapter:
         region = continent_region or self._continent_region
         return self._client.match.by_id(region, match_id)
 
-    def get_challenger_league(self, queue: str = "RANKED_SOLO_5x5") -> dict:
+    def get_challenger_league(self, queue: str = "RANKED_SOLO_5x5", platform_region: str | None = None) -> dict:
         """League-V4 apex league — todos os jogadores Desafiante da fila,
         num único payload (LeagueListDTO). Diferente de `get_league_entries`
-        (paginado por tier+divisão), aqui a Riot já devolve a liga inteira."""
-        return self._client.league.challenger_by_queue(self._platform_region, queue)
+        (paginado por tier+divisão), aqui a Riot já devolve a liga inteira.
+        `platform_region` sobrescreve a região configurada — necessário pro
+        filtro por região do Rankings (rodada 20), que cobre várias
+        regiões, não só a do backend."""
+        region = platform_region or self._platform_region
+        return self._client.league.challenger_by_queue(region, queue)
 
-    def get_grandmaster_league(self, queue: str = "RANKED_SOLO_5x5") -> dict:
-        return self._client.league.grandmaster_by_queue(self._platform_region, queue)
+    def get_grandmaster_league(self, queue: str = "RANKED_SOLO_5x5", platform_region: str | None = None) -> dict:
+        region = platform_region or self._platform_region
+        return self._client.league.grandmaster_by_queue(region, queue)
 
-    def get_master_league(self, queue: str = "RANKED_SOLO_5x5") -> dict:
-        return self._client.league.masters_by_queue(self._platform_region, queue)
+    def get_master_league(self, queue: str = "RANKED_SOLO_5x5", platform_region: str | None = None) -> dict:
+        region = platform_region or self._platform_region
+        return self._client.league.masters_by_queue(region, queue)
+
+    def get_summoner_by_puuid(self, puuid: str, platform_region: str | None = None) -> dict:
+        """Summoner-V4 — nível e ícone de invocador (`summonerLevel`,
+        `profileIconId`). Roteado por plataforma (br1/na1/...), igual
+        League-V4 — diferente do continente usado por Account-V1/Match-V5."""
+        region = platform_region or self._platform_region
+        return self._client.summoner.by_puuid(region, puuid)
