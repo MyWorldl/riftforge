@@ -370,17 +370,19 @@ function App() {
               return (
                 <Fragment key={key}>
                   <tr>
-                    <td className="champion-cell">
-                      {meta && ddragonPatch && (
-                        <img
-                          src={championImageUrl(ddragonPatch, meta.image.full)}
-                          alt=""
-                          width={32}
-                          height={32}
-                        />
-                      )}
-                      <span>{meta?.name ?? row.champion_id}</span>
-                      {row.trap_flag && <span className="trap-badge" title="Alta presença (pick/ban) com win rate abaixo do esperado">Trap</span>}
+                    <td>
+                      <div className="champion-cell">
+                        {meta && ddragonPatch && (
+                          <img
+                            src={championImageUrl(ddragonPatch, meta.image.full)}
+                            alt=""
+                            width={32}
+                            height={32}
+                          />
+                        )}
+                        <span>{meta?.name ?? row.champion_id}</span>
+                        {row.trap_flag && <span className="trap-badge" title="Alta presença (pick/ban) com win rate abaixo do esperado">Trap</span>}
+                      </div>
                     </td>
                     {!lane && <td>{LANE_LABELS[row.lane] ?? row.lane}</td>}
                     <td>
@@ -392,25 +394,27 @@ function App() {
                     <td>
                       {row.n_matches} <span className="explain-sub">({row.confianca.toFixed(1)}%)</span>
                     </td>
-                    <td className="actions-cell">
-                      <button
-                        type="button"
-                        className={`icon-toggle ${activePanel === 'explain' ? 'icon-toggle-active' : ''}`}
-                        onClick={() => toggle('explain')}
-                        title={activePanel === 'explain' ? 'Ocultar explicação' : 'Por que esse tier?'}
-                        aria-label="Explicação do score"
-                      >
-                        <IconInfo />
-                      </button>
-                      <button
-                        type="button"
-                        className={`icon-toggle ${activePanel === 'history' ? 'icon-toggle-active' : ''}`}
-                        onClick={() => toggle('history')}
-                        title={activePanel === 'history' ? 'Ocultar histórico' : 'Ver histórico entre patches'}
-                        aria-label="Histórico entre patches"
-                      >
-                        <IconChart />
-                      </button>
+                    <td>
+                      <div className="actions-cell">
+                        <button
+                          type="button"
+                          className={`icon-toggle ${activePanel === 'explain' ? 'icon-toggle-active' : ''}`}
+                          onClick={() => toggle('explain')}
+                          title={activePanel === 'explain' ? 'Ocultar explicação' : 'Por que esse tier?'}
+                          aria-label="Explicação do score"
+                        >
+                          <IconInfo />
+                        </button>
+                        <button
+                          type="button"
+                          className={`icon-toggle ${activePanel === 'history' ? 'icon-toggle-active' : ''}`}
+                          onClick={() => toggle('history')}
+                          title={activePanel === 'history' ? 'Ocultar histórico' : 'Ver histórico entre patches'}
+                          aria-label="Histórico entre patches"
+                        >
+                          <IconChart />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                   {activePanel === 'explain' && (
