@@ -10,6 +10,7 @@ from app.adapters.data_dragon import DataDragonAdapter
 from app.adapters.riot_api import RiotApiAdapter
 from app.core.config import get_settings
 from app.core.explain import explain_score
+from app.core.power_profile import power_profile
 from app.db.models import (
     ChampionBanStat,
     ChampionLaneStat,
@@ -152,7 +153,12 @@ def get_champion_scores(elo_tier: str = "GOLD", lane: str | None = None, patch: 
     Cada linha traz `explicacao` (item 3.1): a decomposição do score final
     em contribuições por camada, calculada na hora a partir dos valores já
     persistidos — matemática pura sobre dado que já está na linha, não uma
-    consulta a mais. Ver app/core/explain.py."""
+    consulta a mais. Ver app/core/explain.py.
+
+    Cada linha também traz `perfil_poder` (item 3.2): quanto do score vem
+    de característica própria do campeão (Kit+Build, "estrutural") vs. do
+    momento do patch (Performance+Meta, "meta") — mesma matemática de
+    pesos reais usados, ver app/core/power_profile.py."""
     session = SessionLocal()
     try:
         if patch is None:
@@ -177,33 +183,35 @@ def get_champion_scores(elo_tier: str = "GOLD", lane: str | None = None, patch: 
             for r in session.query(ChampionPerformanceScore).filter_by(tier=elo_tier, patch=patch).all()
         }
 
-        return [
-            {
-                "champion_id": row.champion_id,
-                "lane": row.lane,
-                "patch": row.patch,
-                "elo_tier": row.elo_tier,
-                "n_matches": n_matches_by_key.get((row.patch, row.elo_tier, row.lane, row.champion_id), 0),
-                "score_final": row.score_final,
-                "score_tier": row.score_tier,
-                "confianca": row.confianca,
-                "tier_provisorio": row.tier_provisorio,
-                "trap_flag": row.trap_flag,
-                "performance_score": row.performance_score,
-                "kit_score": row.kit_score,
-                "build_score": row.build_score,
-                "meta_score": row.meta_score,
-                "explicacao": explain_score(
-                    {
-                        "performance": row.performance_score,
-                        "kit": row.kit_score,
-                        "build": row.build_score,
-                        "meta": row.meta_score,
-                    },
-                    row.pesos_usados or {},
-                ),
+        result = []
+        for row in rows:
+            layer_scores = {
+                "performance": row.performance_score,
+                "kit": row.kit_score,
+                "build": row.build_score,
+                "meta": row.meta_score,
             }
-            for row in rows
-        ]
+            pesos_usados = row.pesos_usados or {}
+            result.append(
+                {
+                    "champion_id": row.champion_id,
+                    "lane": row.lane,
+                    "patch": row.patch,
+                    "elo_tier": row.elo_tier,
+                    "n_matches": n_matches_by_key.get((row.patch, row.elo_tier, row.lane, row.champion_id), 0),
+                    "score_final": row.score_final,
+                    "score_tier": row.score_tier,
+                    "confianca": row.confianca,
+                    "tier_provisorio": row.tier_provisorio,
+                    "trap_flag": row.trap_flag,
+                    "performance_score": row.performance_score,
+                    "kit_score": row.kit_score,
+                    "build_score": row.build_score,
+                    "meta_score": row.meta_score,
+                    "explicacao": explain_score(layer_scores, pesos_usados),
+                    "perfil_poder": power_profile(layer_scores, pesos_usados),
+                }
+            )
+        return result
     finally:
         session.close()

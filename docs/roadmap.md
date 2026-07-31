@@ -83,7 +83,7 @@ Baseado em `Core/Estrutura_roadmap/00_INDEX.md` (fonte de verdade atual — tem 
 ## Core — Fase 3 (Diferenciais competitivos)
 
 - [x] 3.1 — Explicabilidade por camada (**principal diferencial do produto** segundo `09_BACKLOG.md` §Fase 3): `backend/app/core/explain.py` decompõe o score final em contribuições por camada — `contribuicao_i = peso_normalizado_i * (nota_i − 50)`, com `50 + Σ contribuições = score_final` como identidade exata. Exposto no campo `explicacao` de `GET /scores/champions` e renderizado no frontend como painel com frase em linguagem natural ("Performance puxa para cima; Build é o que mais segura"), barras divergentes por camada e a conta fechando de 50.0 até o score final. Camadas ausentes (ex: Kit sem dado pro patch) são declaradas explicitamente, com aviso de que o peso foi redistribuído.
-- [ ] 3.2 — Distinção visual entre poder estrutural (Kit+Build) e poder emprestado do meta.
+- [x] 3.2 — Distinção visual entre poder estrutural (Kit+Build) e poder emprestado do meta (Performance+Meta): `app/core/power_profile.py`, campo `perfil_poder` em `GET /scores/champions`. Badge na coluna "Perfil" da tabela + detalhamento com duas barras no painel "Por quê?". Usa os pesos reais (`pesos_usados`), não os nominais.
 - [ ] 3.3 — Etiqueta de Skill Expression (floor/ceiling).
 - [ ] 3.4 — Histórico de evolução do campeão entre patches (gráfico).
 - [ ] 3.5 — Comparador de matchups dedicado.

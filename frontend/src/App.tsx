@@ -5,6 +5,7 @@ import {
   fetchChampions,
   type ChampionMeta,
   type ChampionScoreRow,
+  type PowerProfile,
   type ScoreExplanation,
 } from './api/client'
 import './App.css'
@@ -47,6 +48,32 @@ const LAYER_HINTS: Record<string, string> = {
 
 function signed(value: number): string {
   return `${value >= 0 ? '+' : '−'}${Math.abs(value).toFixed(1)}`
+}
+
+const POWER_LABELS: Record<PowerProfile['classificacao'], string> = {
+  estrutural: 'Estrutural',
+  meta: 'Depende do meta',
+  equilibrado: 'Equilibrado',
+  indeterminado: '—',
+}
+
+const POWER_HINTS: Record<PowerProfile['classificacao'], string> = {
+  estrutural: 'Poder vem majoritariamente do próprio campeão (Kit+Build) — deve se manter em patches futuros',
+  meta: 'Poder vem majoritariamente do patch atual (Performance+Meta) — pode cair quando o meta mudar',
+  equilibrado: 'Poder próprio e favorecimento do patch atual pesam de forma parecida',
+  indeterminado: 'Sem dado suficiente pra classificar',
+}
+
+/** Item 3.2: badge compacto na linha principal, sem precisar expandir. */
+function PowerProfileBadge({ perfil }: { perfil: PowerProfile }) {
+  return (
+    <span
+      className={`power-badge power-${perfil.classificacao}`}
+      title={POWER_HINTS[perfil.classificacao]}
+    >
+      {POWER_LABELS[perfil.classificacao]}
+    </span>
+  )
 }
 
 /** Frase em linguagem natural — o ponto do item 3.1 é o usuário entender
@@ -123,6 +150,54 @@ function ScoreExplanationPanel({ row }: { row: ChampionScoreRow }) {
           {explicacao.camadas_ausentes.map((c) => LAYER_LABELS[c] ?? c).join(', ')} para este patch — o
           peso foi redistribuído entre as camadas acima, não contado como zero.
         </p>
+      )}
+
+      <PowerProfileDetail perfil={row.perfil_poder} />
+    </div>
+  )
+}
+
+/** Item 3.2, versão detalhada: duas barras lado a lado (Kit+Build vs.
+ *  Performance+Meta) com os pesos reais usados naquela linha. */
+function PowerProfileDetail({ perfil }: { perfil: PowerProfile }) {
+  const { estrutural, meta, classificacao } = perfil
+  if (estrutural.score === null || meta.score === null) return null
+
+  const maxScore = Math.max(estrutural.score, meta.score, 1)
+
+  return (
+    <div className="power-detail">
+      <span className="power-detail-title">
+        Perfil de poder: <PowerProfileBadge perfil={perfil} />
+      </span>
+      <div className="power-detail-bars">
+        <div className="power-detail-row">
+          <span className="power-detail-label">Estrutural (Kit+Build)</span>
+          <span className="power-detail-bar-cell">
+            <span
+              className="power-detail-bar bar-estrutural"
+              style={{ width: `${(estrutural.score / maxScore) * 100}%` }}
+            />
+          </span>
+          <span className="power-detail-value">
+            {estrutural.score.toFixed(1)} <span className="explain-sub">({(estrutural.peso * 100).toFixed(0)}%)</span>
+          </span>
+        </div>
+        <div className="power-detail-row">
+          <span className="power-detail-label">Meta (Performance+Meta)</span>
+          <span className="power-detail-bar-cell">
+            <span
+              className="power-detail-bar bar-meta"
+              style={{ width: `${(meta.score / maxScore) * 100}%` }}
+            />
+          </span>
+          <span className="power-detail-value">
+            {meta.score.toFixed(1)} <span className="explain-sub">({(meta.peso * 100).toFixed(0)}%)</span>
+          </span>
+        </div>
+      </div>
+      {classificacao === 'meta' && (
+        <p className="explain-missing">Cuidado ao projetar esse campeão pro próximo patch — boa parte do score de hoje vem do momento atual, não de característica própria.</p>
       )}
     </div>
   )
@@ -235,6 +310,7 @@ function App() {
               <th>Rota</th>
               <th>Patch</th>
               <th>Tier</th>
+              <th>Perfil</th>
               <th>Score</th>
               <th>Confiança</th>
               <th>Partidas</th>
@@ -267,6 +343,7 @@ function App() {
                       <span className={`tier-badge tier-${row.score_tier}`}>{row.score_tier}</span>
                       {row.tier_provisorio && <span className="provisional-mark" title="Amostra pequena — tier provisório, teto em A">*</span>}
                     </td>
+                    <td><PowerProfileBadge perfil={row.perfil_poder} /></td>
                     <td>{row.score_final.toFixed(1)}</td>
                     <td>{row.confianca.toFixed(1)}%</td>
                     <td>{row.n_matches}</td>
@@ -282,7 +359,7 @@ function App() {
                   </tr>
                   {expanded && (
                     <tr className="layer-row">
-                      <td colSpan={8}>
+                      <td colSpan={9}>
                         <ScoreExplanationPanel row={row} />
                       </td>
                     </tr>

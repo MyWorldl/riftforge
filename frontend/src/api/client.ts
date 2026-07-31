@@ -68,6 +68,12 @@ export interface ScoreExplanation {
   camadas_ausentes: string[]
 }
 
+export interface PowerProfile {
+  estrutural: { score: number | null; peso: number }
+  meta: { score: number | null; peso: number }
+  classificacao: 'estrutural' | 'meta' | 'equilibrado' | 'indeterminado'
+}
+
 export interface ChampionScoreRow {
   champion_id: string
   lane: string
@@ -84,6 +90,7 @@ export interface ChampionScoreRow {
   build_score: number
   meta_score: number
   explicacao: ScoreExplanation
+  perfil_poder: PowerProfile
 }
 
 export interface ChampionScoreFilters {

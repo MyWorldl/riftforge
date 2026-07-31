@@ -13,6 +13,16 @@
      fundos — no claro precisam ser mais escuros, no escuro mais claros. */
   --pos: #1a7f37;
   --neg: #b3261e;
+  /* Perfil de poder (item 3.2): estrutural (Kit+Build) vs. meta
+     (Performance+Meta). Cores distintas do verde/vermelho acima de
+     propósito — não é "bom/ruim", é "de onde vem o poder". O badge é
+     texto branco sobre a própria cor, então o contraste não depende do
+     fundo da página — mesmos valores nos dois temas (diferente do
+     --pos/--neg acima, que ficam direto sobre --code-bg).
+     Verificado: 7.48:1 / 6.67:1 / 7.38:1 contra branco. */
+  --power-estrutural: #1550b0;
+  --power-meta: #8a4d09;
+  --power-equilibrado: #52565c;
   --shadow:
     rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
 
