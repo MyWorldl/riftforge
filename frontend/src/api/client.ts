@@ -1,5 +1,16 @@
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
 
+/** Erro de fetch que preserva o status HTTP — necessário pra distinguir
+ *  "backend fora do ar" de "endpoint desativado de propósito" (501, ver
+ *  `_ensure_riot_proxy_enabled` no backend). */
+export class HttpError extends Error {
+  status: number
+  constructor(status: number, message: string) {
+    super(message)
+    this.status = status
+  }
+}
+
 export interface ChampionMeta {
   id: string
   name: string
@@ -143,6 +154,105 @@ export async function fetchChampionScores(filters: ChampionScoreFilters): Promis
   const response = await fetch(`${API_URL}/scores/champions?${params}`)
   if (!response.ok) {
     throw new Error(`Falha ao buscar scores: ${response.status}`)
+  }
+  return response.json()
+}
+
+export interface PlayerScoreSummary {
+  patch: string
+  score_final: number
+  score_tier: string
+  tier_provisorio: boolean
+}
+
+export interface PlayerChampionSummary {
+  champion_id: string
+  lane: string
+  partidas: number
+  vitorias: number
+  kda_medio: number
+  score_atual: PlayerScoreSummary | null
+}
+
+export interface PlayerLookupResult {
+  puuid: string
+  game_name: string
+  tag_line: string
+  elo_tier_comparado: string
+  partidas_analisadas: number
+  campeoes: PlayerChampionSummary[]
+}
+
+export interface PlayerLookupFilters {
+  region: string
+  gameName: string
+  tagLine: string
+  eloTier?: string
+}
+
+export interface RankingRow {
+  rank_position: number
+  puuid: string
+  game_name: string | null
+  tag_line: string | null
+  league_points: number
+  wins: number
+  losses: number
+}
+
+export interface RankingFilters {
+  queue?: string
+  tier: string
+}
+
+export async function fetchRankings(filters: RankingFilters): Promise<RankingRow[]> {
+  const params = new URLSearchParams({ tier: filters.tier })
+  if (filters.queue) params.set('queue', filters.queue)
+
+  const response = await fetch(`${API_URL}/rankings?${params}`)
+  if (!response.ok) {
+    throw new Error(`Falha ao buscar ranking: ${response.status}`)
+  }
+  return response.json()
+}
+
+export interface PatchDeltaRow {
+  champion_id: string
+  lane: string
+  score_anterior: number
+  score_atual: number
+  delta: number
+}
+
+export interface PatchNotesResult {
+  patch_atual: string | null
+  patch_anterior: string | null
+  altas: PatchDeltaRow[]
+  quedas: PatchDeltaRow[]
+  comparados: number
+}
+
+export async function fetchPatchNotes(eloTier: string): Promise<PatchNotesResult> {
+  const params = new URLSearchParams({ elo_tier: eloTier })
+  const response = await fetch(`${API_URL}/patch-notes?${params}`)
+  if (!response.ok) {
+    throw new Error(`Falha ao buscar patch notes: ${response.status}`)
+  }
+  return response.json()
+}
+
+export async function fetchPlayerLookup(filters: PlayerLookupFilters): Promise<PlayerLookupResult> {
+  const params = new URLSearchParams({
+    region: filters.region,
+    game_name: filters.gameName,
+    tag_line: filters.tagLine,
+  })
+  if (filters.eloTier) params.set('elo_tier', filters.eloTier)
+
+  const response = await fetch(`${API_URL}/player/lookup?${params}`)
+  if (!response.ok) {
+    const body = await response.json().catch(() => null)
+    throw new HttpError(response.status, body?.detail ?? `Falha ao buscar jogador: ${response.status}`)
   }
   return response.json()
 }

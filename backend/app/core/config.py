@@ -48,6 +48,22 @@ class Settings(BaseSettings):
     # Rate limiting por IP (protege a cota da Riot API e o backend contra abuso).
     rate_limit_default: str = "60/minute"
     rate_limit_riot_proxy: str = "10/minute"
+    # Mais restritivo que rate_limit_riot_proxy: aquele é debug interno,
+    # este fica público atrás do formulário de busca da Home (item novo,
+    # rodada 19) — qualquer visitante pode disparar, não só quem sabe a
+    # URL do endpoint.
+    rate_limit_player_lookup: str = "5/minute"
+    # Quantas partidas recentes o lookup de "Análise do Jogador" busca por
+    # clique — sob demanda, ao contrário do resto do pipeline (batch), então
+    # precisa ficar pequeno pra não estourar cota por usuário.
+    player_lookup_recent_matches: int = 10
+
+    # Quantos jogadores por tier (Desafiante/Grão-Mestre/Mestre) o job de
+    # ranking resolve nome via Account-V1 (app/jobs/collect_rankings.py).
+    # As ligas apex somadas passam de ~2000 jogadores — resolver nome de
+    # todos gastaria cota à toa, já que ninguém rola até a posição 800 de
+    # um leaderboard.
+    rankings_top_n_per_tier: int = 50
 
     # Parâmetros de calibração do modelo de score (Core/Estrutura_roadmap/
     # 02_MODELO_SCORE_TIERS.md, 16_BASELINES_CALIBRACAO.md) — nunca hardcoded

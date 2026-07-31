@@ -1,3 +1,5 @@
+import asyncio
+
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from riotwatcher import ApiError
@@ -7,9 +9,11 @@ from slowapi.middleware import SlowAPIMiddleware
 from slowapi.util import get_remote_address
 
 from app.adapters.data_dragon import DataDragonAdapter
-from app.adapters.riot_api import RiotApiAdapter
+from app.adapters.riot_api import PLATFORM_TO_CONTINENT, RiotApiAdapter
+from app.core.champions import resolve_champion_id
 from app.core.config import get_settings
 from app.core.explain import explain_score
+from app.core.patch_diff import diff_patches
 from app.core.power_profile import power_profile
 from app.db.models import (
     ChampionBanStat,
@@ -17,6 +21,7 @@ from app.db.models import (
     ChampionPerformanceScore,
     ChampionScore,
     Patch,
+    PlayerRanking,
     SegmentTotal,
 )
 from app.db.session import SessionLocal
@@ -91,6 +96,189 @@ def get_match(request: Request, match_id: str) -> dict:
         return riot_api.get_match(match_id)
     except ApiError as exc:
         raise HTTPException(status_code=exc.response.status_code, detail=str(exc)) from exc
+
+
+@app.get("/player/lookup")
+@limiter.limit(settings.rate_limit_player_lookup)
+def get_player_lookup(
+    request: Request,
+    game_name: str,
+    tag_line: str,
+    region: str | None = None,
+    elo_tier: str = "GOLD",
+) -> dict:
+    """"Análise do Jogador" (rodada 19) — busca sob demanda de um jogador
+    por Riot ID (`Nome#Tag`). Diferente do resto do backend, ESTA rota faz
+    chamadas reais à Riot API por requisição (Account-V1 → Match-V5), por
+    isso reaproveita o mesmo gate de `_ensure_riot_proxy_enabled()` dos
+    endpoints `/riot/*` — não pode ir ao ar em produção até a Production
+    Key ser aprovada (ToS da Riot não permite Personal/Development Key
+    atrás de tráfego público).
+
+    `region` é a região de plataforma escolhida na Home (br1/na1/euw1/...)
+    — resolvida pro continente (americas/europe/asia) que Account-V1 e
+    Match-V5 exigem via `PLATFORM_TO_CONTINENT`, senão a busca sempre bate
+    no shard default do servidor mesmo pra jogador de outro continente.
+
+    Simplificação assumida nesta rodada, documentada e não escondida:
+    compara os campeões do jogador contra `elo_tier` (default GOLD) em vez
+    de detectar o elo real do jogador — isso exigiria mais uma chamada
+    Riot (league entries por PUUID). Dá pra evoluir depois."""
+    _ensure_riot_proxy_enabled()
+    continent = PLATFORM_TO_CONTINENT.get(region.lower()) if region else None
+    try:
+        account = riot_api.get_account_by_riot_id(game_name, tag_line, continent_region=continent)
+        puuid = account["puuid"]
+        match_ids = riot_api.get_match_ids_by_puuid(
+            puuid, count=settings.player_lookup_recent_matches, continent_region=continent
+        )
+        matches = [riot_api.get_match(match_id, continent_region=continent) for match_id in match_ids]
+    except ApiError as exc:
+        raise HTTPException(status_code=exc.response.status_code, detail=str(exc)) from exc
+
+    version = asyncio.run(data_dragon.get_latest_version())
+    name_by_riot_id = asyncio.run(data_dragon.get_champion_name_by_riot_id(version))
+
+    tally: dict[tuple[str, str], dict] = {}
+    for match in matches:
+        participant = next(
+            (p for p in match["info"]["participants"] if p["puuid"] == puuid), None
+        )
+        if participant is None:
+            continue
+        champion_id = resolve_champion_id(
+            name_by_riot_id, participant["championId"], participant.get("championName")
+        )
+        lane = participant.get("teamPosition") or "UNKNOWN"
+        entry = tally.setdefault(
+            (champion_id, lane), {"partidas": 0, "vitorias": 0, "kills": 0, "deaths": 0, "assists": 0}
+        )
+        entry["partidas"] += 1
+        entry["vitorias"] += 1 if participant.get("win") else 0
+        entry["kills"] += participant.get("kills", 0)
+        entry["deaths"] += participant.get("deaths", 0)
+        entry["assists"] += participant.get("assists", 0)
+
+    session = SessionLocal()
+    try:
+        campeoes = []
+        for (champion_id, lane), stats in sorted(tally.items(), key=lambda kv: -kv[1]["partidas"]):
+            score_row = (
+                session.query(ChampionScore)
+                .join(Patch, Patch.version_label == ChampionScore.patch)
+                .filter(
+                    ChampionScore.champion_id == champion_id,
+                    ChampionScore.lane == lane,
+                    ChampionScore.elo_tier == elo_tier,
+                )
+                .order_by(Patch.patch_sequence.desc())
+                .first()
+            )
+            campeoes.append(
+                {
+                    "champion_id": champion_id,
+                    "lane": lane,
+                    "partidas": stats["partidas"],
+                    "vitorias": stats["vitorias"],
+                    "kda_medio": round((stats["kills"] + stats["assists"]) / max(stats["deaths"], 1), 2),
+                    "score_atual": (
+                        {
+                            "patch": score_row.patch,
+                            "score_final": score_row.score_final,
+                            "score_tier": score_row.score_tier,
+                            "tier_provisorio": score_row.tier_provisorio,
+                        }
+                        if score_row
+                        else None
+                    ),
+                }
+            )
+        return {
+            "puuid": puuid,
+            "game_name": account.get("gameName", game_name),
+            "tag_line": account.get("tagLine", tag_line),
+            "elo_tier_comparado": elo_tier,
+            "partidas_analisadas": len(matches),
+            "campeoes": campeoes,
+        }
+    finally:
+        session.close()
+
+
+@app.get("/rankings")
+def get_rankings(queue: str = "RANKED_SOLO_5x5", tier: str = "CHALLENGER") -> list[dict]:
+    """"Classificações" (rodada 19) — lê só de `player_rankings` (saída de
+    `app/jobs/collect_rankings.py`), nunca consulta a Riot em tempo real.
+    Ranking direto das ligas apex da própria Riot, não um conceito
+    inventado pelo app."""
+    session = SessionLocal()
+    try:
+        rows = (
+            session.query(PlayerRanking)
+            .filter_by(queue=queue, tier=tier)
+            .order_by(PlayerRanking.rank_position)
+            .all()
+        )
+        return [
+            {
+                "rank_position": row.rank_position,
+                "puuid": row.puuid,
+                "game_name": row.game_name,
+                "tag_line": row.tag_line,
+                "league_points": row.league_points,
+                "wins": row.wins,
+                "losses": row.losses,
+            }
+            for row in rows
+        ]
+    finally:
+        session.close()
+
+
+@app.get("/patch-notes")
+def get_patch_notes(elo_tier: str = "GOLD", top_n: int = 10) -> dict:
+    """"Patch Notes" (rodada 19) — não reproduz as notas oficiais da Riot
+    (conteúdo protegido por direitos autorais); deriva do próprio modelo de
+    score, comparando os dois patches mais recentes com dado calculado pro
+    elo (ver app/core/patch_diff.py). Nenhuma chamada Riot."""
+    session = SessionLocal()
+    try:
+        # `patch_sequence` precisa estar no SELECT pra aparecer no ORDER BY
+        # com DISTINCT — Postgres rejeita ("must appear in select list"),
+        # diferente do SQLite local usado nos testes (mesmo cuidado já
+        # documentado em `/scores/patches`).
+        patches = (
+            session.query(ChampionScore.patch, Patch.patch_sequence)
+            .join(Patch, Patch.version_label == ChampionScore.patch)
+            .filter(ChampionScore.elo_tier == elo_tier)
+            .distinct()
+            .order_by(Patch.patch_sequence.desc())
+            .limit(2)
+            .all()
+        )
+        if len(patches) < 2:
+            return {
+                "patch_atual": patches[0][0] if patches else None,
+                "patch_anterior": None,
+                "altas": [],
+                "quedas": [],
+                "comparados": 0,
+            }
+
+        patch_atual, patch_anterior = patches[0][0], patches[1][0]
+        rows_atual = session.query(ChampionScore).filter_by(elo_tier=elo_tier, patch=patch_atual).all()
+        rows_anterior = (
+            session.query(ChampionScore).filter_by(elo_tier=elo_tier, patch=patch_anterior).all()
+        )
+
+        diff = diff_patches(
+            [{"champion_id": r.champion_id, "lane": r.lane, "score_final": r.score_final} for r in rows_atual],
+            [{"champion_id": r.champion_id, "lane": r.lane, "score_final": r.score_final} for r in rows_anterior],
+            top_n=top_n,
+        )
+        return {"patch_atual": patch_atual, "patch_anterior": patch_anterior, **diff}
+    finally:
+        session.close()
 
 
 @app.get("/stats/champions")

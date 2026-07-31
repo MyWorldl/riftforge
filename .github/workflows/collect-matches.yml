@@ -90,3 +90,12 @@ jobs:
       - name: Expurgar PUUID fora da janela de retenção
         continue-on-error: true
         run: python -m app.jobs.purge_puuid
+
+      # "Classificações" (rodada 19): ranking das ligas apex direto da
+      # Riot, independente do pipeline de campeões acima — não bloqueia
+      # nem é bloqueado por ele. Sequencial e rate-limited pela própria
+      # RiotWatcher (150 chamadas Account-V1 pro top 50 de cada tier),
+      # por isso demora minutos, não segundos.
+      - name: Coletar ranking das ligas apex
+        continue-on-error: true
+        run: python -m app.jobs.collect_rankings

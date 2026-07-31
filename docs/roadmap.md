@@ -102,3 +102,29 @@ Validado com o volume: a trava de segurança rebaixou 70 linhas da faixa S para 
 **Limite conhecido:** todo tier segue provisório — a melhor combinação chega a 10,1% de confiança contra um piso de 30%. Chegar lá exige ~1,5 h de coleta *dentro* da janela de ~2 semanas do patch. Ver `Core/Estrutura_roadmap/17_ESTADO_IMPLEMENTADO.md` §rodada 12.
 
 Detalhe completo do que mudou: `Core/Estrutura_roadmap/17_ESTADO_IMPLEMENTADO.md`.
+
+## Home multi-página, Análise do Jogador e Classificações (2026-07-31)
+
+Pedido do usuário a partir de um wireframe: transformar a tela única de
+campeões numa Home com navegação (nav + hero + busca de jogador) e três
+páginas novas. Detalhe completo em `Core/Estrutura_roadmap/17_ESTADO_IMPLEMENTADO.md`
+§rodada 19; resumo:
+
+- **Frontend virou multi-página** (`react-router-dom`, `HashRouter`): Home
+  (hero + busca), Campeões (tela de antes, sem mudança de comportamento),
+  Classificações, Análise do Jogador, Patch Notes, Desktop.
+- **Análise do Jogador** (`GET /player/lookup`, novo): busca sob demanda
+  por Riot ID via Account-V1 + Match-V5. Único endpoint novo que faz
+  chamada Riot em tempo real por requisição — **bloqueado em produção até
+  a Production Key ser aprovada**, mesmo gate dos `/riot/*` já existentes.
+  Funciona hoje em desenvolvimento local.
+- **Classificações** (`GET /rankings`, novo): ranking das ligas apex
+  (Desafiante/Grão-Mestre/Mestre) direto da Riot — sem inventar conceito
+  de classificação. Coletado por job batch (`app/jobs/collect_rankings.py`,
+  integrado ao workflow diário), o backend público só lê do banco — **não
+  precisa esperar a Production Key**, ao contrário do item acima.
+- **Patch Notes** (`GET /patch-notes`, novo): maiores altas/quedas de
+  score entre os dois patches mais recentes, derivado do próprio modelo —
+  não reproduz o texto oficial da Riot (direitos autorais).
+
+Suite de testes: 51 → 56. `tsc -b`/`lint`/`build` do frontend limpos.

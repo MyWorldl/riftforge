@@ -337,3 +337,32 @@ class ChampionScore(Base):
     computed_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc))
 
     __table_args__ = (UniqueConstraint("patch", "elo_tier", "lane", "champion_id"),)
+
+
+class PlayerRanking(Base):
+    """"Classificações" (rodada 19) — snapshot do ranking de jogadores das
+    ligas apex (Desafiante/Grão-Mestre/Mestre) direto da Riot, não um
+    conceito de classificação inventado pelo app (decisão explícita do
+    usuário). Populado por `app/jobs/collect_rankings.py`, delete-and-
+    recompute por (queue, tier) a cada execução — mesmo padrão idempotente
+    do resto do pipeline, nunca lido ao vivo da Riot pelo backend público.
+
+    `game_name`/`tag_line` ficam nuláveis: o job só resolve o nome via
+    Account-V1 pro top N por tier (`rankings_top_n_per_tier`) — resolver
+    a liga inteira (~2000+ jogadores somados) gastaria cota à toa."""
+
+    __tablename__ = "player_rankings"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    queue: Mapped[str]
+    tier: Mapped[str]
+    puuid: Mapped[str]
+    game_name: Mapped[str | None]
+    tag_line: Mapped[str | None]
+    league_points: Mapped[int]
+    wins: Mapped[int]
+    losses: Mapped[int]
+    rank_position: Mapped[int]
+    collected_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc))
+
+    __table_args__ = (UniqueConstraint("queue", "tier", "puuid"),)
