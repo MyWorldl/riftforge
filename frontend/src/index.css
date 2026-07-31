@@ -23,6 +23,19 @@
   --power-estrutural: #1550b0;
   --power-meta: #8a4d09;
   --power-equilibrado: #52565c;
+  /* Tier God-E. Mesma lógica do power-badge: texto branco fixo sobre a
+     própria cor, contraste independente do tema. Corrigido nesta rodada —
+     os tons originais (item 1.8) nunca tinham sido checados contra AA;
+     6 de 7 falhavam (GOD 2.38:1, A 4.39:1, B 4.12:1, C 3.07:1, D 4.29:1).
+     Valores abaixo verificados: 5.27 / 4.84 / 7.01 / 6.5 / 5.37 / 6.69 /
+     8.86:1 contra branco. */
+  --tier-god: #8a6608;
+  --tier-s: #d0393e;
+  --tier-a: #7a1fd6;
+  --tier-b: #1a5bb8;
+  --tier-c: #1f7a3d;
+  --tier-d: #5c5c5c;
+  --tier-e: #4a4a4a;
   --shadow:
     rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
 

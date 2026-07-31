@@ -215,3 +215,54 @@ def get_champion_scores(elo_tier: str = "GOLD", lane: str | None = None, patch: 
         return result
     finally:
         session.close()
+
+
+@app.get("/scores/history")
+def get_champion_history(champion_id: str, elo_tier: str = "GOLD", lane: str | None = None) -> list[dict]:
+    """Item 3.4: evolução do score de um campeão entre patches — a
+    interface pede um gráfico, isso é a série que alimenta ele.
+
+    Ordena por `patches.patch_sequence`, não pela string do patch: versão
+    é texto ("16.9" > "16.14" alfabeticamente), então ordenar pela coluna
+    teria embaralhado a linha do tempo — mesmo problema que motivou criar
+    `patch_sequence` desde a Fase 0 (ver `15_SCHEMA_DADOS.md` §3).
+
+    `lane` filtra pra uma série só; sem ele, um campeão com múltiplas
+    rotas traria uma linha por rota misturada — a interface sempre chama
+    com a rota da linha que o usuário está vendo, então isso nunca
+    acontece na prática, mas a API não força o filtro pra continuar
+    utilizável fora do frontend."""
+    session = SessionLocal()
+    try:
+        query = (
+            session.query(ChampionScore, Patch.patch_sequence)
+            .join(Patch, Patch.version_label == ChampionScore.patch)
+            .filter(ChampionScore.champion_id == champion_id, ChampionScore.elo_tier == elo_tier)
+        )
+        if lane:
+            query = query.filter(ChampionScore.lane == lane)
+        rows = query.order_by(Patch.patch_sequence).all()
+
+        perf_query = session.query(ChampionPerformanceScore).filter_by(
+            tier=elo_tier, champion_id=champion_id
+        )
+        if lane:
+            perf_query = perf_query.filter_by(lane=lane)
+        n_matches_by_key = {
+            (r.patch, r.tier, r.lane, r.champion_id): r.n_matches for r in perf_query.all()
+        }
+
+        return [
+            {
+                "patch": row.patch,
+                "lane": row.lane,
+                "score_final": row.score_final,
+                "score_tier": row.score_tier,
+                "confianca": row.confianca,
+                "tier_provisorio": row.tier_provisorio,
+                "n_matches": n_matches_by_key.get((row.patch, row.elo_tier, row.lane, row.champion_id), 0),
+            }
+            for row, _ in rows
+        ]
+    finally:
+        session.close()

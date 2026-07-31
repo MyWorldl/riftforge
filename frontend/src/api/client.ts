@@ -51,6 +51,33 @@ export async function fetchChampionStats(filters: ChampionStatsFilters): Promise
   return response.json()
 }
 
+export interface ChampionHistoryPoint {
+  patch: string
+  lane: string
+  score_final: number
+  score_tier: string
+  confianca: number
+  tier_provisorio: boolean
+  n_matches: number
+}
+
+export interface ChampionHistoryFilters {
+  championId: string
+  eloTier: string
+  lane?: string
+}
+
+export async function fetchChampionHistory(filters: ChampionHistoryFilters): Promise<ChampionHistoryPoint[]> {
+  const params = new URLSearchParams({ champion_id: filters.championId, elo_tier: filters.eloTier })
+  if (filters.lane) params.set('lane', filters.lane)
+
+  const response = await fetch(`${API_URL}/scores/history?${params}`)
+  if (!response.ok) {
+    throw new Error(`Falha ao buscar histórico: ${response.status}`)
+  }
+  return response.json()
+}
+
 export function championImageUrl(ddragonPatch: string, imageFile: string): string {
   return `https://ddragon.leagueoflegends.com/cdn/${ddragonPatch}/img/champion/${imageFile}`
 }

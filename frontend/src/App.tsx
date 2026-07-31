@@ -8,7 +8,10 @@ import {
   type PowerProfile,
   type ScoreExplanation,
 } from './api/client'
+import HistoryChart from './HistoryChart'
 import './App.css'
+
+type ExpandedPanel = { key: string; type: 'explain' | 'history' } | null
 
 const ELO_TIERS = [
   'IRON', 'BRONZE', 'SILVER', 'GOLD', 'PLATINUM',
@@ -215,7 +218,7 @@ function App() {
   const [scores, setScores] = useState<ChampionScoreRow[] | null>(null)
   const [scoresError, setScoresError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const [expandedRow, setExpandedRow] = useState<string | null>(null)
+  const [expandedPanel, setExpandedPanel] = useState<ExpandedPanel>(null)
 
   useEffect(() => {
     fetchChampions()
@@ -246,7 +249,7 @@ function App() {
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault()
-    setExpandedRow(null)
+    setExpandedPanel(null)
     loadScores({ eloTier, lane, patch: patchInput })
   }
 
@@ -321,7 +324,9 @@ function App() {
             {scores.map((row) => {
               const meta = championsMeta?.[row.champion_id]
               const key = rowKey(row)
-              const expanded = expandedRow === key
+              const activePanel = expandedPanel?.key === key ? expandedPanel.type : null
+              const toggle = (type: 'explain' | 'history') =>
+                setExpandedPanel(activePanel === type ? null : { key, type })
               return (
                 <Fragment key={key}>
                   <tr>
@@ -347,20 +352,31 @@ function App() {
                     <td>{row.score_final.toFixed(1)}</td>
                     <td>{row.confianca.toFixed(1)}%</td>
                     <td>{row.n_matches}</td>
-                    <td>
-                      <button
-                        type="button"
-                        className="details-toggle"
-                        onClick={() => setExpandedRow(expanded ? null : key)}
-                      >
-                        {expanded ? 'Ocultar' : 'Por quê?'}
+                    <td className="actions-cell">
+                      <button type="button" className="details-toggle" onClick={() => toggle('explain')}>
+                        {activePanel === 'explain' ? 'Ocultar' : 'Por quê?'}
+                      </button>
+                      <button type="button" className="details-toggle" onClick={() => toggle('history')}>
+                        {activePanel === 'history' ? 'Ocultar' : 'Histórico'}
                       </button>
                     </td>
                   </tr>
-                  {expanded && (
+                  {activePanel === 'explain' && (
                     <tr className="layer-row">
                       <td colSpan={9}>
                         <ScoreExplanationPanel row={row} />
+                      </td>
+                    </tr>
+                  )}
+                  {activePanel === 'history' && (
+                    <tr className="layer-row">
+                      <td colSpan={9}>
+                        <HistoryChart
+                          championId={row.champion_id}
+                          championName={meta?.name ?? row.champion_id}
+                          eloTier={row.elo_tier}
+                          lane={row.lane}
+                        />
                       </td>
                     </tr>
                   )}
