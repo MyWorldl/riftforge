@@ -99,7 +99,9 @@
   display: flex;
   justify-content: center;
   width: 100%;
-  max-width: 620px;
+  /* Era 620px — reduzido de propósito, o emblema não precisa dominar a
+     Home tanto quanto o gráfico anterior. */
+  max-width: 360px;
 }
 
 .hero-image {
@@ -630,4 +632,19 @@
   line-height: 1.5;
   color: var(--text);
   box-sizing: border-box;
+}
+
+/* Reset da margem padrão de <p> — o footer agora tem duas linhas
+   (disclaimer da Riot + crédito do ícone) em vez de texto solto. */
+.riot-disclaimer p {
+  margin: 0;
+}
+
+.riot-disclaimer .icon-credit {
+  margin-top: 8px;
+  opacity: 0.75;
+}
+
+.riot-disclaimer .icon-credit a {
+  color: inherit;
 }

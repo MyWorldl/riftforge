@@ -74,10 +74,23 @@ function AppLayout() {
       <Outlet />
 
       <footer className="riot-disclaimer">
-        RiftForge não é endossado pela Riot Games e não reflete os pontos de vista ou opiniões da Riot
-        Games ou de qualquer pessoa oficialmente envolvida na produção ou gerenciamento de League of
-        Legends. League of Legends e Riot Games são marcas registradas ou marcas comerciais da Riot
-        Games, Inc.
+        <p>
+          RiftForge não é endossado pela Riot Games e não reflete os pontos de vista ou opiniões da Riot
+          Games ou de qualquer pessoa oficialmente envolvida na produção ou gerenciamento de League of
+          Legends. League of Legends e Riot Games são marcas registradas ou marcas comerciais da Riot
+          Games, Inc.
+        </p>
+        <p className="icon-credit">
+          Ícone de bigorna por{' '}
+          <a href="https://freeicons.io/profile/9950" target="_blank" rel="noreferrer">
+            Muhammad Naufal Subhiansyah
+          </a>{' '}
+          via{' '}
+          <a href="https://freeicons.io" target="_blank" rel="noreferrer">
+            freeicons.io
+          </a>
+          .
+        </p>
       </footer>
     </div>
   )

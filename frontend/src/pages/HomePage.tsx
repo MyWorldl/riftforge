@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
-import heroImage from '../assets/hero.png'
+import heroImage from '../assets/hero.svg'
 import { REGIONS } from '../constants/regions'
 
 function HomePage() {
