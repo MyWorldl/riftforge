@@ -61,6 +61,14 @@ const POWER_LABELS: Record<PowerProfile['classificacao'], string> = {
   indeterminado: '—',
 }
 
+// "Depende do meta" (16 caracteres) era o maior fator sozinho empurrando
+// a tabela pra fora da largura da tela — a coluna Perfil usa a versão
+// curta, o painel expandido (PowerProfileDetail) usa a versão completa.
+const POWER_LABELS_COMPACT: Record<PowerProfile['classificacao'], string> = {
+  ...POWER_LABELS,
+  meta: 'Meta',
+}
+
 const POWER_HINTS: Record<PowerProfile['classificacao'], string> = {
   estrutural: 'Poder vem majoritariamente do próprio campeão (Kit+Build) — deve se manter em patches futuros',
   meta: 'Poder vem majoritariamente do patch atual (Performance+Meta) — pode cair quando o meta mudar',
@@ -68,15 +76,40 @@ const POWER_HINTS: Record<PowerProfile['classificacao'], string> = {
   indeterminado: 'Sem dado suficiente pra classificar',
 }
 
-/** Item 3.2: badge compacto na linha principal, sem precisar expandir. */
-function PowerProfileBadge({ perfil }: { perfil: PowerProfile }) {
+/** Item 3.2: badge compacto na linha principal, sem precisar expandir.
+ *  `compact` usa o rótulo curto — a tabela precisa caber na tela sem
+ *  rolar pro lado, o painel expandido tem espaço de sobra pro nome
+ *  completo. */
+function PowerProfileBadge({ perfil, compact = false }: { perfil: PowerProfile; compact?: boolean }) {
+  const labels = compact ? POWER_LABELS_COMPACT : POWER_LABELS
   return (
     <span
       className={`power-badge power-${perfil.classificacao}`}
       title={POWER_HINTS[perfil.classificacao]}
     >
-      {POWER_LABELS[perfil.classificacao]}
+      {labels[perfil.classificacao]}
     </span>
+  )
+}
+
+/** Ícones das ações da linha — texto ("Por quê?"/"Histórico") ocupava
+ *  espaço demais quando somado às outras 8 colunas. `currentColor` puxa a
+ *  cor do botão, então hover/estado ativo funcionam sem CSS extra. */
+function IconInfo() {
+  return (
+    <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
+      <circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" strokeWidth="1.4" />
+      <circle cx="8" cy="4.8" r="0.9" fill="currentColor" />
+      <path d="M8 7.2v4.6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function IconChart() {
+  return (
+    <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
+      <path d="M2 13V9M6.4 13V5M10.7 13V7.5M15 13V3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
   )
 }
 
@@ -308,18 +341,21 @@ function App() {
       )}
 
       {scores && scores.length > 0 && (
+        <>
+        <p className="table-caption">
+          Patch <strong>{scores[0].patch}</strong>{patch === '' && ' (mais recente com dado calculado)'}
+          {lane && <> · {LANE_LABELS[lane] ?? lane}</>} · {eloTier}
+        </p>
         <div className="table-scroll">
         <table className="stats-table">
           <thead>
             <tr>
               <th>Campeão</th>
-              <th>Rota</th>
-              <th>Patch</th>
+              {!lane && <th>Rota</th>}
               <th>Tier</th>
               <th>Perfil</th>
               <th>Score</th>
-              <th>Confiança</th>
-              <th>Partidas</th>
+              <th>Amostra</th>
               <th></th>
             </tr>
           </thead>
@@ -330,6 +366,7 @@ function App() {
               const activePanel = expandedPanel?.key === key ? expandedPanel.type : null
               const toggle = (type: 'explain' | 'history') =>
                 setExpandedPanel(activePanel === type ? null : { key, type })
+              const colSpan = lane ? 6 : 7
               return (
                 <Fragment key={key}>
                   <tr>
@@ -345,35 +382,47 @@ function App() {
                       <span>{meta?.name ?? row.champion_id}</span>
                       {row.trap_flag && <span className="trap-badge" title="Alta presença (pick/ban) com win rate abaixo do esperado">Trap</span>}
                     </td>
-                    <td>{LANE_LABELS[row.lane] ?? row.lane}</td>
-                    <td>{row.patch}</td>
+                    {!lane && <td>{LANE_LABELS[row.lane] ?? row.lane}</td>}
                     <td>
                       <span className={`tier-badge tier-${row.score_tier}`}>{row.score_tier}</span>
                       {row.tier_provisorio && <span className="provisional-mark" title="Amostra pequena — tier provisório, teto em A">*</span>}
                     </td>
-                    <td><PowerProfileBadge perfil={row.perfil_poder} /></td>
+                    <td><PowerProfileBadge perfil={row.perfil_poder} compact /></td>
                     <td>{row.score_final.toFixed(1)}</td>
-                    <td>{row.confianca.toFixed(1)}%</td>
-                    <td>{row.n_matches}</td>
+                    <td>
+                      {row.n_matches} <span className="explain-sub">({row.confianca.toFixed(1)}%)</span>
+                    </td>
                     <td className="actions-cell">
-                      <button type="button" className="details-toggle" onClick={() => toggle('explain')}>
-                        {activePanel === 'explain' ? 'Ocultar' : 'Por quê?'}
+                      <button
+                        type="button"
+                        className={`icon-toggle ${activePanel === 'explain' ? 'icon-toggle-active' : ''}`}
+                        onClick={() => toggle('explain')}
+                        title={activePanel === 'explain' ? 'Ocultar explicação' : 'Por que esse tier?'}
+                        aria-label="Explicação do score"
+                      >
+                        <IconInfo />
                       </button>
-                      <button type="button" className="details-toggle" onClick={() => toggle('history')}>
-                        {activePanel === 'history' ? 'Ocultar' : 'Histórico'}
+                      <button
+                        type="button"
+                        className={`icon-toggle ${activePanel === 'history' ? 'icon-toggle-active' : ''}`}
+                        onClick={() => toggle('history')}
+                        title={activePanel === 'history' ? 'Ocultar histórico' : 'Ver histórico entre patches'}
+                        aria-label="Histórico entre patches"
+                      >
+                        <IconChart />
                       </button>
                     </td>
                   </tr>
                   {activePanel === 'explain' && (
                     <tr className="layer-row">
-                      <td colSpan={9}>
+                      <td colSpan={colSpan}>
                         <ScoreExplanationPanel row={row} />
                       </td>
                     </tr>
                   )}
                   {activePanel === 'history' && (
                     <tr className="layer-row">
-                      <td colSpan={9}>
+                      <td colSpan={colSpan}>
                         <HistoryChart
                           championId={row.champion_id}
                           championName={meta?.name ?? row.champion_id}
@@ -389,6 +438,7 @@ function App() {
           </tbody>
         </table>
         </div>
+        </>
       )}
 
       {scores && scores.length > 0 && (

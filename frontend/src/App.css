@@ -65,16 +65,23 @@
 
 .stats-table {
   width: 100%;
-  /* 9 colunas (a mais recente: Perfil, item 3.2) não cabem mais em 640px
-     sem espremer — o navegador tentava encolher a coluna Tier até o
-     badge e o asterisco de "provisório" quebrarem em duas linhas, o que
-     inflava a altura de TODA linha e empurrava "Aplicar filtros" pra
-     fora da posição onde o usuário espera clicar. Largura mínima maior
-     + nowrap abaixo faz o conteúdo forçar o scroll horizontal (que já
-     existe em .table-scroll) em vez de se espremer. */
-  min-width: 1040px;
+  /* nowrap abaixo já garante que nenhuma célula quebra linha (era a causa
+     da altura de linha inflada que empurrava o layout inteiro) — o
+     min-width aqui é só um piso pra telas muito estreitas, não precisa
+     ser grande: Rota some quando filtrada, Patch virou legenda acima da
+     tabela (.table-caption) em vez de coluna, e Confiança+Partidas viram
+     uma coluna só (Amostra). A tabela caiu de 9 pra 6-7 colunas. */
+  min-width: 600px;
   border-collapse: collapse;
   font-size: 15px;
+}
+
+.table-caption {
+  font-size: 13px;
+  color: var(--text);
+  width: 100%;
+  max-width: 900px;
+  margin: 0;
 }
 
 .stats-table th,
@@ -143,21 +150,32 @@
   gap: 6px;
 }
 
-.details-toggle {
-  font: inherit;
-  font-size: 13px;
-  padding: 4px 10px;
+/* Botões viraram ícone (eram "Por quê?"/"Histórico" em texto) — o par
+   de botões em texto sozinho já passava de 170px, mais largo que
+   qualquer outra coluna da tabela. */
+.icon-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
   border-radius: 6px;
   border: 1px solid var(--border);
   background: transparent;
   color: var(--text);
   cursor: pointer;
-  white-space: nowrap;
 }
 
-.details-toggle:hover {
+.icon-toggle:hover {
   border-color: var(--accent-border);
   color: var(--accent);
+}
+
+.icon-toggle-active {
+  border-color: var(--accent-border);
+  color: var(--accent);
+  background: var(--accent-bg);
 }
 
 .layer-row td {
