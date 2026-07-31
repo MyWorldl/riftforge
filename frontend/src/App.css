@@ -34,23 +34,10 @@
   color: var(--text-h);
 }
 
-.filters button {
-  font: inherit;
-  padding: 8px 16px;
-  border-radius: 6px;
-  border: 2px solid transparent;
-  color: var(--accent);
-  background: var(--accent-bg);
-  cursor: pointer;
-}
-
-.filters button:hover {
-  border-color: var(--accent-border);
-}
-
-.filters button:disabled {
-  opacity: 0.6;
-  cursor: default;
+.filters-loading {
+  font-size: 14px;
+  color: var(--text);
+  align-self: center;
 }
 
 .error {
@@ -78,7 +65,14 @@
 
 .stats-table {
   width: 100%;
-  min-width: 640px;
+  /* 9 colunas (a mais recente: Perfil, item 3.2) não cabem mais em 640px
+     sem espremer — o navegador tentava encolher a coluna Tier até o
+     badge e o asterisco de "provisório" quebrarem em duas linhas, o que
+     inflava a altura de TODA linha e empurrava "Aplicar filtros" pra
+     fora da posição onde o usuário espera clicar. Largura mínima maior
+     + nowrap abaixo faz o conteúdo forçar o scroll horizontal (que já
+     existe em .table-scroll) em vez de se espremer. */
+  min-width: 1040px;
   border-collapse: collapse;
   font-size: 15px;
 }
@@ -88,6 +82,7 @@
   padding: 8px 12px;
   border-bottom: 1px solid var(--border);
   text-align: left;
+  white-space: nowrap;
 }
 
 .stats-table th {
@@ -168,6 +163,10 @@
 .layer-row td {
   padding: 4px 12px 12px;
   border-bottom: 1px solid var(--border);
+  /* O nowrap geral da tabela (acima) é pra badges/números curtos — aqui
+     dentro é prosa (explicação, dica do histórico) e precisa quebrar
+     normalmente. */
+  white-space: normal;
 }
 
 .explain {

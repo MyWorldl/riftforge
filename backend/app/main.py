@@ -217,6 +217,33 @@ def get_champion_scores(elo_tier: str = "GOLD", lane: str | None = None, patch: 
         session.close()
 
 
+@app.get("/scores/patches")
+def get_available_patches(elo_tier: str = "GOLD") -> list[str]:
+    """Patches com score calculado pro elo, do mais recente pro mais
+    antigo — alimenta o filtro de patch da interface. Antes era um campo
+    de texto livre: o usuário não tinha como saber quais patches existem
+    sem adivinhar (e adivinhar errado dava tabela vazia, sem explicação).
+
+    Ordena por `patch_sequence`, mesmo cuidado de sempre — string de
+    versão não ordena cronologicamente."""
+    session = SessionLocal()
+    try:
+        # `patch_sequence` precisa estar no SELECT pra aparecer no ORDER
+        # BY com DISTINCT — Postgres rejeita ("must appear in select
+        # list"), diferente do SQLite local usado nos testes.
+        rows = (
+            session.query(ChampionScore.patch, Patch.patch_sequence)
+            .join(Patch, Patch.version_label == ChampionScore.patch)
+            .filter(ChampionScore.elo_tier == elo_tier)
+            .distinct()
+            .order_by(Patch.patch_sequence.desc())
+            .all()
+        )
+        return [r[0] for r in rows]
+    finally:
+        session.close()
+
+
 @app.get("/scores/history")
 def get_champion_history(champion_id: str, elo_tier: str = "GOLD", lane: str | None = None) -> list[dict]:
     """Item 3.4: evolução do score de um campeão entre patches — a

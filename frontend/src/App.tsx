@@ -1,6 +1,7 @@
-import { Fragment, useEffect, useState, type FormEvent } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import {
   championImageUrl,
+  fetchAvailablePatches,
   fetchChampionScores,
   fetchChampions,
   type ChampionMeta,
@@ -213,7 +214,9 @@ function App() {
 
   const [eloTier, setEloTier] = useState('GOLD')
   const [lane, setLane] = useState('')
-  const [patchInput, setPatchInput] = useState('')
+  const [patch, setPatch] = useState('') // '' = mais recente
+
+  const [availablePatches, setAvailablePatches] = useState<string[]>([])
 
   const [scores, setScores] = useState<ChampionScoreRow[] | null>(null)
   const [scoresError, setScoresError] = useState<string | null>(null)
@@ -229,36 +232,38 @@ function App() {
       .catch((err: Error) => setMetaError(err.message))
   }, [])
 
-  const loadScores = (filters: { eloTier: string; lane: string; patch: string }) => {
+  // Patches disponíveis dependem do elo (nem todo patch tem dado
+  // calculado pra todo elo) — refaz a lista sempre que o elo muda, e
+  // some com a seleção atual se ela não existir mais nesse elo, em vez
+  // de deixar o filtro preso num valor que não bate com nada.
+  useEffect(() => {
+    fetchAvailablePatches(eloTier)
+      .then((patches) => {
+        setAvailablePatches(patches)
+        setPatch((current) => (current && patches.includes(current) ? current : ''))
+      })
+      .catch(() => setAvailablePatches([]))
+  }, [eloTier])
+
+  // Filtros aplicam na hora, sem botão "Aplicar" — um seletor não
+  // precisa de confirmação extra, e remove qualquer risco de o botão
+  // ficar mal posicionado se a tabela apertar o layout.
+  useEffect(() => {
+    setExpandedPanel(null)
     setLoading(true)
     setScoresError(null)
-    fetchChampionScores({
-      eloTier: filters.eloTier,
-      lane: filters.lane || undefined,
-      patch: filters.patch || undefined,
-    })
+    fetchChampionScores({ eloTier, lane: lane || undefined, patch: patch || undefined })
       .then((data) => setScores([...data].sort((a, b) => b.score_final - a.score_final)))
       .catch((err: Error) => setScoresError(err.message))
       .finally(() => setLoading(false))
-  }
-
-  useEffect(() => {
-    loadScores({ eloTier, lane, patch: patchInput })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  const handleSubmit = (event: FormEvent) => {
-    event.preventDefault()
-    setExpandedPanel(null)
-    loadScores({ eloTier, lane, patch: patchInput })
-  }
+  }, [eloTier, lane, patch])
 
   return (
     <main id="center">
       <h1>RiftForge</h1>
       <p>Poder dos campeões de League of Legends por elo, rota e patch — score em camadas com tier God-E.</p>
 
-      <form className="filters" onSubmit={handleSubmit}>
+      <div className="filters">
         <label>
           Elo
           <select value={eloTier} onChange={(e) => setEloTier(e.target.value)}>
@@ -279,18 +284,16 @@ function App() {
 
         <label>
           Patch
-          <input
-            type="text"
-            placeholder="mais recente"
-            value={patchInput}
-            onChange={(e) => setPatchInput(e.target.value)}
-          />
+          <select value={patch} onChange={(e) => setPatch(e.target.value)}>
+            <option value="">Mais recente</option>
+            {availablePatches.map((p) => (
+              <option key={p} value={p}>{p}</option>
+            ))}
+          </select>
         </label>
 
-        <button type="submit" disabled={loading}>
-          {loading ? 'Buscando...' : 'Aplicar filtros'}
-        </button>
-      </form>
+        {loading && <span className="filters-loading">Buscando...</span>}
+      </div>
 
       {metaError && <p className="error">Não foi possível carregar dados do Data Dragon: {metaError}</p>}
       {scoresError && <p className="error">Backend indisponível: {scoresError}</p>}

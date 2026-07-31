@@ -120,6 +120,15 @@ export interface ChampionScoreRow {
   perfil_poder: PowerProfile
 }
 
+export async function fetchAvailablePatches(eloTier: string): Promise<string[]> {
+  const params = new URLSearchParams({ elo_tier: eloTier })
+  const response = await fetch(`${API_URL}/scores/patches?${params}`)
+  if (!response.ok) {
+    throw new Error(`Falha ao buscar patches: ${response.status}`)
+  }
+  return response.json()
+}
+
 export interface ChampionScoreFilters {
   eloTier: string
   lane?: string
