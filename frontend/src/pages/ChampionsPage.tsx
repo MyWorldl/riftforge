@@ -363,8 +363,7 @@ function ChampionsPage() {
             onClick={() => setLane(l.value)}
             title={l.label}
           >
-            <img src={LANE_ICONS[l.value]} alt="" width={22} height={22} />
-            <span>{l.label}</span>
+            <img src={LANE_ICONS[l.value]} alt={l.label} width={18} height={18} />
           </button>
         ))}
       </div>
