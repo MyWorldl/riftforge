@@ -27,6 +27,31 @@ function winRatePct(row: RankingRow): number {
   return Math.round((row.wins / Math.max(total, 1)) * 100)
 }
 
+/** Anel de vitória/derrota: em vez de uma barra com trilha cinza neutra,
+ *  o círculo inteiro é dividido entre verde (vitórias) e vermelho
+ *  (derrotas), então as duas informações ficam visíveis de uma vez. */
+function WinRateRing({ winRate }: { winRate: number }) {
+  const radius = 15
+  const circumference = 2 * Math.PI * radius
+  const greenLength = (winRate / 100) * circumference
+  return (
+    <svg width="32" height="32" viewBox="0 0 36 36" className="win-rate-ring" aria-hidden="true">
+      <circle cx="18" cy="18" r={radius} fill="none" stroke="var(--neg)" strokeWidth="4" />
+      <circle
+        cx="18"
+        cy="18"
+        r={radius}
+        fill="none"
+        stroke="var(--pos)"
+        strokeWidth="4"
+        strokeDasharray={`${greenLength} ${circumference}`}
+        strokeLinecap="round"
+        transform="rotate(-90 18 18)"
+      />
+    </svg>
+  )
+}
+
 function RankingsPage() {
   const [tier, setTier] = useState('')
   const [region, setRegion] = useState(RANKINGS_REGIONS[0].value)
@@ -116,8 +141,8 @@ function RankingsPage() {
                   className="podium-avatar"
                   src={profileIconUrl(ddragonPatch, row.profile_icon_id)}
                   alt=""
-                  width={40}
-                  height={40}
+                  width={index === 0 ? 48 : 40}
+                  height={index === 0 ? 48 : 40}
                 />
               )}
               <span className="podium-name">
@@ -168,13 +193,12 @@ function RankingsPage() {
                     <td>{row.league_points}</td>
                     <td>
                       <div className="win-rate-cell">
-                        <span className="win-rate-bar-track">
-                          <span className="win-rate-bar-fill" style={{ width: `${winRate}%` }} />
-                        </span>
-                        <span>
-                          <span className="value-pos">{row.wins}</span>/<span className="value-neg">{row.losses}</span>
-                          {' - '}
-                          <span className={winRate >= 50 ? 'value-pos' : 'value-neg'}>{winRate}%</span>
+                        <WinRateRing winRate={winRate} />
+                        <span className="win-rate-text">
+                          <span className={`win-rate-pct ${winRate >= 50 ? 'value-pos' : 'value-neg'}`}>{winRate}%</span>
+                          <span className="win-rate-sub">
+                            <span className="value-pos">{row.wins}</span>/<span className="value-neg">{row.losses}</span>
+                          </span>
                         </span>
                       </div>
                     </td>

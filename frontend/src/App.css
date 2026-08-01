@@ -629,23 +629,29 @@
   gap: 8px;
 }
 
-.win-rate-bar-track {
-  width: 60px;
-  height: 6px;
-  border-radius: 3px;
-  background: var(--code-bg);
-  overflow: hidden;
+.win-rate-ring {
   flex-shrink: 0;
 }
 
-.win-rate-bar-fill {
-  display: block;
-  height: 100%;
-  background: var(--pos);
+.win-rate-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+}
+
+.win-rate-text .win-rate-pct {
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.win-rate-sub {
+  font-size: 11px;
+  color: var(--text);
 }
 
 .podium {
   display: flex;
+  align-items: flex-end;
   gap: 12px;
   width: 100%;
   max-width: 960px;
@@ -665,16 +671,32 @@
   text-align: center;
 }
 
-.podium-card.podium-1 { border-color: var(--podium-gold); }
-.podium-card.podium-2 { border-color: var(--podium-silver); }
-.podium-card.podium-3 { border-color: var(--podium-bronze); }
+/* #1 fica maior e "elevado" (degrau de pódio de verdade) — as outras
+   duas posições continuam do mesmo tamanho entre si, só a tinta de
+   fundo e a cor da borda mudam por posição. */
+.podium-card.podium-1 {
+  flex: 1.15;
+  padding: 24px 14px;
+  border-width: 2px;
+  border-color: var(--podium-gold);
+  background: linear-gradient(160deg, rgba(201, 162, 39, 0.22), var(--code-bg));
+  box-shadow: 0 0 12px rgba(201, 162, 39, 0.35);
+}
+.podium-card.podium-2 {
+  border-color: var(--podium-silver);
+  background: linear-gradient(160deg, rgba(154, 160, 166, 0.14), var(--code-bg));
+}
+.podium-card.podium-3 {
+  border-color: var(--podium-bronze);
+  background: linear-gradient(160deg, rgba(181, 101, 29, 0.12), var(--code-bg));
+}
 
 .podium-rank {
   font-size: 20px;
   font-weight: 700;
 }
 
-.podium-1 .podium-rank { color: var(--podium-gold); }
+.podium-1 .podium-rank { color: var(--podium-gold); font-size: 24px; }
 .podium-2 .podium-rank { color: var(--podium-silver); }
 .podium-3 .podium-rank { color: var(--podium-bronze); }
 
@@ -688,6 +710,8 @@
   color: var(--text-h);
   font-weight: 600;
 }
+
+.podium-1 .podium-name { font-size: 16px; }
 
 .podium-meta {
   font-size: 12px;
