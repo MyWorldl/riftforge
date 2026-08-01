@@ -22,6 +22,11 @@ function matchesSearch(row: RankingRow, search: string): boolean {
   return haystack.includes(needle)
 }
 
+function winRatePct(row: RankingRow): number {
+  const total = row.wins + row.losses
+  return Math.round((row.wins / Math.max(total, 1)) * 100)
+}
+
 function RankingsPage() {
   const [tier, setTier] = useState('')
   const [region, setRegion] = useState(RANKINGS_REGIONS[0].value)
@@ -48,6 +53,11 @@ function RankingsPage() {
 
   const filteredRows = rows?.filter((row) => matchesSearch(row, search)) ?? null
   const showTierColumn = tier === ''
+  // Pódio só faz sentido pro top 3 "de verdade" — some quando o usuário
+  // busca um jogador específico, senão a posição no resultado filtrado
+  // não tem nada a ver com a colocação real dele no ranking.
+  const podiumRows = !search ? (filteredRows ?? []).slice(0, 3) : []
+  const tableRows = podiumRows.length > 0 ? (filteredRows ?? []).slice(3) : filteredRows ?? []
 
   return (
     <main className="center">
@@ -96,7 +106,30 @@ function RankingsPage() {
         </p>
       )}
 
-      {filteredRows && filteredRows.length > 0 && (
+      {podiumRows.length > 0 && (
+        <div className="podium">
+          {podiumRows.map((row, index) => (
+            <div className={`podium-card podium-${index + 1}`} key={`${row.tier}-${row.puuid}`}>
+              <span className="podium-rank">#{row.rank_position}</span>
+              {row.profile_icon_id && ddragonPatch && (
+                <img
+                  className="podium-avatar"
+                  src={profileIconUrl(ddragonPatch, row.profile_icon_id)}
+                  alt=""
+                  width={40}
+                  height={40}
+                />
+              )}
+              <span className="podium-name">
+                {row.game_name && row.tag_line ? `${row.game_name}#${row.tag_line}` : '—'}
+              </span>
+              <span className="podium-meta">{row.league_points} LP · {winRatePct(row)}%</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {tableRows.length > 0 && (
         <div className="table-scroll">
           <table className="stats-table">
             <thead>
@@ -110,9 +143,8 @@ function RankingsPage() {
               </tr>
             </thead>
             <tbody>
-              {filteredRows.map((row) => {
-                const totalGames = row.wins + row.losses
-                const winRate = Math.round((row.wins / Math.max(totalGames, 1)) * 100)
+              {tableRows.map((row) => {
+                const winRate = winRatePct(row)
                 return (
                   <tr key={`${row.tier}-${row.puuid}`}>
                     <td>{row.rank_position}</td>
@@ -129,10 +161,19 @@ function RankingsPage() {
                         <span>{row.game_name && row.tag_line ? `${row.game_name}#${row.tag_line}` : '—'}</span>
                       </div>
                     </td>
-                    {showTierColumn && <td>{TIER_LABELS[row.tier] ?? row.tier}</td>}
+                    {showTierColumn && (
+                      <td><span className="rank-tier-badge">{TIER_LABELS[row.tier] ?? row.tier}</span></td>
+                    )}
                     <td>{row.summoner_level ?? '—'}</td>
                     <td>{row.league_points}</td>
-                    <td>{row.wins}/{row.losses} - {winRate}%</td>
+                    <td>
+                      <div className="win-rate-cell">
+                        <span className="win-rate-bar-track">
+                          <span className="win-rate-bar-fill" style={{ width: `${winRate}%` }} />
+                        </span>
+                        <span>{row.wins}/{row.losses} - {winRate}%</span>
+                      </div>
+                    </td>
                   </tr>
                 )
               })}

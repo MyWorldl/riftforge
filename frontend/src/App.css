@@ -580,6 +580,89 @@
   font-weight: 400;
 }
 
+.rank-tier-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  color: var(--accent);
+  background: var(--accent-bg);
+  border: 1px solid var(--accent-border);
+}
+
+.win-rate-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.win-rate-bar-track {
+  width: 60px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--code-bg);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.win-rate-bar-fill {
+  display: block;
+  height: 100%;
+  background: var(--pos);
+}
+
+.podium {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+  max-width: 960px;
+  align-self: flex-start;
+}
+
+.podium-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 12px;
+  text-align: center;
+}
+
+.podium-card.podium-1 { border-color: var(--podium-gold); }
+.podium-card.podium-2 { border-color: var(--podium-silver); }
+.podium-card.podium-3 { border-color: var(--podium-bronze); }
+
+.podium-rank {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.podium-1 .podium-rank { color: var(--podium-gold); }
+.podium-2 .podium-rank { color: var(--podium-silver); }
+.podium-3 .podium-rank { color: var(--podium-bronze); }
+
+.podium-avatar {
+  border-radius: 8px;
+  margin: 4px 0;
+}
+
+.podium-name {
+  font-size: 14px;
+  color: var(--text-h);
+  font-weight: 600;
+}
+
+.podium-meta {
+  font-size: 12px;
+  color: var(--text);
+}
+
 .power-detail {
   margin-top: 16px;
   padding-top: 12px;
