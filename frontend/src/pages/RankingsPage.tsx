@@ -84,7 +84,7 @@ function RankingsPage() {
         </label>
 
         <label>
-          Jogador
+          Invocador
           <input
             type="text"
             placeholder="Buscar por nome"
@@ -135,7 +135,7 @@ function RankingsPage() {
             <thead>
               <tr>
                 <th>#</th>
-                <th>Jogador</th>
+                <th>Invocador</th>
                 {showTierColumn && <th>Tier</th>}
                 <th>Nível</th>
                 <th>LP</th>
@@ -162,7 +162,7 @@ function RankingsPage() {
                       </div>
                     </td>
                     {showTierColumn && (
-                      <td><span className="rank-tier-badge">{TIER_LABELS[row.tier] ?? row.tier}</span></td>
+                      <td><span className={`rank-tier-badge tier-${row.tier}`}>{TIER_LABELS[row.tier] ?? row.tier}</span></td>
                     )}
                     <td>{row.summoner_level ?? '—'}</td>
                     <td>{row.league_points}</td>
@@ -171,7 +171,11 @@ function RankingsPage() {
                         <span className="win-rate-bar-track">
                           <span className="win-rate-bar-fill" style={{ width: `${winRate}%` }} />
                         </span>
-                        <span>{row.wins}/{row.losses} - {winRate}%</span>
+                        <span>
+                          <span className="value-pos">{row.wins}</span>/<span className="value-neg">{row.losses}</span>
+                          {' - '}
+                          <span className={winRate >= 50 ? 'value-pos' : 'value-neg'}>{winRate}%</span>
+                        </span>
                       </div>
                     </td>
                   </tr>

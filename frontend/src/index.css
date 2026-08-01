@@ -41,6 +41,16 @@
   --podium-gold: #c9a227;
   --podium-silver: #9aa0a6;
   --podium-bronze: #b5651d;
+  /* Tiers apex do Rankings (Desafiante/Grão-Mestre/Mestre) — cores
+     inspiradas nos emblemas oficiais da Riot (dourado/vermelho/roxo),
+     mas com variáveis próprias em vez de reaproveitar --tier-god/-s/-a
+     do sistema de tier de campeão (conceitos diferentes). Texto branco
+     fixo por cima, então checado contra AA como os outros tiers acima:
+     dourado e vermelho reaproveitam valores já verificados (5.27:1 e
+     4.84:1); o roxo (#9333ea) foi calculado agora e passa em ~5.55:1. */
+  --rank-challenger: #8a6608;
+  --rank-grandmaster: #d0393e;
+  --rank-master: #9333ea;
   --shadow:
     rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
 

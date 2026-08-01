@@ -587,10 +587,12 @@
   font-size: 12px;
   font-weight: 700;
   white-space: nowrap;
-  color: var(--accent);
-  background: var(--accent-bg);
-  border: 1px solid var(--accent-border);
+  color: #fff;
 }
+
+.rank-tier-badge.tier-CHALLENGER { background: var(--rank-challenger); }
+.rank-tier-badge.tier-GRANDMASTER { background: var(--rank-grandmaster); }
+.rank-tier-badge.tier-MASTER { background: var(--rank-master); }
 
 .win-rate-cell {
   display: flex;
