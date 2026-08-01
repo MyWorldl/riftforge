@@ -43,7 +43,17 @@ class Settings(BaseSettings):
     puuid_retention_days: int = 42
 
     app_env: str = "development"
-    cors_origins: str = "http://localhost:5173,https://riftforge-self.vercel.app"
+    # `https://tauri.localhost` é a origem que o WebView2 usa pro app
+    # desktop no Windows (Tauri v2) — `tauri://localhost` é a mesma coisa
+    # em macOS/Linux (WKWebView/WebKitGTK), incluída por precaução mesmo
+    # o app hoje só distribuindo instalador Windows. Sem isso, todo fetch
+    # do app empacotado falha com "Failed to fetch" — a chamada nunca sai
+    # com erro de rede, é bloqueada pelo CORSMiddleware (confirmado:
+    # resposta "Disallowed CORS origin" simulando a origem via curl).
+    cors_origins: str = (
+        "http://localhost:5173,https://riftforge-self.vercel.app,"
+        "https://tauri.localhost,tauri://localhost"
+    )
 
     # Rate limiting por IP (protege a cota da Riot API e o backend contra abuso).
     rate_limit_default: str = "60/minute"
