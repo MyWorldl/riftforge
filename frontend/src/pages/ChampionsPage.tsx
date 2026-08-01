@@ -11,6 +11,7 @@ import {
 } from '../api/client'
 import { CHAMPIONS_COUNTRY_OPTIONS } from '../constants/regions'
 import HistoryChart from '../HistoryChart'
+import roleIconAll from '../assets/roles/all.png'
 import roleIconTop from '../assets/roles/top.png'
 import roleIconJungle from '../assets/roles/jungle.png'
 import roleIconMiddle from '../assets/roles/middle.png'
@@ -46,6 +47,7 @@ const LANE_LABELS: Record<string, string> = Object.fromEntries(
  *  Dragon já usado pro resto do site, só que o Data Dragon não tem esse
  *  conjunto. `UNKNOWN` (partidas sem rota detectada) não tem ícone. */
 const LANE_ICONS: Partial<Record<string, string>> = {
+  '': roleIconAll,
   TOP: roleIconTop,
   JUNGLE: roleIconJungle,
   MIDDLE: roleIconMiddle,
@@ -320,19 +322,21 @@ function ChampionsPage() {
 
       <div className="filters">
         <label>
-          Elo
-          <select value={eloTier} onChange={(e) => setEloTier(e.target.value)}>
-            {ELO_TIERS.map((t) => (
-              <option key={t} value={t}>{t}</option>
+          Região
+          <select value={country} onChange={(e) => setCountry(e.target.value)}>
+            {CHAMPIONS_COUNTRY_OPTIONS.map((c) => (
+              <option key={c.value} value={c.value} disabled={c.value !== 'br1'}>
+                {c.flag} {c.label}{c.value !== 'br1' ? ' (em breve)' : ''}
+              </option>
             ))}
           </select>
         </label>
 
         <label>
-          Rota
-          <select value={lane} onChange={(e) => setLane(e.target.value)}>
-            {LANES.map((l) => (
-              <option key={l.value} value={l.value}>{l.label}</option>
+          Tier
+          <select value={eloTier} onChange={(e) => setEloTier(e.target.value)}>
+            {ELO_TIERS.map((t) => (
+              <option key={t} value={t}>{t}</option>
             ))}
           </select>
         </label>
@@ -347,18 +351,22 @@ function ChampionsPage() {
           </select>
         </label>
 
-        <label>
-          País
-          <select value={country} onChange={(e) => setCountry(e.target.value)}>
-            {CHAMPIONS_COUNTRY_OPTIONS.map((c) => (
-              <option key={c.value} value={c.value} disabled={c.value !== 'br1'}>
-                {c.flag} {c.label}{c.value !== 'br1' ? ' (em breve)' : ''}
-              </option>
-            ))}
-          </select>
-        </label>
-
         {loading && <span className="filters-loading">Buscando...</span>}
+      </div>
+
+      <div className="role-filter">
+        {LANES.map((l) => (
+          <button
+            key={l.value}
+            type="button"
+            className={`role-filter-btn ${lane === l.value ? 'role-filter-btn-active' : ''}`}
+            onClick={() => setLane(l.value)}
+            title={l.label}
+          >
+            <img src={LANE_ICONS[l.value]} alt="" width={22} height={22} />
+            <span>{l.label}</span>
+          </button>
+        ))}
       </div>
 
       {metaError && <p className="error">Não foi possível carregar dados do Data Dragon: {metaError}</p>}
