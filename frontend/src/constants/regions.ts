@@ -1,3 +1,12 @@
+import flagBr1 from '../assets/flags/br1.png'
+import flagNa1 from '../assets/flags/na1.svg'
+import flagLan from '../assets/flags/lan.svg'
+import flagLas from '../assets/flags/las.svg'
+import flagEuw1 from '../assets/flags/euw1.svg'
+import flagEun1 from '../assets/flags/eun1.svg'
+import flagKr from '../assets/flags/kr.jpg'
+import flagJp1 from '../assets/flags/jp1.svg'
+
 export interface RegionOption {
   value: string
   label: string
@@ -5,18 +14,20 @@ export interface RegionOption {
 }
 
 /** Todas as regiões que a Riot suporta pra Análise do Jogador (busca por
- * Riot ID via Account-V1, qualquer região funciona). `flag` é emoji de
- * bandeira — LAN/LAS cobrem vários países, então usam 🌎 em vez de
- * escolher um país arbitrário; EUW/EUNE usam 🇪🇺 pelo mesmo motivo. */
+ * Riot ID via Account-V1, qualquer região funciona). `flag` é a imagem
+ * (recortada em círculo via CSS) mostrada no dropdown customizado —
+ * LAN/LAS e as duas regiões da Europa não têm um único país "dono", então
+ * usam uma bandeira representativa (México/Argentina/UE/Polônia) em vez
+ * de fingir uma nacionalidade única pro servidor. */
 export const REGIONS: RegionOption[] = [
-  { value: 'br1', label: 'Brasil', flag: '🇧🇷' },
-  { value: 'na1', label: 'América do Norte', flag: '🇺🇸' },
-  { value: 'lan', label: 'LAN', flag: '🌎' },
-  { value: 'las', label: 'LAS', flag: '🌎' },
-  { value: 'euw1', label: 'Europa Ocidental', flag: '🇪🇺' },
-  { value: 'eun1', label: 'Europa Nórdica/Leste', flag: '🇪🇺' },
-  { value: 'kr', label: 'Coreia', flag: '🇰🇷' },
-  { value: 'jp1', label: 'Japão', flag: '🇯🇵' },
+  { value: 'br1', label: 'Brasil', flag: flagBr1 },
+  { value: 'na1', label: 'América do Norte', flag: flagNa1 },
+  { value: 'lan', label: 'LAN', flag: flagLan },
+  { value: 'las', label: 'LAS', flag: flagLas },
+  { value: 'euw1', label: 'Europa Ocidental', flag: flagEuw1 },
+  { value: 'eun1', label: 'Europa Nórdica/Leste', flag: flagEun1 },
+  { value: 'kr', label: 'Coreia', flag: flagKr },
+  { value: 'jp1', label: 'Japão', flag: flagJp1 },
 ]
 
 /** Regiões cobertas pelo job de Rankings (`rankings_platform_regions` em

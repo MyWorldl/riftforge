@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { fetchChampions, fetchRankings, profileIconUrl, type RankingRow } from '../api/client'
+import FlagSelect from '../components/FlagSelect'
 import { RANKINGS_REGIONS } from '../constants/regions'
 
 const TIERS = [
@@ -101,11 +102,7 @@ function RankingsPage() {
 
         <label>
           Região
-          <select value={region} onChange={(e) => setRegion(e.target.value)}>
-            {RANKINGS_REGIONS.map((r) => (
-              <option key={r.value} value={r.value}>{r.flag} {r.label}</option>
-            ))}
-          </select>
+          <FlagSelect options={RANKINGS_REGIONS} value={region} onChange={setRegion} />
         </label>
 
         <label>

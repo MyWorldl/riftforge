@@ -255,6 +255,30 @@ export async function fetchPatchNotes(eloTier: string): Promise<PatchNotesResult
   return response.json()
 }
 
+export interface PatchChangeRow {
+  champion_id: string
+  category: 'stat' | 'spell' | 'passive'
+  spell_key: string | null
+  spell_name: string | null
+  field_label: string
+  before_value: string
+  after_value: string
+}
+
+export interface PatchChangesResult {
+  patch_atual: string | null
+  patch_anterior: string | null
+  mudancas: PatchChangeRow[]
+}
+
+export async function fetchPatchChanges(): Promise<PatchChangesResult> {
+  const response = await fetch(`${API_URL}/patch-notes/changes`)
+  if (!response.ok) {
+    throw new Error(`Falha ao buscar mudanças do patch: ${response.status}`)
+  }
+  return response.json()
+}
+
 export async function fetchPlayerLookup(filters: PlayerLookupFilters): Promise<PlayerLookupResult> {
   const params = new URLSearchParams({
     region: filters.region,

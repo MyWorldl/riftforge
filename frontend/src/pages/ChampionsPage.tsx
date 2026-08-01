@@ -9,6 +9,7 @@ import {
   type PowerProfile,
   type ScoreExplanation,
 } from '../api/client'
+import FlagSelect from '../components/FlagSelect'
 import { CHAMPIONS_COUNTRY_OPTIONS } from '../constants/regions'
 import HistoryChart from '../HistoryChart'
 import roleIconAll from '../assets/roles/all.png'
@@ -17,17 +18,50 @@ import roleIconJungle from '../assets/roles/jungle.png'
 import roleIconMiddle from '../assets/roles/middle.png'
 import roleIconBottom from '../assets/roles/bottom.png'
 import roleIconUtility from '../assets/roles/utility.png'
+import tierIconIron from '../assets/tiers/iron.png'
+import tierIconBronze from '../assets/tiers/bronze.png'
+import tierIconSilver from '../assets/tiers/silver.png'
+import tierIconGold from '../assets/tiers/gold.png'
+import tierIconPlatinum from '../assets/tiers/platinum.png'
+import tierIconEmerald from '../assets/tiers/emerald.png'
+import tierIconDiamond from '../assets/tiers/diamond.png'
+import tierIconMaster from '../assets/tiers/master.png'
+import tierIconGrandmaster from '../assets/tiers/grandmaster.png'
+import tierIconChallenger from '../assets/tiers/challenger.png'
 
 function formatPct(value: number | null): string {
   return value == null ? '—' : `${(value * 100).toFixed(1)}%`
 }
 
+/** Só `br1` é funcional hoje (ver comentário em `CHAMPIONS_COUNTRY_OPTIONS`
+ *  em `constants/regions.ts`) — os demais ficam visíveis no dropdown mas
+ *  desabilitados. */
+const COUNTRY_SELECT_OPTIONS = CHAMPIONS_COUNTRY_OPTIONS.map((c) => ({
+  ...c,
+  disabled: c.value !== 'br1',
+}))
+
 type ExpandedPanel = { key: string; type: 'explain' | 'history' } | null
+
+const TIER_ICONS: Record<string, string> = {
+  IRON: tierIconIron,
+  BRONZE: tierIconBronze,
+  SILVER: tierIconSilver,
+  GOLD: tierIconGold,
+  PLATINUM: tierIconPlatinum,
+  EMERALD: tierIconEmerald,
+  DIAMOND: tierIconDiamond,
+  MASTER: tierIconMaster,
+  GRANDMASTER: tierIconGrandmaster,
+  CHALLENGER: tierIconChallenger,
+}
 
 const ELO_TIERS = [
   'IRON', 'BRONZE', 'SILVER', 'GOLD', 'PLATINUM',
   'EMERALD', 'DIAMOND', 'MASTER', 'GRANDMASTER', 'CHALLENGER',
 ]
+
+const TIER_SELECT_OPTIONS = ELO_TIERS.map((t) => ({ value: t, label: t, flag: TIER_ICONS[t] }))
 
 const LANES = [
   { value: '', label: 'Todas as rotas' },
@@ -323,22 +357,12 @@ function ChampionsPage() {
       <div className="filters">
         <label>
           Região
-          <select value={country} onChange={(e) => setCountry(e.target.value)}>
-            {CHAMPIONS_COUNTRY_OPTIONS.map((c) => (
-              <option key={c.value} value={c.value} disabled={c.value !== 'br1'}>
-                {c.flag} {c.label}{c.value !== 'br1' ? ' (em breve)' : ''}
-              </option>
-            ))}
-          </select>
+          <FlagSelect options={COUNTRY_SELECT_OPTIONS} value={country} onChange={setCountry} />
         </label>
 
         <label>
           Tier
-          <select value={eloTier} onChange={(e) => setEloTier(e.target.value)}>
-            {ELO_TIERS.map((t) => (
-              <option key={t} value={t}>{t}</option>
-            ))}
-          </select>
+          <FlagSelect options={TIER_SELECT_OPTIONS} value={eloTier} onChange={setEloTier} iconShape="contain" />
         </label>
 
         <label>

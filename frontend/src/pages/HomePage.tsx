@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import heroImage from '../assets/hero.svg'
+import FlagSelect from '../components/FlagSelect'
 import { REGIONS } from '../constants/regions'
 
 function HomePage() {
@@ -38,11 +39,7 @@ function HomePage() {
       <form className="player-search-form" onSubmit={handleSubmit}>
         <label>
           Região
-          <select value={region} onChange={(e) => setRegion(e.target.value)}>
-            {REGIONS.map((r) => (
-              <option key={r.value} value={r.value}>{r.flag} {r.label}</option>
-            ))}
-          </select>
+          <FlagSelect options={REGIONS} value={region} onChange={setRegion} />
         </label>
         <label>
           Buscar

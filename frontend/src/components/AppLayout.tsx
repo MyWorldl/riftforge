@@ -163,7 +163,11 @@ function AppLayout() {
           <a href="https://freeicons.io" target="_blank" rel="noreferrer">
             freeicons.io
           </a>
-          .
+          . Bandeiras de região por{' '}
+          <a href="https://github.com/lipis/flag-icons" target="_blank" rel="noreferrer">
+            flag-icons
+          </a>{' '}
+          (MIT).
         </p>
       </footer>
     </div>
