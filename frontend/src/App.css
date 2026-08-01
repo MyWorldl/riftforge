@@ -590,9 +590,38 @@
   color: #fff;
 }
 
-.rank-tier-badge.tier-CHALLENGER { background: var(--rank-challenger); }
 .rank-tier-badge.tier-GRANDMASTER { background: var(--rank-grandmaster); }
 .rank-tier-badge.tier-MASTER { background: var(--rank-master); }
+
+/* Desafiante ganha um tratamento especial — é o tier mais alto do jogo.
+   O degradê e o brilho variam só entre tons escuros o bastante pra
+   manter o texto branco em contraste AA (a mesma cor sólida de antes,
+   --rank-challenger, já passava em 5.27:1); o brilho de verdade vem do
+   feixe translúcido que desliza por cima via ::after, não da cor de
+   fundo em si — assim a legibilidade nunca fica comprometida. */
+.rank-tier-badge.tier-CHALLENGER {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #6b4d06, var(--rank-challenger), #6b4d06);
+  box-shadow: 0 0 6px rgba(212, 175, 55, 0.5);
+}
+
+.rank-tier-badge.tier-CHALLENGER::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -150%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(120deg, transparent, rgba(255, 255, 255, 0.6), transparent);
+  animation: challenger-shine 2.5s ease-in-out infinite;
+}
+
+@keyframes challenger-shine {
+  0% { left: -150%; }
+  55% { left: 150%; }
+  100% { left: 150%; }
+}
 
 .win-rate-cell {
   display: flex;
