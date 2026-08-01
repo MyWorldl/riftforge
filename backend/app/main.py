@@ -18,6 +18,7 @@ from app.core.power_profile import power_profile
 from app.db.models import (
     ChampionBanStat,
     ChampionLaneStat,
+    ChampionPatchChange,
     ChampionPerformanceScore,
     ChampionScore,
     Patch,
@@ -297,6 +298,51 @@ def get_patch_notes(elo_tier: str = "GOLD", top_n: int = 10) -> dict:
             top_n=top_n,
         )
         return {"patch_atual": patch_atual, "patch_anterior": patch_anterior, **diff}
+    finally:
+        session.close()
+
+
+@app.get("/patch-notes/changes")
+def get_patch_changes(patch: str | None = None) -> dict:
+    """Complementa `/patch-notes`: em vez do impacto estatístico (via
+    partidas), mostra a mudança numérica bruta que a Riot de fato
+    publicou no Data Dragon pro patch (ver app/core/patch_notes_diff.py
+    pro escopo/limitações). Populado por app/jobs/compute_patch_changes.py,
+    nenhuma chamada Riot/Data Dragon ao vivo aqui."""
+    session = SessionLocal()
+    try:
+        if patch is None:
+            row = (
+                session.query(ChampionPatchChange.patch, Patch.patch_sequence)
+                .join(Patch, Patch.version_label == ChampionPatchChange.patch)
+                .distinct()
+                .order_by(Patch.patch_sequence.desc())
+                .first()
+            )
+            if row is None:
+                return {"patch_atual": None, "patch_anterior": None, "mudancas": []}
+            patch = row[0]
+
+        rows = session.query(ChampionPatchChange).filter_by(patch=patch).all()
+        if not rows:
+            return {"patch_atual": patch, "patch_anterior": None, "mudancas": []}
+
+        return {
+            "patch_atual": patch,
+            "patch_anterior": rows[0].patch_anterior,
+            "mudancas": [
+                {
+                    "champion_id": r.champion_id,
+                    "category": r.category,
+                    "spell_key": r.spell_key,
+                    "spell_name": r.spell_name,
+                    "field_label": r.field_label,
+                    "before_value": r.before_value,
+                    "after_value": r.after_value,
+                }
+                for r in rows
+            ],
+        }
     finally:
         session.close()
 

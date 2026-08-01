@@ -73,6 +73,14 @@ jobs:
         continue-on-error: true
         run: python -m app.jobs.compute_kit
 
+      # "Patch Notes" (o que a Riot mudou de verdade, não só impacto no
+      # score): também só depende do Data Dragon, mesma justificativa do
+      # Kit acima pro continue-on-error — não bloqueia o resto do
+      # pipeline se o Data Dragon estiver instável.
+      - name: Detectar mudanças reais do patch (Data Dragon diff)
+        continue-on-error: true
+        run: python -m app.jobs.compute_patch_changes
+
       # Todos os estágios são delete-and-recompute, então rodar o pipeline
       # inteiro a cada coleta é idempotente e mantém o site em dia.
       - name: Reprocessar pipeline

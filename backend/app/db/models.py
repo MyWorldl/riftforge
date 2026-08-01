@@ -339,6 +339,37 @@ class ChampionScore(Base):
     __table_args__ = (UniqueConstraint("patch", "elo_tier", "lane", "champion_id"),)
 
 
+class ChampionPatchChange(Base):
+    """Item novo: "o que a Riot mudou de verdade" no patch, complementando
+    `ChampionScore`/`patch_diff.py` (que mede IMPACTO estatístico via
+    partidas, não a alteração numérica bruta). Populado por
+    `app/jobs/compute_patch_changes.py`, que faz diff campo-a-campo do
+    Data Dragon entre duas versões consecutivas (ver
+    `app/core/patch_notes_diff.py` pra escopo/limitações — nem toda
+    mudança de balanceamento é capturada, ajustes de proporção/escala
+    ficam em `spells[].vars`, que a API pública não expõe).
+
+    `patch` é a versão ATUAL (pra onde a mudança foi aplicada);
+    `patch_anterior` só existe pra exibição ("comparando X -> Y"), não é
+    usado como chave de busca — cada linha já representa uma comparação
+    fixa calculada no momento do job."""
+
+    __tablename__ = "champion_patch_changes"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    patch: Mapped[str] = mapped_column(index=True)
+    patch_anterior: Mapped[str]
+    champion_id: Mapped[str]
+    category: Mapped[str]  # "stat" | "spell" | "passive"
+    spell_key: Mapped[str | None]  # "Q"/"W"/"E"/"R", None fora de "spell"
+    spell_name: Mapped[str | None]
+    field: Mapped[str]
+    field_label: Mapped[str]
+    before_value: Mapped[str]
+    after_value: Mapped[str]
+    computed_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc))
+
+
 class PlayerRanking(Base):
     """"Rankings" (rodada 19, filtro por região na rodada 20) — snapshot do
     ranking de jogadores das ligas apex (Desafiante/Grão-Mestre/Mestre)
