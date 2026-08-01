@@ -58,7 +58,7 @@ function ThemeToggle() {
       title={isDark ? 'Mudar para tema claro' : 'Mudar para tema escuro'}
       aria-label={isDark ? 'Mudar para tema claro' : 'Mudar para tema escuro'}
     >
-      {isDark ? <IconSun /> : <IconMoon />}
+      {isDark ? <IconMoon /> : <IconSun />}
     </button>
   )
 }

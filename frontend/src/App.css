@@ -296,6 +296,12 @@
   border-radius: 4px;
 }
 
+.lane-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .tier-badge {
   display: inline-block;
   min-width: 28px;
@@ -397,6 +403,12 @@
 .explain-headline {
   font-size: 15px;
   color: var(--text-h);
+  margin-bottom: 4px;
+}
+
+.explain-sample {
+  font-size: 13px;
+  color: var(--text);
   margin-bottom: 12px;
 }
 

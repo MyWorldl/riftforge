@@ -9,7 +9,17 @@ import {
   type PowerProfile,
   type ScoreExplanation,
 } from '../api/client'
+import { CHAMPIONS_COUNTRY_OPTIONS } from '../constants/regions'
 import HistoryChart from '../HistoryChart'
+import roleIconTop from '../assets/roles/top.png'
+import roleIconJungle from '../assets/roles/jungle.png'
+import roleIconMiddle from '../assets/roles/middle.png'
+import roleIconBottom from '../assets/roles/bottom.png'
+import roleIconUtility from '../assets/roles/utility.png'
+
+function formatPct(value: number | null): string {
+  return value == null ? '—' : `${(value * 100).toFixed(1)}%`
+}
 
 type ExpandedPanel = { key: string; type: 'explain' | 'history' } | null
 
@@ -30,6 +40,28 @@ const LANES = [
 const LANE_LABELS: Record<string, string> = Object.fromEntries(
   LANES.filter((l) => l.value).map((l) => [l.value, l.label]),
 )
+
+/** Ícones oficiais de posição da Riot (position-select do client),
+ *  servidos pelo CommunityDragon — mesma categoria de asset que o Data
+ *  Dragon já usado pro resto do site, só que o Data Dragon não tem esse
+ *  conjunto. `UNKNOWN` (partidas sem rota detectada) não tem ícone. */
+const LANE_ICONS: Partial<Record<string, string>> = {
+  TOP: roleIconTop,
+  JUNGLE: roleIconJungle,
+  MIDDLE: roleIconMiddle,
+  BOTTOM: roleIconBottom,
+  UTILITY: roleIconUtility,
+}
+
+function LaneCell({ lane }: { lane: string }) {
+  const icon = LANE_ICONS[lane]
+  return (
+    <div className="lane-cell">
+      {icon && <img src={icon} alt="" width={18} height={18} />}
+      <span>{LANE_LABELS[lane] ?? lane}</span>
+    </div>
+  )
+}
 
 function rowKey(row: ChampionScoreRow): string {
   return `${row.champion_id}-${row.lane}-${row.patch}`
@@ -60,14 +92,6 @@ const POWER_LABELS: Record<PowerProfile['classificacao'], string> = {
   indeterminado: '—',
 }
 
-// "Depende do meta" (16 caracteres) era o maior fator sozinho empurrando
-// a tabela pra fora da largura da tela — a coluna Perfil usa a versão
-// curta, o painel expandido (PowerProfileDetail) usa a versão completa.
-const POWER_LABELS_COMPACT: Record<PowerProfile['classificacao'], string> = {
-  ...POWER_LABELS,
-  meta: 'Meta',
-}
-
 const POWER_HINTS: Record<PowerProfile['classificacao'], string> = {
   estrutural: 'Poder vem majoritariamente do próprio campeão (Kit+Build) — deve se manter em patches futuros',
   meta: 'Poder vem majoritariamente do patch atual (Performance+Meta) — pode cair quando o meta mudar',
@@ -75,18 +99,13 @@ const POWER_HINTS: Record<PowerProfile['classificacao'], string> = {
   indeterminado: 'Sem dado suficiente pra classificar',
 }
 
-/** Item 3.2: badge compacto na linha principal, sem precisar expandir.
- *  `compact` usa o rótulo curto — a tabela precisa caber na tela sem
- *  rolar pro lado, o painel expandido tem espaço de sobra pro nome
- *  completo. */
-function PowerProfileBadge({ perfil, compact = false }: { perfil: PowerProfile; compact?: boolean }) {
-  const labels = compact ? POWER_LABELS_COMPACT : POWER_LABELS
+function PowerProfileBadge({ perfil }: { perfil: PowerProfile }) {
   return (
     <span
       className={`power-badge power-${perfil.classificacao}`}
       title={POWER_HINTS[perfil.classificacao]}
     >
-      {labels[perfil.classificacao]}
+      {POWER_LABELS[perfil.classificacao]}
     </span>
   )
 }
@@ -139,6 +158,9 @@ function ScoreExplanationPanel({ row }: { row: ChampionScoreRow }) {
   return (
     <div className="explain">
       <p className="explain-headline">{explanationHeadline(explicacao)}</p>
+      <p className="explain-sample">
+        Amostra: {row.n_matches} {row.n_matches === 1 ? 'partida' : 'partidas'} ({row.confianca.toFixed(1)}% de confiança)
+      </p>
 
       <div className="explain-rows">
         <div className="explain-row explain-base">
@@ -247,6 +269,7 @@ function ChampionsPage() {
   const [eloTier, setEloTier] = useState('GOLD')
   const [lane, setLane] = useState('')
   const [patch, setPatch] = useState('') // '' = mais recente
+  const [country, setCountry] = useState('br1')
 
   const [availablePatches, setAvailablePatches] = useState<string[]>([])
 
@@ -324,6 +347,17 @@ function ChampionsPage() {
           </select>
         </label>
 
+        <label>
+          País
+          <select value={country} onChange={(e) => setCountry(e.target.value)}>
+            {CHAMPIONS_COUNTRY_OPTIONS.map((c) => (
+              <option key={c.value} value={c.value} disabled={c.value !== 'br1'}>
+                {c.flag} {c.label}{c.value !== 'br1' ? ' (em breve)' : ''}
+              </option>
+            ))}
+          </select>
+        </label>
+
         {loading && <span className="filters-loading">Buscando...</span>}
       </div>
 
@@ -349,26 +383,28 @@ function ChampionsPage() {
         <table className="stats-table">
           <thead>
             <tr>
+              <th>#</th>
               <th>Campeão</th>
-              {!lane && <th>Rota</th>}
               <th>Tier</th>
-              <th>Perfil</th>
-              <th>Score</th>
-              <th>Amostra</th>
+              {!lane && <th>Função</th>}
+              <th>Taxa de Vitória</th>
+              <th>Taxa de escolha</th>
+              <th>Taxa de banimento</th>
               <th></th>
             </tr>
           </thead>
           <tbody>
-            {scores.map((row) => {
+            {scores.map((row, index) => {
               const meta = championsMeta?.[row.champion_id]
               const key = rowKey(row)
               const activePanel = expandedPanel?.key === key ? expandedPanel.type : null
               const toggle = (type: 'explain' | 'history') =>
                 setExpandedPanel(activePanel === type ? null : { key, type })
-              const colSpan = lane ? 6 : 7
+              const colSpan = lane ? 7 : 8
               return (
                 <Fragment key={key}>
                   <tr>
+                    <td>{index + 1}</td>
                     <td>
                       <div className="champion-cell">
                         {meta && ddragonPatch && (
@@ -383,16 +419,14 @@ function ChampionsPage() {
                         {row.trap_flag && <span className="trap-badge" title="Alta presença (pick/ban) com win rate abaixo do esperado">Trap</span>}
                       </div>
                     </td>
-                    {!lane && <td>{LANE_LABELS[row.lane] ?? row.lane}</td>}
                     <td>
                       <span className={`tier-badge tier-${row.score_tier}`}>{row.score_tier}</span>
                       {row.tier_provisorio && <span className="provisional-mark" title="Amostra pequena — tier provisório, teto em A">*</span>}
                     </td>
-                    <td><PowerProfileBadge perfil={row.perfil_poder} compact /></td>
-                    <td>{row.score_final.toFixed(1)}</td>
-                    <td>
-                      {row.n_matches} <span className="explain-sub">({row.confianca.toFixed(1)}%)</span>
-                    </td>
+                    {!lane && <td><LaneCell lane={row.lane} /></td>}
+                    <td>{formatPct(row.win_rate)}</td>
+                    <td>{formatPct(row.pick_rate)}</td>
+                    <td>{formatPct(row.ban_rate)}</td>
                     <td>
                       <div className="actions-cell">
                         <button

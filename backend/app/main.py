@@ -386,8 +386,14 @@ def get_champion_scores(elo_tier: str = "GOLD", lane: str | None = None, patch: 
             query = query.filter_by(lane=lane)
         rows = query.all()
 
-        n_matches_by_key = {
-            (r.patch, r.tier, r.lane, r.champion_id): r.n_matches
+        # Win rate/pick rate/ban rate já existem em ChampionPerformanceScore
+        # (calculados na Camada 1, item 1.1) — reaproveita a mesma linha já
+        # buscada pra n_matches em vez de mais uma tabela/consulta. "Taxa de
+        # Vitória" usa win_rate_raw (o número observado de verdade), não
+        # win_rate_adjusted (Wilson, só pra pontuação interna) — é o que o
+        # usuário espera ver, igual outros sites de tier list.
+        perf_by_key = {
+            (r.patch, r.tier, r.lane, r.champion_id): r
             for r in session.query(ChampionPerformanceScore).filter_by(tier=elo_tier, patch=patch).all()
         }
 
@@ -400,13 +406,17 @@ def get_champion_scores(elo_tier: str = "GOLD", lane: str | None = None, patch: 
                 "meta": row.meta_score,
             }
             pesos_usados = row.pesos_usados or {}
+            perf = perf_by_key.get((row.patch, row.elo_tier, row.lane, row.champion_id))
             result.append(
                 {
                     "champion_id": row.champion_id,
                     "lane": row.lane,
                     "patch": row.patch,
                     "elo_tier": row.elo_tier,
-                    "n_matches": n_matches_by_key.get((row.patch, row.elo_tier, row.lane, row.champion_id), 0),
+                    "n_matches": perf.n_matches if perf else 0,
+                    "win_rate": perf.win_rate_raw if perf else None,
+                    "pick_rate": perf.pick_rate if perf else None,
+                    "ban_rate": perf.ban_rate if perf else None,
                     "score_final": row.score_final,
                     "score_tier": row.score_tier,
                     "confianca": row.confianca,

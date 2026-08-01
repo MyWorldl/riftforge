@@ -68,7 +68,7 @@ function RankingsPage() {
           Região
           <select value={region} onChange={(e) => setRegion(e.target.value)}>
             {RANKINGS_REGIONS.map((r) => (
-              <option key={r.value} value={r.value}>{r.label}</option>
+              <option key={r.value} value={r.value}>{r.flag} {r.label}</option>
             ))}
           </select>
         </label>

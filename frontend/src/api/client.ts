@@ -118,6 +118,9 @@ export interface ChampionScoreRow {
   patch: string
   elo_tier: string
   n_matches: number
+  win_rate: number | null
+  pick_rate: number | null
+  ban_rate: number | null
   score_final: number
   score_tier: string
   confianca: number
