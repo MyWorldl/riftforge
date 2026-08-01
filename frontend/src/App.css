@@ -199,6 +199,7 @@
 .filters {
   display: flex;
   flex-wrap: wrap;
+  align-self: flex-start;
   gap: 16px;
   align-items: end;
   width: 100%;
@@ -284,6 +285,7 @@
 /* A tabela é larga demais para telas estreitas. Ela rola dentro deste
    container em vez de fazer a página inteira rolar na horizontal. */
 .table-scroll {
+  align-self: flex-start;
   width: 100%;
   max-width: 960px;
   overflow-x: auto;
