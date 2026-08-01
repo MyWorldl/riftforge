@@ -196,6 +196,48 @@
   color: var(--text);
 }
 
+.download-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.download-button {
+  display: inline-flex;
+  align-items: center;
+  font: inherit;
+  font-weight: 600;
+  padding: 10px 22px;
+  border-radius: 6px;
+  border: 1px solid var(--accent-border);
+  background: var(--accent-bg);
+  color: var(--accent);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.download-button:hover {
+  background: var(--accent);
+  color: #fff;
+}
+
+.download-button-secondary {
+  background: none;
+  border-color: var(--border);
+  color: var(--text-h);
+}
+
+.download-button-secondary:hover {
+  background: var(--code-bg);
+  color: var(--text-h);
+  border-color: var(--border);
+}
+
+.download-note {
+  font-size: 13px;
+  color: var(--text);
+}
+
 .filters {
   display: flex;
   flex-wrap: wrap;
