@@ -27,32 +27,22 @@ function winRatePct(row: RankingRow): number {
   return Math.round((row.wins / Math.max(total, 1)) * 100)
 }
 
-/** Anel de vitória: a fatia de vitórias usa um degradê rosa-carmim ->
- *  roxo vibrante (escolhido pelo usuário) em vez de verde sólido; o
- *  resto do anel fica num cinza neutro em vez de vermelho — a taxa de
- *  vitória em texto (verde/vermelho, abaixo) já cobre esse contraste,
- *  o anel agora é só o toque vibrante. `id` precisa ser único por
- *  linha pra cada `<linearGradient>` não colidir no DOM. */
-function WinRateRing({ winRate, id }: { winRate: number; id: string }) {
+/** Anel de vitória/derrota: fatia proporcional à taxa real, vitória em
+ *  roxo vibrante (#8B5CF6) e derrota em rosa-carmim (#F4306B) — cores
+ *  fixas escolhidas pelo usuário, sem variar por tema. */
+function WinRateRing({ winRate }: { winRate: number }) {
   const radius = 15
   const circumference = 2 * Math.PI * radius
   const winLength = (winRate / 100) * circumference
-  const gradientId = `win-rate-gradient-${id}`
   return (
     <svg width="32" height="32" viewBox="0 0 36 36" className="win-rate-ring" aria-hidden="true">
-      <defs>
-        <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#F4306B" />
-          <stop offset="100%" stopColor="#8B5CF6" />
-        </linearGradient>
-      </defs>
-      <circle cx="18" cy="18" r={radius} fill="none" stroke="var(--border)" strokeWidth="4" />
+      <circle cx="18" cy="18" r={radius} fill="none" stroke="#F4306B" strokeWidth="4" />
       <circle
         cx="18"
         cy="18"
         r={radius}
         fill="none"
-        stroke={`url(#${gradientId})`}
+        stroke="#8B5CF6"
         strokeWidth="4"
         strokeDasharray={`${winLength} ${circumference}`}
         strokeLinecap="round"
@@ -213,12 +203,10 @@ function RankingsPage() {
                     <td>{row.league_points}</td>
                     <td>
                       <div className="win-rate-cell">
-                        <WinRateRing winRate={winRate} id={row.puuid} />
+                        <WinRateRing winRate={winRate} />
                         <span className="win-rate-text">
-                          <span className={`win-rate-pct ${winRate >= 50 ? 'value-pos' : 'value-neg'}`}>{winRate}%</span>
-                          <span className="win-rate-sub">
-                            <span className="value-pos">{row.wins}</span>/<span className="value-neg">{row.losses}</span>
-                          </span>
+                          <span className="win-rate-pct">{winRate}%</span>
+                          <span className="win-rate-sub">{row.wins}/{row.losses}</span>
                         </span>
                       </div>
                     </td>
