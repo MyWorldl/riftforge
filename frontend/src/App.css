@@ -705,10 +705,16 @@
   margin: 4px 0;
 }
 
+/* Mesmo degradê rosa-carmim/roxo do anel de taxa de vitória, aplicado
+   igual nos três nomes do pódio (não varia por lugar) — pedido do
+   usuário a partir de uma referência visual. */
 .podium-name {
   font-size: 14px;
-  color: var(--text-h);
-  font-weight: 600;
+  font-weight: 700;
+  background: linear-gradient(90deg, #8b5cf6, #f4306b);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 .podium-1 .podium-name { font-size: 16px; }

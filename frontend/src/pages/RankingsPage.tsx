@@ -27,24 +27,34 @@ function winRatePct(row: RankingRow): number {
   return Math.round((row.wins / Math.max(total, 1)) * 100)
 }
 
-/** Anel de vitória/derrota: em vez de uma barra com trilha cinza neutra,
- *  o círculo inteiro é dividido entre verde (vitórias) e vermelho
- *  (derrotas), então as duas informações ficam visíveis de uma vez. */
-function WinRateRing({ winRate }: { winRate: number }) {
+/** Anel de vitória: a fatia de vitórias usa um degradê rosa-carmim ->
+ *  roxo vibrante (escolhido pelo usuário) em vez de verde sólido; o
+ *  resto do anel fica num cinza neutro em vez de vermelho — a taxa de
+ *  vitória em texto (verde/vermelho, abaixo) já cobre esse contraste,
+ *  o anel agora é só o toque vibrante. `id` precisa ser único por
+ *  linha pra cada `<linearGradient>` não colidir no DOM. */
+function WinRateRing({ winRate, id }: { winRate: number; id: string }) {
   const radius = 15
   const circumference = 2 * Math.PI * radius
-  const greenLength = (winRate / 100) * circumference
+  const winLength = (winRate / 100) * circumference
+  const gradientId = `win-rate-gradient-${id}`
   return (
     <svg width="32" height="32" viewBox="0 0 36 36" className="win-rate-ring" aria-hidden="true">
-      <circle cx="18" cy="18" r={radius} fill="none" stroke="var(--neg)" strokeWidth="4" />
+      <defs>
+        <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#F4306B" />
+          <stop offset="100%" stopColor="#8B5CF6" />
+        </linearGradient>
+      </defs>
+      <circle cx="18" cy="18" r={radius} fill="none" stroke="var(--border)" strokeWidth="4" />
       <circle
         cx="18"
         cy="18"
         r={radius}
         fill="none"
-        stroke="var(--pos)"
+        stroke={`url(#${gradientId})`}
         strokeWidth="4"
-        strokeDasharray={`${greenLength} ${circumference}`}
+        strokeDasharray={`${winLength} ${circumference}`}
         strokeLinecap="round"
         transform="rotate(-90 18 18)"
       />
@@ -133,24 +143,34 @@ function RankingsPage() {
 
       {podiumRows.length > 0 && (
         <div className="podium">
-          {podiumRows.map((row, index) => (
-            <div className={`podium-card podium-${index + 1}`} key={`${row.tier}-${row.puuid}`}>
-              <span className="podium-rank">#{row.rank_position}</span>
-              {row.profile_icon_id && ddragonPatch && (
-                <img
-                  className="podium-avatar"
-                  src={profileIconUrl(ddragonPatch, row.profile_icon_id)}
-                  alt=""
-                  width={index === 0 ? 48 : 40}
-                  height={index === 0 ? 48 : 40}
-                />
-              )}
-              <span className="podium-name">
-                {row.game_name && row.tag_line ? `${row.game_name}#${row.tag_line}` : '—'}
-              </span>
-              <span className="podium-meta">{row.league_points} LP · {winRatePct(row)}%</span>
-            </div>
-          ))}
+          {/* Estilo (tamanho/cor) segue o `place` real (1o/2o/3o), mas a
+              ORDEM visual é 2-1-3 (prata, ouro, bronze) — igual pódio de
+              premiação de verdade. Com menos de 3 resultados não dá pra
+              montar esse arranjo, então mantém a ordem natural. */}
+          {(podiumRows.length === 3
+            ? [podiumRows[1], podiumRows[0], podiumRows[2]]
+            : podiumRows
+          ).map((row) => {
+            const place = podiumRows.indexOf(row) + 1
+            return (
+              <div className={`podium-card podium-${place}`} key={`${row.tier}-${row.puuid}`}>
+                <span className="podium-rank">#{row.rank_position}</span>
+                {row.profile_icon_id && ddragonPatch && (
+                  <img
+                    className="podium-avatar"
+                    src={profileIconUrl(ddragonPatch, row.profile_icon_id)}
+                    alt=""
+                    width={place === 1 ? 48 : 40}
+                    height={place === 1 ? 48 : 40}
+                  />
+                )}
+                <span className="podium-name">
+                  {row.game_name && row.tag_line ? `${row.game_name}#${row.tag_line}` : '—'}
+                </span>
+                <span className="podium-meta">{row.league_points} LP · {winRatePct(row)}%</span>
+              </div>
+            )
+          })}
         </div>
       )}
 
@@ -193,7 +213,7 @@ function RankingsPage() {
                     <td>{row.league_points}</td>
                     <td>
                       <div className="win-rate-cell">
-                        <WinRateRing winRate={winRate} />
+                        <WinRateRing winRate={winRate} id={row.puuid} />
                         <span className="win-rate-text">
                           <span className={`win-rate-pct ${winRate >= 50 ? 'value-pos' : 'value-neg'}`}>{winRate}%</span>
                           <span className="win-rate-sub">
