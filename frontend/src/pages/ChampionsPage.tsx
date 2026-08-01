@@ -382,10 +382,6 @@ function ChampionsPage() {
 
       {scores && scores.length > 0 && (
         <>
-        <p className="table-caption">
-          Patch <strong>{scores[0].patch}</strong>{patch === '' && ' (mais recente com dado calculado)'}
-          {lane && <> · {LANE_LABELS[lane] ?? lane}</>} · {eloTier}
-        </p>
         <div className="table-scroll">
         <table className="stats-table">
           <thead>
