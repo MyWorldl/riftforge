@@ -33,6 +33,7 @@ Uso: python -m app.jobs.compute_scores
 """
 
 from app.core.config import get_settings
+from app.core.logging import get_logger, new_correlation_id
 from app.db.models import (
     ChampionBuildScore,
     ChampionKitScore,
@@ -41,6 +42,8 @@ from app.db.models import (
     ChampionScore,
 )
 from app.db.session import SessionLocal, init_db
+
+log = get_logger(__name__)
 
 MODEL_VERSION = "score_v1"
 
@@ -65,6 +68,7 @@ def _assign_tier(score: float) -> str:
 
 
 def compute() -> dict:
+    new_correlation_id()
     init_db()
     settings = get_settings()
 
@@ -155,12 +159,7 @@ def compute() -> dict:
 
 def main() -> None:
     result = compute()
-    print(
-        f"Score final calculado: {result['linhas_criadas']} linhas "
-        f"({result['linhas_puladas']} puladas por camada ausente), "
-        f"{result['tier_provisorio']} com tier provisório, "
-        f"{result['trap_flag']} com selo Trap."
-    )
+    log.info("job_concluido", job="compute_scores", **result)
 
 
 if __name__ == "__main__":

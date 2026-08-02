@@ -24,9 +24,12 @@ import asyncio
 import httpx
 
 from app.adapters.data_dragon import DataDragonAdapter
+from app.core.logging import get_logger, new_correlation_id
 from app.core.patch_notes_diff import diff_champion_detail
 from app.db.models import ChampionPatchChange
 from app.db.session import SessionLocal, init_db
+
+log = get_logger(__name__)
 
 CONCURRENCY = 10
 
@@ -59,7 +62,12 @@ async def _fetch_all_details(
             try:
                 return champion_id, await data_dragon.get_champion_detail(version, champion_id)
             except httpx.HTTPStatusError as exc:
-                print(f"  aviso: {champion_id} ({version}) — {exc.response.status_code}, pulando", flush=True)
+                log.warning(
+                    "champion_detail_indisponivel",
+                    champion_id=champion_id,
+                    data_dragon_version=version,
+                    status_code=exc.response.status_code,
+                )
                 return champion_id, None
 
     results = await asyncio.gather(*(fetch_one(cid) for cid in champion_ids))
@@ -67,6 +75,7 @@ async def _fetch_all_details(
 
 
 def compute(patch_prefix: str | None = None) -> dict:
+    new_correlation_id()
     init_db()
     data_dragon = DataDragonAdapter()
 
@@ -80,7 +89,12 @@ def compute(patch_prefix: str | None = None) -> dict:
     champions = asyncio.run(data_dragon.get_champions(version))
     champion_ids = list(champions.keys())
 
-    print(f"Buscando detalhe de {len(champion_ids)} campeões em {previous_version} e {version}...", flush=True)
+    log.info(
+        "buscando_detalhe_campeoes",
+        total=len(champion_ids),
+        versao_anterior=previous_version,
+        versao_atual=version,
+    )
     details_before = asyncio.run(_fetch_all_details(data_dragon, previous_version, champion_ids))
     details_after = asyncio.run(_fetch_all_details(data_dragon, version, champion_ids))
 
@@ -132,12 +146,9 @@ def main() -> None:
 
     result = compute(patch_prefix=args.patch)
     if result["patch_anterior"] is None:
-        print(f"Sem patch anterior pra comparar com {result['patch']} (é o mais antigo na lista de versões).")
+        log.info("sem_patch_anterior", patch=result["patch"])
         return
-    print(
-        f"Patch changes calculado: {result['mudancas']} mudanças em {result['campeoes_afetados']} campeões "
-        f"({result['patch_anterior']} -> {result['patch']})."
-    )
+    log.info("job_concluido", job="compute_patch_changes", **result)
 
 
 if __name__ == "__main__":

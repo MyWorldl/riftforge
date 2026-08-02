@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import JSON, BigInteger, ForeignKey, UniqueConstraint
+from sqlalchemy import JSON, BigInteger, ForeignKey, Index, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -32,6 +32,11 @@ class Match(Base):
     game_duration_s: Mapped[int]
     ingested_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc))
     raw_payload: Mapped[dict] = mapped_column(JSON)
+
+    # Revisão técnica §1.7: `purge_puuid.py` filtra por `game_start_ts` pra
+    # decidir quais partidas estão fora da janela de retenção — sem índice,
+    # isso varria a tabela inteira (a maior do banco).
+    __table_args__ = (Index("ix_matches_game_start_ts", "game_start_ts"),)
 
 
 class MatchParticipant(Base):
@@ -78,7 +83,12 @@ class MatchParticipant(Base):
     primary_style_id: Mapped[int | None]
     sub_style_id: Mapped[int | None]
 
-    __table_args__ = (UniqueConstraint("match_id", "puuid"),)
+    __table_args__ = (
+        UniqueConstraint("match_id", "puuid"),
+        # Revisão técnica §1.7: FK sem índice — `purge_puuid.py` filtra por
+        # `match_id IN (...)` contra a maior tabela do banco.
+        Index("ix_match_participants_match_id", "match_id"),
+    )
 
 
 class MatchBan(Base):
@@ -348,7 +358,14 @@ class ChampionScore(Base):
     model_version: Mapped[str]
     computed_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc))
 
-    __table_args__ = (UniqueConstraint("patch", "elo_tier", "lane", "champion_id"),)
+    __table_args__ = (
+        UniqueConstraint("patch", "elo_tier", "lane", "champion_id"),
+        # Revisão técnica §1.7: `champion_id` é a última coluna do índice
+        # único acima — `/scores/history` filtra só por `champion_id` +
+        # `elo_tier` (sem `patch`), o que varria a tabela inteira sem um
+        # índice próprio nessa ordem.
+        Index("ix_champion_scores_champion_elo", "champion_id", "elo_tier"),
+    )
 
 
 class ChampionPatchChange(Base):
@@ -415,6 +432,13 @@ class PlayerRanking(Base):
     wins: Mapped[int]
     losses: Mapped[int]
     rank_position: Mapped[int]
+    # Revisão técnica §5.2: diferença entre a posição anterior e a atual
+    # (positivo = subiu no ranking, negativo = caiu), lida do snapshot
+    # anterior por `puuid` antes de `collect_rankings.py` apagar as linhas
+    # velhas. `None` na primeira aparição do jogador nesse (queue, tier,
+    # region) — sem posição anterior, não há delta pra mostrar, e mostrar
+    # zero seria uma afirmação falsa ("não mudou") em vez de "sem dado".
+    delta_posicao: Mapped[int | None]
     collected_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc))
 
     __table_args__ = (UniqueConstraint("queue", "tier", "region", "puuid"),)

@@ -2,10 +2,12 @@ import { Fragment, useEffect, useState } from 'react'
 import {
   championImageUrl,
   fetchAvailablePatches,
+  fetchChampionExplanation,
   fetchChampionScores,
   fetchChampions,
   fetchItems,
   fetchRunes,
+  type ChampionExplanation,
   type ChampionMeta,
   type ChampionScoreRow,
   type ItemMeta,
@@ -107,6 +109,103 @@ function LaneCell({ lane }: { lane: string }) {
 
 function rowKey(row: ChampionScoreRow): string {
   return `${row.champion_id}-${row.lane}-${row.patch}`
+}
+
+function matchesNameSearch(
+  row: ChampionScoreRow,
+  search: string,
+  championsMeta: Record<string, ChampionMeta> | null,
+): boolean {
+  if (!search) return true
+  const needle = search.trim().toLowerCase()
+  const name = championsMeta?.[row.champion_id]?.name ?? row.champion_id
+  return name.toLowerCase().includes(needle) || row.champion_id.toLowerCase().includes(needle)
+}
+
+type SortKey = 'score' | 'win_rate' | 'pick_rate' | 'ban_rate'
+
+/** Item 5.1 (revisão técnica): ordenação por coluna client-side — a lista
+ *  inteira já vem carregada de uma vez (nunca paginada, ver Lote B da
+ *  revisão), então não há motivo pra ida ao backend só pra reordenar. */
+function sortScores(rows: ChampionScoreRow[], sortKey: SortKey, sortDir: 'asc' | 'desc'): ChampionScoreRow[] {
+  const dir = sortDir === 'asc' ? 1 : -1
+  const valueOf = (row: ChampionScoreRow): number => {
+    switch (sortKey) {
+      case 'win_rate':
+        return row.win_rate ?? -1
+      case 'pick_rate':
+        return row.pick_rate ?? -1
+      case 'ban_rate':
+        return row.ban_rate ?? -1
+      default:
+        return row.score_final
+    }
+  }
+  return [...rows].sort((a, b) => (valueOf(a) - valueOf(b)) * dir)
+}
+
+function SortableHeader({
+  label,
+  sortKeyFor,
+  currentKey,
+  currentDir,
+  onSort,
+}: {
+  label: string
+  sortKeyFor: SortKey
+  currentKey: SortKey
+  currentDir: 'asc' | 'desc'
+  onSort: (key: SortKey) => void
+}) {
+  const active = currentKey === sortKeyFor
+  return (
+    <th className="sortable-th" onClick={() => onSort(sortKeyFor)}>
+      {label}
+      <span className={`sort-caret ${active ? 'sort-caret-active' : ''}`}>
+        {active ? (currentDir === 'asc' ? '▲' : '▼') : '↕'}
+      </span>
+    </th>
+  )
+}
+
+/** Item 5.1 — barra de 4 segmentos reaproveitando os scores de camada já
+ *  presentes em `ChampionScoreRow` (`performance_score`/`kit_score`/
+ *  `build_score`/`meta_score`), sem nenhuma chamada extra ao backend —
+ *  a explicação completa (`ScoreExplanationPanel`) continua sob demanda,
+ *  isto aqui é só um resumo visual de "de onde vem o score" na própria
+ *  linha. Contribuição = nota da camada × peso do modelo (mesmos pesos de
+ *  `compute_scores.py`), não a nota bruta — senão uma camada de peso baixo
+ *  com nota alta pareceria mais importante do que realmente é. */
+const LAYER_WEIGHTS: Record<string, number> = { performance: 0.4, kit: 0.25, build: 0.25, meta: 0.1 }
+
+function LayerContributionBar({ row }: { row: ChampionScoreRow }) {
+  const layers = (
+    [
+      ['performance', row.performance_score],
+      ['kit', row.kit_score],
+      ['build', row.build_score],
+      ['meta', row.meta_score],
+    ] as [string, number | null][]
+  )
+    .filter((entry): entry is [string, number] => entry[1] !== null)
+    .map(([key, score]) => ({ key, contribuicao: score * LAYER_WEIGHTS[key] }))
+
+  const total = layers.reduce((sum, l) => sum + l.contribuicao, 0) || 1
+  const hint = layers
+    .map((l) => `${LAYER_LABELS[l.key] ?? l.key}: ${((l.contribuicao / total) * 100).toFixed(0)}%`)
+    .join(' · ')
+
+  return (
+    <div className="mini-contribution-bar" title={hint}>
+      {layers.map((l) => (
+        <span
+          key={l.key}
+          className={`mini-contribution-seg mini-contribution-${l.key}`}
+          style={{ width: `${(l.contribuicao / total) * 100}%` }}
+        />
+      ))}
+    </div>
+  )
 }
 
 const LAYER_LABELS: Record<string, string> = {
@@ -213,8 +312,31 @@ function explanationHeadline(explanation: ScoreExplanation): string {
   return `${label(top)} puxa para cima; ${label(bottom)} é o que mais segura.`
 }
 
+/** Item 4.3 (revisão técnica): busca a explicação sob demanda em vez de ler
+ *  de `row.explicacao`/`row.perfil_poder` (removidos de `ChampionScoreRow`)
+ *  — mesmo padrão lazy-fetch já usado por `MatchupPanel`/
+ *  `BuildRecommendationPanel`. */
 function ScoreExplanationPanel({ row }: { row: ChampionScoreRow }) {
-  const { explicacao } = row
+  const [data, setData] = useState<ChampionExplanation | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    setData(null)
+    setError(null)
+    fetchChampionExplanation({
+      championId: row.champion_id,
+      lane: row.lane,
+      eloTier: row.elo_tier,
+      patch: row.patch,
+    })
+      .then(setData)
+      .catch((err: Error) => setError(err.message))
+  }, [row.champion_id, row.lane, row.elo_tier, row.patch])
+
+  if (error) return <p className="error">Não foi possível carregar a explicação: {error}</p>
+  if (!data) return <p className="filters-loading">Buscando explicação...</p>
+
+  const { explicacao } = data
   const layers = explicacao.camadas
   const maxAbs = Math.max(...layers.map((c) => Math.abs(c.contribuicao)), 0.01)
 
@@ -273,7 +395,7 @@ function ScoreExplanationPanel({ row }: { row: ChampionScoreRow }) {
         </p>
       )}
 
-      <PowerProfileDetail perfil={row.perfil_poder} />
+      <PowerProfileDetail perfil={data.perfil_poder} />
       <SkillExpressionBadges skill={row.skill_expression} />
     </div>
   )
@@ -341,6 +463,83 @@ function PowerProfileDetail({ perfil }: { perfil: PowerProfile }) {
   )
 }
 
+/** Item 5.1 — comparador lado a lado: até 3 campeões selecionados via
+ *  checkbox na tabela, mesmos dados que já vêm em `ChampionScoreRow`
+ *  (sem fetch extra). */
+function ComparatorPanel({
+  rows,
+  championsMeta,
+  ddragonPatch,
+  onRemove,
+  onClear,
+}: {
+  rows: ChampionScoreRow[]
+  championsMeta: Record<string, ChampionMeta> | null
+  ddragonPatch: string
+  onRemove: (key: string) => void
+  onClear: () => void
+}) {
+  if (rows.length === 0) return null
+  return (
+    <div className="comparator-panel">
+      <div className="comparator-header">
+        <span>Comparando {rows.length} {rows.length === 1 ? 'campeão' : 'campeões'}</span>
+        <button type="button" className="comparator-clear" onClick={onClear}>Limpar</button>
+      </div>
+      <div className="comparator-grid">
+        {rows.map((row) => {
+          const meta = championsMeta?.[row.champion_id]
+          return (
+            <div className="comparator-card" key={rowKey(row)}>
+              <div className="comparator-card-header">
+                {meta && ddragonPatch && (
+                  <img src={championImageUrl(ddragonPatch, meta.image.full)} alt="" width={28} height={28} />
+                )}
+                <span>{meta?.name ?? row.champion_id}</span>
+                <button
+                  type="button"
+                  className="comparator-remove"
+                  onClick={() => onRemove(rowKey(row))}
+                  aria-label="Remover da comparação"
+                >
+                  ×
+                </button>
+              </div>
+              <div className="comparator-stat">
+                <span>Score</span>
+                <strong>
+                  {row.score_final.toFixed(1)}{' '}
+                  <span className={`tier-badge tier-${row.score_tier}`}>{row.score_tier}</span>
+                </strong>
+              </div>
+              <div className="comparator-stat">
+                <span>Performance</span>
+                <strong>{row.performance_score.toFixed(1)}</strong>
+              </div>
+              <div className="comparator-stat">
+                <span>Kit</span>
+                <strong>{row.kit_score !== null ? row.kit_score.toFixed(1) : '—'}</strong>
+              </div>
+              <div className="comparator-stat">
+                <span>Build</span>
+                <strong>{row.build_score.toFixed(1)}</strong>
+              </div>
+              <div className="comparator-stat">
+                <span>Meta</span>
+                <strong>{row.meta_score.toFixed(1)}</strong>
+              </div>
+              <div className="comparator-stat">
+                <span>Vitória</span>
+                <strong>{formatPct(row.win_rate)}</strong>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 function ChampionsPage() {
   const [championsMeta, setChampionsMeta] = useState<Record<string, ChampionMeta> | null>(null)
   const [ddragonPatch, setDdragonPatch] = useState<string>('')
@@ -359,6 +558,28 @@ function ChampionsPage() {
   const [scoresError, setScoresError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [expandedPanel, setExpandedPanel] = useState<ExpandedPanel>(null)
+
+  const [search, setSearch] = useState('')
+  const [sortKey, setSortKey] = useState<SortKey>('score')
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
+  const [compareKeys, setCompareKeys] = useState<string[]>([])
+
+  function handleSort(key: SortKey) {
+    if (key === sortKey) {
+      setSortDir((dir) => (dir === 'asc' ? 'desc' : 'asc'))
+    } else {
+      setSortKey(key)
+      setSortDir('desc')
+    }
+  }
+
+  function toggleCompare(key: string) {
+    setCompareKeys((prev) => {
+      if (prev.includes(key)) return prev.filter((k) => k !== key)
+      if (prev.length >= 3) return prev
+      return [...prev, key]
+    })
+  }
 
   useEffect(() => {
     fetchChampions()
@@ -394,14 +615,31 @@ function ChampionsPage() {
   // precisa de confirmação extra, e remove qualquer risco de o botão
   // ficar mal posicionado se a tabela apertar o layout.
   useEffect(() => {
+    // Item 1.3 (revisão técnica): sem AbortController, trocar os filtros
+    // rapidamente (ex: GOLD → PLATINUM → DIAMOND) podia deixar a tabela
+    // mostrando dados de um filtro anterior se a resposta dele chegasse
+    // depois da mais recente — silencioso e difícil de reproduzir.
+    const controller = new AbortController()
     setExpandedPanel(null)
+    setCompareKeys([])
     setLoading(true)
     setScoresError(null)
-    fetchChampionScores({ eloTier, lane: lane || undefined, patch: patch || undefined })
-      .then((data) => setScores([...data].sort((a, b) => b.score_final - a.score_final)))
-      .catch((err: Error) => setScoresError(err.message))
-      .finally(() => setLoading(false))
+    fetchChampionScores({ eloTier, lane: lane || undefined, patch: patch || undefined }, controller.signal)
+      .then((data) => setScores(data))
+      .catch((err: Error) => {
+        if (err.name !== 'AbortError') setScoresError(err.message)
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false)
+      })
+    return () => controller.abort()
   }, [eloTier, lane, patch])
+
+  const filteredScores = scores ? scores.filter((row) => matchesNameSearch(row, search, championsMeta)) : null
+  const displayedScores = filteredScores ? sortScores(filteredScores, sortKey, sortDir) : null
+
+  const scoreByKey = new Map((scores ?? []).map((row) => [rowKey(row), row]))
+  const compareRows = compareKeys.map((key) => scoreByKey.get(key)).filter((r): r is ChampionScoreRow => !!r)
 
   return (
     <main className="center">
@@ -429,8 +667,26 @@ function ChampionsPage() {
           </select>
         </label>
 
+        <label>
+          Campeão
+          <input
+            type="text"
+            placeholder="Buscar por nome"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </label>
+
         {loading && <span className="filters-loading">Buscando...</span>}
       </div>
+
+      <ComparatorPanel
+        rows={compareRows}
+        championsMeta={championsMeta}
+        ddragonPatch={ddragonPatch}
+        onRemove={(key) => setCompareKeys((prev) => prev.filter((k) => k !== key))}
+        onClear={() => setCompareKeys([])}
+      />
 
       <div className="role-filter">
         {LANES.map((l) => (
@@ -458,33 +714,49 @@ function ChampionsPage() {
         </p>
       )}
 
-      {scores && scores.length > 0 && (
+      {!scoresError && scores && scores.length > 0 && displayedScores && displayedScores.length === 0 && (
+        <p className="empty-state">Nenhum campeão encontrado com esse nome.</p>
+      )}
+
+      {displayedScores && displayedScores.length > 0 && (
         <>
         <div className="table-scroll">
         <table className="stats-table">
           <thead>
             <tr>
+              <th title="Selecionar para comparar (até 3)"></th>
               <th>#</th>
               <th>Campeão</th>
-              <th>Tier</th>
+              <SortableHeader label="Tier" sortKeyFor="score" currentKey={sortKey} currentDir={sortDir} onSort={handleSort} />
+              <th title="Contribuição de cada camada no score (Performance/Kit/Build/Meta)">Composição</th>
               {!lane && <th>Função</th>}
-              <th>Taxa de Vitória</th>
-              <th>Taxa de escolha</th>
-              <th>Taxa de banimento</th>
+              <SortableHeader label="Taxa de Vitória" sortKeyFor="win_rate" currentKey={sortKey} currentDir={sortDir} onSort={handleSort} />
+              <SortableHeader label="Taxa de escolha" sortKeyFor="pick_rate" currentKey={sortKey} currentDir={sortDir} onSort={handleSort} />
+              <SortableHeader label="Taxa de banimento" sortKeyFor="ban_rate" currentKey={sortKey} currentDir={sortDir} onSort={handleSort} />
               <th></th>
             </tr>
           </thead>
           <tbody>
-            {scores.map((row, index) => {
+            {displayedScores.map((row, index) => {
               const meta = championsMeta?.[row.champion_id]
               const key = rowKey(row)
               const activePanel = expandedPanel?.key === key ? expandedPanel.type : null
               const toggle = (type: 'explain' | 'history' | 'matchups' | 'build') =>
                 setExpandedPanel(activePanel === type ? null : { key, type })
-              const colSpan = lane ? 7 : 8
+              const isComparing = compareKeys.includes(key)
+              const colSpan = lane ? 9 : 10
               return (
                 <Fragment key={key}>
                   <tr>
+                    <td>
+                      <input
+                        type="checkbox"
+                        checked={isComparing}
+                        onChange={() => toggleCompare(key)}
+                        disabled={!isComparing && compareKeys.length >= 3}
+                        aria-label={`Comparar ${meta?.name ?? row.champion_id}`}
+                      />
+                    </td>
                     <td>{index + 1}</td>
                     <td>
                       <div className="champion-cell">
@@ -504,6 +776,7 @@ function ChampionsPage() {
                       <span className={`tier-badge tier-${row.score_tier}`}>{row.score_tier}</span>
                       {row.tier_provisorio && <span className="provisional-mark" title="Amostra pequena — tier provisório, teto em A">*</span>}
                     </td>
+                    <td><LayerContributionBar row={row} /></td>
                     {!lane && <td><LaneCell lane={row.lane} /></td>}
                     <td>{formatPct(row.win_rate)}</td>
                     <td>{formatPct(row.pick_rate)}</td>

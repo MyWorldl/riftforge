@@ -51,9 +51,12 @@ import json
 from pathlib import Path
 
 from app.adapters.data_dragon import DataDragonAdapter
+from app.core.logging import get_logger, new_correlation_id
 from app.core.stats import percentile_rank
 from app.db.models import ChampionKitScore
 from app.db.session import SessionLocal, init_db
+
+log = get_logger(__name__)
 
 MODEL_VERSION = "automatica_v1"
 MODEL_VERSION_COM_MANUAL = "automatica_v1+manual_v1"
@@ -104,6 +107,7 @@ def _average_spell_range(spells: list[dict]) -> float | None:
 
 
 def compute(patch_prefix: str | None = None) -> dict:
+    new_correlation_id()
     init_db()
     data_dragon = DataDragonAdapter()
 
@@ -113,7 +117,7 @@ def compute(patch_prefix: str | None = None) -> dict:
     champions = asyncio.run(data_dragon.get_champions(version))
     champion_ids = list(champions.keys())
 
-    print(f"Buscando detalhe de {len(champion_ids)} campeões (Data Dragon {version})...", flush=True)
+    log.info("buscando_detalhe_campeoes", total=len(champion_ids), data_dragon_version=version)
     details_by_id = asyncio.run(_fetch_all_details(data_dragon, version, champion_ids))
 
     info_by_id: dict[str, dict] = {}
@@ -188,7 +192,7 @@ def main() -> None:
     args = parser.parse_args()
 
     result = compute(patch_prefix=args.patch)
-    print(f"Camada 2 (Kit) calculada: {result['campeoes']} campeões, patch {result['patch']}.")
+    log.info("job_concluido", job="compute_kit", **result)
 
 
 if __name__ == "__main__":

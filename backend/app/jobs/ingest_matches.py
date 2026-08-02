@@ -39,16 +39,27 @@ Uso: python -m app.jobs.ingest_matches --tier GOLD --division I
 """
 
 import argparse
+import re
 import time
+import uuid
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from app.adapters.riot_api import RiotApiAdapter
 from app.core.config import get_settings
+from app.core.logging import get_logger
 from app.db.models import Match, MatchBan, MatchParticipant, Patch
 from app.db.session import SessionLocal, init_db
 
+log = get_logger(__name__)
+
 QUEUE_IDS = {"RANKED_SOLO_5x5": 420, "RANKED_FLEX_SR": 440}
 CORE_ITEM_SLOTS = ["item0", "item1", "item2", "item3", "item4", "item5"]
+# Item novo (rodada 23, revisão técnica §2.2): campos removidos de cada
+# participante antes de gravar `Match.raw_payload` — identificam a conta
+# Riot da pessoa (PUUID e Riot ID visível Nome#Tag), não usados por nenhum
+# estágio do pipeline a partir do payload bruto (tudo casa por
+# `riot_champion_id`/`match_id`, ver `backfill_participant_runes.py`).
+_SENSITIVE_PARTICIPANT_FIELDS = {"puuid", "riotIdGameName", "riotIdTagline"}
 
 
 def _extract_runes(participant: dict) -> tuple[int | None, int | None, int | None]:
@@ -68,8 +79,19 @@ def _extract_runes(participant: dict) -> tuple[int | None, int | None, int | Non
     return keystone_id, primary_style_id, sub_style_id
 
 
+_VERSION_LABEL_RE = re.compile(r"^\d+\.\d+$")
+
+
 def _patch_sequence(version_label: str) -> int:
-    major, minor = (int(part) for part in version_label.split(".")[:2])
+    """Revisão técnica §1.6: a Riot já devolveu `gameVersion` em formato
+    inesperado em builds de PBE/evento — sem essa checagem, isso levantava
+    `ValueError: invalid literal for int() with base 10: '...'` sem dizer
+    qual partida ou qual valor causou o problema, e o invocador inteiro era
+    pulado (try/except de fora já cobre isso) sem dar pra entender por quê
+    depois, só olhando o log."""
+    if not _VERSION_LABEL_RE.match(version_label):
+        raise ValueError(f"version_label em formato inesperado: {version_label!r}")
+    major, minor = (int(part) for part in version_label.split("."))
     return major * 1000 + minor
 
 
@@ -94,13 +116,20 @@ def _process_summoner(
     tier: str,
     matches_per_summoner: int,
     start_time: int,
+    run_id: str,
 ) -> dict:
     """Todo o trabalho de um invocador — chamado de dentro de uma thread do
     pool em `ingest()`. Sessão própria, escopada só a este invocador (mesmo
     motivo de antes da paralelização: o Supabase derruba conexão de vida
     longa, e agora também evita que threads diferentes compartilhem uma
-    sessão do SQLAlchemy, que não é thread-safe)."""
-    print(f"[{index}] buscando histórico de partidas...", flush=True)
+    sessão do SQLAlchemy, que não é thread-safe).
+
+    `run_id` vem via parâmetro, não `ContextVar` (revisão técnica §3): threads
+    criadas por `ThreadPoolExecutor.submit` não herdam o contexto da thread
+    principal automaticamente — passar explícito é mais simples e correto do
+    que propagar contexto manualmente."""
+    thread_log = log.bind(run_id=run_id, invocador=index)
+    thread_log.info("invocador_iniciado")
 
     session = SessionLocal()
     try:
@@ -116,11 +145,27 @@ def _process_summoner(
                 skipped_existing += 1
                 continue
 
-            print(f"  [{index}] ingerindo partida {match_id}...", flush=True)
+            thread_log.info("ingerindo_partida", match_id=match_id)
             match_payload = riot.get_match(match_id)
             info = match_payload["info"]
             version_label = ".".join(info["gameVersion"].split(".")[:2])
             patch = _get_or_create_patch(session, version_label)
+
+            # Sanitiza uma cópia pra gravar em `raw_payload` — o payload
+            # bruto original (`info["participants"]`, usado no loop abaixo)
+            # continua intacto, com PUUID, porque `MatchParticipant.puuid`
+            # ainda precisa dele. Sem isso, a política de retenção de PUUID
+            # (rodada 18, `purge_puuid.py`) fica funcionalmente anulada: ela
+            # zera a coluna `puuid`, mas o mesmo dado (mais nome/tag da conta
+            # Riot) sobrevivia indefinidamente dentro do JSON bruto ao lado.
+            sanitized_participants = [
+                {k: v for k, v in p.items() if k not in _SENSITIVE_PARTICIPANT_FIELDS}
+                for p in info["participants"]
+            ]
+            sanitized_payload = {
+                **match_payload,
+                "info": {**info, "participants": sanitized_participants},
+            }
 
             session.add(
                 Match(
@@ -130,7 +175,7 @@ def _process_summoner(
                     queue_id=info.get("queueId", queue_id),
                     game_start_ts=info.get("gameStartTimestamp", 0),
                     game_duration_s=info.get("gameDuration", 0),
-                    raw_payload=match_payload,
+                    raw_payload=sanitized_payload,
                 )
             )
 
@@ -185,7 +230,7 @@ def _process_summoner(
         # pulado e a execução segue. Como a dedup é por match_id no banco,
         # rodar de novo depois recupera o que faltou sem recontar nada.
         session.rollback()
-        print(f"  ! [{index}] invocador falhou, seguindo: {type(exc).__name__}: {exc}", flush=True)
+        thread_log.warning("invocador_falhou", erro_tipo=type(exc).__name__, erro=str(exc))
         return {"new_matches": 0, "skipped_existing": 0, "failed": True}
     finally:
         session.close()
@@ -200,7 +245,9 @@ def ingest(
     since_days: int | None = None,
     concurrency: int | None = None,
 ) -> dict:
-    print("Conectando ao banco...", flush=True)
+    run_id = uuid.uuid4().hex[:12]
+    run_log = log.bind(run_id=run_id, tier=tier, division=division)
+    run_log.info("job_iniciado", job="ingest_matches")
     init_db()
 
     settings = get_settings()
@@ -217,13 +264,13 @@ def ingest(
     riot = RiotApiAdapter()
     queue_id = QUEUE_IDS[queue]
 
-    print(f"Buscando invocadores {tier} {division} na Riot API...", flush=True)
     entries = riot.get_league_entries(queue, tier, division)
     puuids = [entry["puuid"] for entry in entries[:puuid_limit]]
-    print(
-        f"{len(puuids)} invocador(es) encontrado(s). "
-        f"Coletando só partidas dos últimos {since_days} dias ({concurrency} em paralelo).",
-        flush=True,
+    run_log.info(
+        "invocadores_encontrados",
+        total=len(puuids),
+        since_days=since_days,
+        concurrency=concurrency,
     )
 
     new_matches = 0
@@ -233,7 +280,7 @@ def ingest(
     with ThreadPoolExecutor(max_workers=concurrency) as executor:
         futures = {
             executor.submit(
-                _process_summoner, i, puuid, riot, queue_id, tier, matches_per_summoner, start_time
+                _process_summoner, i, puuid, riot, queue_id, tier, matches_per_summoner, start_time, run_id
             ): i
             for i, puuid in enumerate(puuids, start=1)
         }
@@ -243,6 +290,14 @@ def ingest(
             skipped_existing += result["skipped_existing"]
             failed_summoners += int(result["failed"])
 
+    run_log.info(
+        "job_concluido",
+        job="ingest_matches",
+        summoners=len(puuids),
+        new_matches=new_matches,
+        skipped_existing=skipped_existing,
+        failed_summoners=failed_summoners,
+    )
     return {
         "summoners": len(puuids),
         "new_matches": new_matches,
@@ -273,7 +328,7 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    result = ingest(
+    ingest(
         queue=args.queue,
         tier=args.tier,
         division=args.division,
@@ -281,11 +336,6 @@ def main() -> None:
         matches_per_summoner=args.matches_per_summoner,
         since_days=args.since_days,
         concurrency=args.concurrency,
-    )
-    print(
-        f"Ingestão concluída: {result['summoners']} invocadores, "
-        f"{result['new_matches']} partidas novas, {result['skipped_existing']} já existiam no banco"
-        + (f", {result['failed_summoners']} invocadores falharam." if result["failed_summoners"] else ".")
     )
 
 

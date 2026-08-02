@@ -25,6 +25,7 @@ import asyncio
 
 from app.adapters.data_dragon import DataDragonAdapter
 from app.core.champions import resolve_champion_id
+from app.core.logging import get_logger, new_correlation_id
 from app.db.models import (
     ChampionBanStat,
     ChampionLaneStat,
@@ -36,6 +37,8 @@ from app.db.models import (
 )
 from app.db.session import SessionLocal, init_db
 
+log = get_logger(__name__)
+
 
 def _resolve_champion_names(data_dragon: DataDragonAdapter, version_prefix: str) -> dict[int, str]:
     versions = asyncio.run(data_dragon.get_versions())
@@ -44,6 +47,7 @@ def _resolve_champion_names(data_dragon: DataDragonAdapter, version_prefix: str)
 
 
 def aggregate() -> dict:
+    new_correlation_id()
     init_db()
     data_dragon = DataDragonAdapter()
     session = SessionLocal()
@@ -129,10 +133,7 @@ def aggregate() -> dict:
 
 def main() -> None:
     result = aggregate()
-    print(
-        f"Agregação concluída: {result['patches']} patch(es), "
-        f"{result['lane_rows']} linhas de lane stat, {result['ban_rows']} linhas de ban stat."
-    )
+    log.info("job_concluido", job="aggregate_stats", **result)
 
 
 if __name__ == "__main__":

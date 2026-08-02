@@ -1,0 +1,39 @@
+name: Frontend checks
+
+# Revisão técnica §4.4: `oxlint` e `tsc -b` (via `npm run build`) só rodavam
+# na máquina de quem lembrasse de rodar — nenhum workflow de frontend
+# existia até agora, então um erro de tipo ou de lint só aparecia depois do
+# merge, olhando o preview quebrado.
+on:
+  push:
+    paths:
+      - "frontend/**"
+      - ".github/workflows/frontend-checks.yml"
+  pull_request:
+    paths:
+      - "frontend/**"
+      - ".github/workflows/frontend-checks.yml"
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint (oxlint)
+        run: npm run lint
+
+      - name: Type-check + build (tsc -b + vite build)
+        run: npm run build

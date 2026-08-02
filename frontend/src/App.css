@@ -238,6 +238,18 @@
   color: var(--text);
 }
 
+.download-checksums {
+  font-size: 12px;
+  color: var(--text);
+  word-break: break-all;
+}
+
+.download-checksums code {
+  background: var(--code-bg);
+  padding: 1px 4px;
+  border-radius: 4px;
+}
+
 .filters {
   display: flex;
   flex-wrap: wrap;
@@ -483,6 +495,29 @@
   border-radius: 4px;
 }
 
+.patch-change-impact {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 10px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+}
+
+.patch-change-impact-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.patch-change-impact-lane {
+  color: var(--text);
+  font-weight: 600;
+}
+
 .patch-change-list {
   list-style: none;
   margin: 0;
@@ -644,6 +679,141 @@
   cursor: default;
 }
 
+/* Item 5.1 (revisão técnica): cabeçalho clicável pra ordenar a tabela de
+   Campeões por coluna. */
+.sortable-th {
+  cursor: pointer;
+  user-select: none;
+}
+
+.sortable-th:hover {
+  color: var(--accent);
+}
+
+.sort-caret {
+  display: inline-block;
+  margin-left: 4px;
+  font-size: 10px;
+  color: var(--text);
+}
+
+.sort-caret-active {
+  color: var(--accent);
+}
+
+/* Item 5.1 — mini-barra de contribuição por camada (Performance/Kit/
+   Build/Meta), reaproveitando os scores que a linha já tem. */
+.mini-contribution-bar {
+  display: flex;
+  width: 90px;
+  height: 8px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--border);
+}
+
+.mini-contribution-seg {
+  height: 100%;
+}
+
+.mini-contribution-performance { background: var(--accent); }
+.mini-contribution-kit { background: #6366f1; }
+.mini-contribution-build { background: #0ea5e9; }
+.mini-contribution-meta { background: #10b981; }
+
+/* Item 5.1 — comparador lado a lado (até 3 campeões). */
+.comparator-panel {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--code-bg);
+  padding: 12px 14px;
+  margin-bottom: 16px;
+}
+
+.comparator-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 600;
+  color: var(--text-h);
+  margin-bottom: 10px;
+}
+
+.comparator-clear {
+  font: inherit;
+  font-size: 13px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.comparator-clear:hover {
+  border-color: var(--accent-border);
+  color: var(--accent);
+}
+
+.comparator-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+.comparator-card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.comparator-card-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  color: var(--text-h);
+  margin-bottom: 4px;
+}
+
+.comparator-card-header img {
+  border-radius: 4px;
+}
+
+.comparator-card-header span {
+  flex: 1;
+}
+
+.comparator-remove {
+  border: none;
+  background: none;
+  color: var(--text);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 2px;
+}
+
+.comparator-remove:hover {
+  color: var(--neg);
+}
+
+.comparator-stat {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.comparator-stat strong {
+  color: var(--text-h);
+}
+
 .icon-toggle:disabled:hover {
   border-color: var(--border);
   color: var(--text);
@@ -753,6 +923,23 @@
 
 .value-neg {
   color: var(--neg);
+}
+
+.delta-position {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.delta-position-up {
+  color: var(--pos);
+}
+
+.delta-position-down {
+  color: var(--neg);
+}
+
+.delta-position-none {
+  color: var(--text);
 }
 
 .explain-base,

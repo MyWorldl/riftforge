@@ -91,9 +91,9 @@ Baseado em `Core/Estrutura_roadmap/00_INDEX.md` (fonte de verdade atual — tem 
 
 - [x] 3.1 — Explicabilidade por camada (**principal diferencial do produto** segundo `09_BACKLOG.md` §Fase 3): `backend/app/core/explain.py` decompõe o score final em contribuições por camada — `contribuicao_i = peso_normalizado_i * (nota_i − 50)`, com `50 + Σ contribuições = score_final` como identidade exata. Exposto no campo `explicacao` de `GET /scores/champions` e renderizado no frontend como painel com frase em linguagem natural ("Performance puxa para cima; Build é o que mais segura"), barras divergentes por camada e a conta fechando de 50.0 até o score final. Camadas ausentes (ex: Kit sem dado pro patch) são declaradas explicitamente, com aviso de que o peso foi redistribuído.
 - [x] 3.2 — Distinção visual entre poder estrutural (Kit+Build) e poder emprestado do meta (Performance+Meta): `app/core/power_profile.py`, campo `perfil_poder` em `GET /scores/champions`. Badge na coluna "Perfil" da tabela + detalhamento com duas barras no painel "Por quê?". Usa os pesos reais (`pesos_usados`), não os nominais.
-- [ ] 3.3 — Etiqueta de Skill Expression (floor/ceiling).
+- [x] 3.3 — Etiqueta de Skill Expression (floor/ceiling): heurística v1 (`app/jobs/compute_skill_expression.py`, ver rodada de 2026-08-02 abaixo), integrada em `GET /scores/champions`.
 - [x] 3.4 — Histórico de evolução do campeão entre patches (gráfico): endpoint `GET /scores/history` (ordena por `patch_sequence`, não pela string do patch) + gráfico SVG na interface (`HistoryChart.tsx`), acessível pelo botão "Histórico" ao lado de "Por quê?". Linhas de grade nas fronteiras de tier (God/S/A/B/C/D), pontos coloridos por tier com opacidade proporcional à confiança (mesma trava do backend tornada visível), tooltip por ponto.
-- [ ] 3.5 — Comparador de matchups dedicado.
+- [x] 3.5 — Comparador de matchups dedicado: `GET /matchups` (ver rodada de 2026-08-02 abaixo), painel expansível na tabela de Campeões.
 
 ## Coleta em volume (2026-07-30)
 
@@ -235,3 +235,57 @@ Redis (item 6.1) ficou de fora por decisão: o próprio backlog marca como
 "só relevante se o uso crescer", e hoje não há tráfego que justifique.
 
 Suite de testes: 71 → 72.
+
+## Execução da revisão técnica externa (2026-08-02)
+
+Pedido do usuário: plano de ação para **todos** os pontos das seções 0-5
+de `Core/Revisao_2026-08-02_RiftForge.md` (documento de auditoria
+automática, baseline de 61 testes) e execução de todos — seções 6
+(gaps de feature nova) e 7 (design/acessibilidade) ficaram fora de
+escopo por instrução explícita dele. ~25 achados, divididos em 7 lotes
+executados em sequência; detalhe completo por lote em
+`Core/Estrutura_roadmap/17_ESTADO_IMPLEMENTADO.md` §rodada 23. Resumo:
+
+- **Lote A (segurança rápida):** PUUID removido do payload de
+  `/rankings`/`/player/lookup`; `raw_payload` sanitizado (guardava PUUID/
+  Riot ID de todo participante desde a Fase 0, sobrevivendo à retenção da
+  rodada 18); CORS restrito a `Content-Type`.
+- **Lote B (refactor estrutural, item 4.1):** `app/main.py` (704 linhas)
+  virou composição pura — rotas/services/repositories/schemas em
+  módulos próprios, as 4 camadas completas (escolha explícita do
+  usuário sobre uma versão mais enxuta de 2 camadas). Cache do Data
+  Dragon, `Cache-Control` nas rotas só-leitura, N+1 de `/player/lookup`
+  resolvido, `explicacao`/`perfil_poder` viraram endpoint próprio sob
+  demanda.
+- **Lote C:** 16 testes de rota HTTP novos (fixture de SQLite in-memory +
+  `TestClient`), CI dividido em job `unit` (todo push) e `integration`
+  (só no cron semanal, com a chave da Riot).
+- **Lote D:** validação de `version_label` na ingestão, 3 índices novos,
+  `AbortController` nos filtros de Campeões/Rankings/Patch Notes.
+- **Lote E (observabilidade Nível 1):** `structlog` em JSON substituindo
+  todo `print()` dos jobs, `correlation_id` por request e por execução de
+  job, `GET /health` real (testa o banco, idade do dado), métricas no-op
+  prontas pra Datadog (Nível 2, fora de escopo — sem conta disponível).
+- **Lote F (segurança + CI):** rate limit por `X-Forwarded-For`
+  (Vercel fica atrás de proxy), CSP do app desktop, headers de segurança
+  na API, checksum SHA-256 dos instaladores, `ruff` no CI, workflow de
+  frontend novo (`oxlint` + `tsc -b`/build) — nenhum dos dois existia
+  antes.
+- **Lote G (features atuais):** Campeões ganhou busca por nome,
+  ordenação por coluna e comparador lado a lado (até 3 campeões) — todos
+  sobre dado já carregado, sem fetch extra; mini-barra de contribuição
+  por camada, reaproveitando os 4 scores que a linha já tinha. Rankings
+  ganhou variação de posição (▲/▼) desde a última coleta. Análise do
+  Jogador passou a comparar contra a baseline de win rate do elo e a
+  detectar o elo real via League-V4 em vez de assumir GOLD fixo. Patch
+  Notes cruza no frontend as mudanças brutas da Riot com o impacto de
+  score já calculado.
+
+Achado de segurança fechado no processo: a rotação de credenciais da
+rodada anterior (Riot Key + senha do Postgres) foi confirmada e mantida —
+nenhuma credencial nova precisou ser exposta pra este trabalho.
+
+Suite de testes: 72 → 88. `ruff check .`, `tsc -b`, `npm run build` e
+`npm run lint` (oxlint — roda no CI Linux; localmente bloqueado por
+política de Controle de Aplicativo do Windows nesta máquina, não é um
+problema do código) todos limpos.

@@ -136,9 +136,37 @@ export interface ChampionScoreRow {
   kit_score: number | null
   build_score: number
   meta_score: number
+  skill_expression: SkillExpression | null
+}
+
+export interface ChampionExplanation {
   explicacao: ScoreExplanation
   perfil_poder: PowerProfile
-  skill_expression: SkillExpression | null
+}
+
+export interface ChampionExplanationFilters {
+  championId: string
+  lane: string
+  eloTier: string
+  patch?: string
+}
+
+/** Item 4.3 (revisão técnica): `explicacao`/`perfil_poder` saíram de
+ *  `ChampionScoreRow` — pesavam por linha (4 camadas + 2 barras) num
+ *  payload de ~300-700 linhas pra uma informação só lida quando o usuário
+ *  clica no ícone (ⓘ). Busca sob demanda, mesmo padrão de `fetchMatchups`/
+ *  `fetchBuildRecommendation`. */
+export async function fetchChampionExplanation(
+  filters: ChampionExplanationFilters,
+): Promise<ChampionExplanation> {
+  const params = new URLSearchParams({ lane: filters.lane, elo_tier: filters.eloTier })
+  if (filters.patch) params.set('patch', filters.patch)
+
+  const response = await fetch(`${API_URL}/scores/champions/${filters.championId}/explain?${params}`)
+  if (!response.ok) {
+    throw new Error(`Falha ao buscar explicação do score: ${response.status}`)
+  }
+  return response.json()
 }
 
 export async function fetchAvailablePatches(eloTier: string): Promise<string[]> {
@@ -156,12 +184,15 @@ export interface ChampionScoreFilters {
   patch?: string
 }
 
-export async function fetchChampionScores(filters: ChampionScoreFilters): Promise<ChampionScoreRow[]> {
+export async function fetchChampionScores(
+  filters: ChampionScoreFilters,
+  signal?: AbortSignal,
+): Promise<ChampionScoreRow[]> {
   const params = new URLSearchParams({ elo_tier: filters.eloTier })
   if (filters.lane) params.set('lane', filters.lane)
   if (filters.patch) params.set('patch', filters.patch)
 
-  const response = await fetch(`${API_URL}/scores/champions?${params}`)
+  const response = await fetch(`${API_URL}/scores/champions?${params}`, { signal })
   if (!response.ok) {
     throw new Error(`Falha ao buscar scores: ${response.status}`)
   }
@@ -175,6 +206,12 @@ export interface PlayerScoreSummary {
   tier_provisorio: boolean
 }
 
+export interface BaselineComparison {
+  win_rate_jogador: number
+  win_rate_medio_elo: number
+  delta_pct: number
+}
+
 export interface PlayerChampionSummary {
   champion_id: string
   lane: string
@@ -182,13 +219,14 @@ export interface PlayerChampionSummary {
   vitorias: number
   kda_medio: number
   score_atual: PlayerScoreSummary | null
+  comparativo_baseline: BaselineComparison | null
 }
 
 export interface PlayerLookupResult {
-  puuid: string
   game_name: string
   tag_line: string
   elo_tier_comparado: string
+  elo_tier_detectado: boolean
   partidas_analisadas: number
   campeoes: PlayerChampionSummary[]
 }
@@ -204,7 +242,6 @@ export interface RankingRow {
   tier: string
   region: string
   rank_position: number
-  puuid: string
   game_name: string | null
   tag_line: string | null
   summoner_level: number | null
@@ -212,6 +249,7 @@ export interface RankingRow {
   league_points: number
   wins: number
   losses: number
+  delta_posicao: number | null
 }
 
 export interface RankingFilters {
@@ -220,13 +258,13 @@ export interface RankingFilters {
   region?: string
 }
 
-export async function fetchRankings(filters: RankingFilters): Promise<RankingRow[]> {
+export async function fetchRankings(filters: RankingFilters, signal?: AbortSignal): Promise<RankingRow[]> {
   const params = new URLSearchParams()
   if (filters.queue) params.set('queue', filters.queue)
   if (filters.tier) params.set('tier', filters.tier)
   if (filters.region) params.set('region', filters.region)
 
-  const response = await fetch(`${API_URL}/rankings?${params}`)
+  const response = await fetch(`${API_URL}/rankings?${params}`, { signal })
   if (!response.ok) {
     throw new Error(`Falha ao buscar ranking: ${response.status}`)
   }
@@ -256,9 +294,9 @@ export interface PatchNotesResult {
   comparados: number
 }
 
-export async function fetchPatchNotes(eloTier: string): Promise<PatchNotesResult> {
+export async function fetchPatchNotes(eloTier: string, signal?: AbortSignal): Promise<PatchNotesResult> {
   const params = new URLSearchParams({ elo_tier: eloTier })
-  const response = await fetch(`${API_URL}/patch-notes?${params}`)
+  const response = await fetch(`${API_URL}/patch-notes?${params}`, { signal })
   if (!response.ok) {
     throw new Error(`Falha ao buscar patch notes: ${response.status}`)
   }

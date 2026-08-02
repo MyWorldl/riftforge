@@ -28,6 +28,20 @@ function winRatePct(row: RankingRow): number {
   return Math.round((row.wins / Math.max(total, 1)) * 100)
 }
 
+/** Item novo (revisão técnica §5.2): ▲/▼ com a variação de posição desde a
+ *  última coleta — `null` (jogador novo no ranking ou primeira coleta,
+ *  ver `collect_rankings.py`) não desenha nada, em vez de fingir "sem
+ *  mudança". */
+function DeltaPositionBadge({ delta }: { delta: number | null }) {
+  if (delta === null || delta === 0) return <span className="delta-position delta-position-none">—</span>
+  const subiu = delta > 0
+  return (
+    <span className={`delta-position ${subiu ? 'delta-position-up' : 'delta-position-down'}`}>
+      {subiu ? '▲' : '▼'} {Math.abs(delta)}
+    </span>
+  )
+}
+
 /** Anel de vitória/derrota: fatia proporcional à taxa real, vitória em
  *  roxo vibrante (#8B5CF6) e derrota em rosa-carmim (#F4306B) — cores
  *  fixas escolhidas pelo usuário, sem variar por tema. */
@@ -69,12 +83,21 @@ function RankingsPage() {
   }, [])
 
   useEffect(() => {
+    // Item 1.3 (revisão técnica): mesmo cuidado de ChampionsPage.tsx — sem
+    // isso, trocar o filtro de tier/região rapidamente podia deixar a
+    // tabela com dados de um filtro anterior.
+    const controller = new AbortController()
     setLoading(true)
     setError(null)
-    fetchRankings({ tier: tier || undefined, region })
+    fetchRankings({ tier: tier || undefined, region }, controller.signal)
       .then(setRows)
-      .catch((err: Error) => setError(err.message))
-      .finally(() => setLoading(false))
+      .catch((err: Error) => {
+        if (err.name !== 'AbortError') setError(err.message)
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false)
+      })
+    return () => controller.abort()
   }, [tier, region])
 
   const filteredRows = rows?.filter((row) => matchesSearch(row, search)) ?? null
@@ -140,7 +163,7 @@ function RankingsPage() {
           ).map((row) => {
             const place = podiumRows.indexOf(row) + 1
             return (
-              <div className={`podium-card podium-${place}`} key={`${row.tier}-${row.puuid}`}>
+              <div className={`podium-card podium-${place}`} key={`${row.tier}-${row.region}-${row.rank_position}`}>
                 <span className="podium-rank">#{row.rank_position}</span>
                 {row.profile_icon_id && ddragonPatch && (
                   <img
@@ -171,6 +194,7 @@ function RankingsPage() {
                 {showTierColumn && <th>Tier</th>}
                 <th>Nível</th>
                 <th>LP</th>
+                <th>Variação</th>
                 <th>Taxa de Vitória</th>
               </tr>
             </thead>
@@ -178,7 +202,7 @@ function RankingsPage() {
               {tableRows.map((row) => {
                 const winRate = winRatePct(row)
                 return (
-                  <tr key={`${row.tier}-${row.puuid}`}>
+                  <tr key={`${row.tier}-${row.region}-${row.rank_position}`}>
                     <td>{row.rank_position}</td>
                     <td>
                       <div className="champion-cell">
@@ -198,6 +222,7 @@ function RankingsPage() {
                     )}
                     <td>{row.summoner_level ?? '—'}</td>
                     <td>{row.league_points}</td>
+                    <td><DeltaPositionBadge delta={row.delta_posicao} /></td>
                     <td>
                       <div className="win-rate-cell">
                         <WinRateRing winRate={winRate} />

@@ -29,9 +29,12 @@ from collections import defaultdict
 from app.adapters.data_dragon import DataDragonAdapter
 from app.core.champions import resolve_champion_id
 from app.core.config import get_settings
+from app.core.logging import get_logger, new_correlation_id
 from app.core.stats import percentile_rank
 from app.db.models import ChampionSkillExpression, Match, MatchParticipant, Patch
 from app.db.session import SessionLocal, init_db
+
+log = get_logger(__name__)
 
 
 def _label(percentil: float) -> str:
@@ -47,6 +50,7 @@ def _kda(participant: MatchParticipant) -> float:
 
 
 def compute() -> int:
+    new_correlation_id()
     init_db()
     settings = get_settings()
     data_dragon = DataDragonAdapter()
@@ -143,7 +147,7 @@ def compute() -> int:
 
 def main() -> None:
     created = compute()
-    print(f"Skill Expression calculado: {created} linhas (champion_skill_expression).")
+    log.info("job_concluido", job="compute_skill_expression", linhas_criadas=created)
 
 
 if __name__ == "__main__":

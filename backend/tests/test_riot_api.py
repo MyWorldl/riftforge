@@ -6,10 +6,13 @@ import pytest
 from app.adapters.riot_api import RiotApiAdapter
 from app.core.config import get_settings
 
-pytestmark = pytest.mark.skipif(
-    get_settings().riot_api_key in ("changeme", ""),
-    reason="Requer uma RIOT_API_KEY válida em backend/.env",
-)
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.skipif(
+        get_settings().riot_api_key in ("changeme", ""),
+        reason="Requer uma RIOT_API_KEY válida em backend/.env",
+    ),
+]
 
 
 def test_get_league_entries_returns_list():

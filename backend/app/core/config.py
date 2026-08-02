@@ -144,6 +144,13 @@ class Settings(BaseSettings):
     # primeira chamada antes de qualquer resposta atualizar o limitador.
     ingest_concurrency: int = 5
 
+    # Revisão técnica §3 (Nível 2, fora de escopo por ora — sem conta
+    # Datadog disponível): presença desta chave é o único gate de
+    # `app/core/metrics.py`. Ausente, as funções de métrica viram no-op —
+    # não é um TODO, é a escolha deliberada de deixar o código pronto pra
+    # conectar depois sem fingir que já está conectado agora.
+    datadog_api_key: str | None = None
+
 
 @lru_cache
 def get_settings() -> Settings:

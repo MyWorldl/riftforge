@@ -21,11 +21,15 @@ Uso: python -m app.jobs.purge_puuid
 from datetime import datetime, timedelta, timezone
 
 from app.core.config import get_settings
+from app.core.logging import get_logger, new_correlation_id
 from app.db.models import Match, MatchParticipant
 from app.db.session import SessionLocal, init_db
 
+log = get_logger(__name__)
+
 
 def purge(retention_days: int | None = None) -> dict:
+    new_correlation_id()
     init_db()
     settings = get_settings()
     if retention_days is None:
@@ -54,10 +58,7 @@ def purge(retention_days: int | None = None) -> dict:
 
 def main() -> None:
     result = purge()
-    print(
-        f"PUUID zerado em {result['linhas_zeradas']} participantes de partidas "
-        f"com mais de {result['cutoff_dias']} dias."
-    )
+    log.info("job_concluido", job="purge_puuid", **result)
 
 
 if __name__ == "__main__":

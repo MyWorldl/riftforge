@@ -20,7 +20,7 @@
       }
     ],
     "security": {
-      "csp": null
+      "csp": "default-src 'self'; img-src 'self' https://ddragon.leagueoflegends.com data:; connect-src 'self' https://riftforge-api-datadog-monitors.vercel.app; style-src 'self' 'unsafe-inline'"
     }
   },
   "bundle": {
