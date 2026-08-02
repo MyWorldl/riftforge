@@ -81,6 +81,25 @@ jobs:
         continue-on-error: true
         run: python -m app.jobs.compute_patch_changes
 
+      # Matchups, Build recomendado e Skill Expression (rodada 21): os
+      # três só dependem de match_participants/matches já ingeridos acima,
+      # nenhum faz chamada à Riot (Build/Skill Expression só ao Data
+      # Dragon pra resolver nome de campeão, mesma cota zero-custo do Kit).
+      # continue-on-error pelo mesmo motivo dos outros estágios
+      # independentes: uma falha aqui não pode travar o reprocessamento
+      # do resto do pipeline.
+      - name: Calcular matchups (campeão vs. campeão)
+        continue-on-error: true
+        run: python -m app.jobs.compute_matchups
+
+      - name: Calcular build/runa recomendados
+        continue-on-error: true
+        run: python -m app.jobs.compute_build_recommendation
+
+      - name: Calcular Skill Expression (floor/ceiling)
+        continue-on-error: true
+        run: python -m app.jobs.compute_skill_expression
+
       # Todos os estágios são delete-and-recompute, então rodar o pipeline
       # inteiro a cada coleta é idempotente e mantém o site em dia.
       - name: Reprocessar pipeline

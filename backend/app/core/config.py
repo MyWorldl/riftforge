@@ -122,6 +122,18 @@ class Settings(BaseSettings):
     # percentual de confiança, o tier fica provisório e limitado ao teto A.
     confianca_minima_pct: float = 30.0
 
+    # Itens novos (rodada 21, backlog Fase 3/4 — Matchups, Build
+    # recomendado, Skill Expression). Mesmo espírito de
+    # `baseline_min_champions`: nunca mostra uma taxa calculada sobre
+    # amostra minúscula como se fosse confiável sem avisar
+    # (`amostra_insuficiente` nas tabelas correspondentes).
+    matchup_min_games: int = 5
+    build_recommendation_min_games: int = 5
+    # Precisa ser grande o suficiente pra um quintil de 20% (melhores/
+    # piores jogos) fazer sentido — com menos que isso, "os 20% piores
+    # jogos" seria 1-2 partidas isoladas, não uma tendência real.
+    skill_expression_min_games: int = 20
+
 
 @lru_cache
 def get_settings() -> Settings:

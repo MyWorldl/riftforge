@@ -39,6 +39,23 @@ QUEUE_IDS = {"RANKED_SOLO_5x5": 420, "RANKED_FLEX_SR": 440}
 CORE_ITEM_SLOTS = ["item0", "item1", "item2", "item3", "item4", "item5"]
 
 
+def _extract_runes(participant: dict) -> tuple[int | None, int | None, int | None]:
+    """Mesma extração de `app/jobs/backfill_participant_runes.py` (partidas
+    ingeridas antes desta mudança foram preenchidas por aquele backfill,
+    reprocessando `raw_payload`; daqui pra frente, direto na ingestão)."""
+    styles = (participant.get("perks") or {}).get("styles") or []
+    primary = next((s for s in styles if s.get("description") == "primaryStyle"), None)
+    sub = next((s for s in styles if s.get("description") == "subStyle"), None)
+
+    keystone_id = None
+    if primary and primary.get("selections"):
+        keystone_id = primary["selections"][0].get("perk")
+
+    primary_style_id = primary.get("style") if primary else None
+    sub_style_id = sub.get("style") if sub else None
+    return keystone_id, primary_style_id, sub_style_id
+
+
 def _patch_sequence(version_label: str) -> int:
     major, minor = (int(part) for part in version_label.split(".")[:2])
     return major * 1000 + minor
@@ -128,6 +145,7 @@ def ingest(
                 )
 
                 for participant in info["participants"]:
+                    keystone_id, primary_style_id, sub_style_id = _extract_runes(participant)
                     session.add(
                         MatchParticipant(
                             match_id=match_id,
@@ -145,6 +163,9 @@ def ingest(
                             assists=participant["assists"],
                             core_items=[participant.get(slot, 0) for slot in CORE_ITEM_SLOTS],
                             elo_tier=tier,
+                            keystone_id=keystone_id,
+                            primary_style_id=primary_style_id,
+                            sub_style_id=sub_style_id,
                         )
                     )
 

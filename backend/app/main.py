@@ -17,10 +17,13 @@ from app.core.patch_diff import diff_patches
 from app.core.power_profile import power_profile
 from app.db.models import (
     ChampionBanStat,
+    ChampionBuildRecommendation,
     ChampionLaneStat,
+    ChampionMatchup,
     ChampionPatchChange,
     ChampionPerformanceScore,
     ChampionScore,
+    ChampionSkillExpression,
     Patch,
     PlayerRanking,
     SegmentTotal,
@@ -60,6 +63,24 @@ async def list_champions() -> dict:
     version = await data_dragon.get_latest_version()
     champions = await data_dragon.get_champions(version)
     return {"patch": version, "champions": champions}
+
+
+@app.get("/items")
+async def list_items() -> dict:
+    """Item novo (rodada 21, "Recomendação de build") — proxy do catálogo
+    de itens do Data Dragon, mesmo padrão de `/champions`. Resolve nome/
+    ícone dos IDs numéricos já gravados em `champion_build_recommendations`."""
+    version = await data_dragon.get_latest_version()
+    items = await data_dragon.get_items(version)
+    return {"patch": version, "items": items}
+
+
+@app.get("/runes")
+async def list_runes() -> dict:
+    """Item novo (rodada 21) — proxy das árvores de runas do Data Dragon."""
+    version = await data_dragon.get_latest_version()
+    paths = await data_dragon.get_rune_paths(version)
+    return {"patch": version, "paths": paths}
 
 
 def _ensure_riot_proxy_enabled() -> None:
@@ -283,6 +304,7 @@ def get_patch_notes(elo_tier: str = "GOLD", top_n: int = 10) -> dict:
                 "patch_anterior": None,
                 "altas": [],
                 "quedas": [],
+                "mudancas_tier": [],
                 "comparados": 0,
             }
 
@@ -293,8 +315,14 @@ def get_patch_notes(elo_tier: str = "GOLD", top_n: int = 10) -> dict:
         )
 
         diff = diff_patches(
-            [{"champion_id": r.champion_id, "lane": r.lane, "score_final": r.score_final} for r in rows_atual],
-            [{"champion_id": r.champion_id, "lane": r.lane, "score_final": r.score_final} for r in rows_anterior],
+            [
+                {"champion_id": r.champion_id, "lane": r.lane, "score_final": r.score_final, "score_tier": r.score_tier}
+                for r in rows_atual
+            ],
+            [
+                {"champion_id": r.champion_id, "lane": r.lane, "score_final": r.score_final, "score_tier": r.score_tier}
+                for r in rows_anterior
+            ],
             top_n=top_n,
         )
         return {"patch_atual": patch_atual, "patch_anterior": patch_anterior, **diff}
@@ -442,6 +470,13 @@ def get_champion_scores(elo_tier: str = "GOLD", lane: str | None = None, patch: 
             (r.patch, r.tier, r.lane, r.champion_id): r
             for r in session.query(ChampionPerformanceScore).filter_by(tier=elo_tier, patch=patch).all()
         }
+        # Item 3.3 (Skill Expression): mesmo padrão de join de `perf_by_key`
+        # acima — junta na resposta em vez de virar mais uma chamada do
+        # frontend.
+        skill_by_key = {
+            (r.patch, r.tier, r.lane, r.champion_id): r
+            for r in session.query(ChampionSkillExpression).filter_by(tier=elo_tier, patch=patch).all()
+        }
 
         result = []
         for row in rows:
@@ -453,6 +488,7 @@ def get_champion_scores(elo_tier: str = "GOLD", lane: str | None = None, patch: 
             }
             pesos_usados = row.pesos_usados or {}
             perf = perf_by_key.get((row.patch, row.elo_tier, row.lane, row.champion_id))
+            skill = skill_by_key.get((row.patch, row.elo_tier, row.lane, row.champion_id))
             result.append(
                 {
                     "champion_id": row.champion_id,
@@ -474,6 +510,15 @@ def get_champion_scores(elo_tier: str = "GOLD", lane: str | None = None, patch: 
                     "meta_score": row.meta_score,
                     "explicacao": explain_score(layer_scores, pesos_usados),
                     "perfil_poder": power_profile(layer_scores, pesos_usados),
+                    "skill_expression": (
+                        {
+                            "ceiling_label": skill.ceiling_label,
+                            "floor_label": skill.floor_label,
+                            "amostra_insuficiente": skill.amostra_insuficiente,
+                        }
+                        if skill
+                        else None
+                    ),
                 }
             )
         return result
@@ -555,5 +600,105 @@ def get_champion_history(champion_id: str, elo_tier: str = "GOLD", lane: str | N
             }
             for row, _ in rows
         ]
+    finally:
+        session.close()
+
+
+@app.get("/matchups")
+def get_matchups(
+    champion_id: str, lane: str, elo_tier: str = "GOLD", patch: str | None = None
+) -> dict:
+    """Item novo (rodada 21, backlog 3.5) — "campeão A vs. todos os B" na
+    mesma rota. Lê só de `champion_matchups` (saída de
+    `app/jobs/compute_matchups.py`), nenhuma chamada Riot em tempo real.
+
+    Ordenado por win rate desc (melhores confrontos primeiro). Coleta
+    ainda é pequena (só GOLD, patches recentes), então boa parte dos
+    confrontos vem com `amostra_insuficiente=True` — o frontend mostra o
+    aviso em vez de esconder a linha."""
+    session = SessionLocal()
+    try:
+        if patch is None:
+            latest = (
+                session.query(ChampionMatchup.patch)
+                .join(Patch, Patch.version_label == ChampionMatchup.patch)
+                .filter(ChampionMatchup.tier == elo_tier, ChampionMatchup.lane == lane)
+                .order_by(Patch.patch_sequence.desc())
+                .first()
+            )
+            if latest is None:
+                return {"patch": None, "confrontos": []}
+            patch = latest[0]
+
+        rows = (
+            session.query(ChampionMatchup)
+            .filter_by(patch=patch, tier=elo_tier, lane=lane, champion_id=champion_id)
+            .all()
+        )
+        confrontos = sorted(
+            (
+                {
+                    "opponent_champion_id": row.opponent_champion_id,
+                    "games": row.games,
+                    "wins": row.wins,
+                    "win_rate": row.wins / row.games if row.games else 0.0,
+                    "amostra_insuficiente": row.amostra_insuficiente,
+                }
+                for row in rows
+            ),
+            key=lambda c: c["win_rate"],
+            reverse=True,
+        )
+        return {"patch": patch, "confrontos": confrontos}
+    finally:
+        session.close()
+
+
+@app.get("/builds/recommended")
+def get_recommended_build(
+    champion_id: str, lane: str, elo_tier: str = "GOLD", patch: str | None = None
+) -> dict | None:
+    """Item novo (rodada 21, backlog 4.1) — build de itens e combinação de
+    runas com maior win rate observado, por `(patch, tier, lane, campeão)`.
+    Lê só de `champion_build_recommendations` (saída de
+    `app/jobs/compute_build_recommendation.py`), nenhuma chamada Riot."""
+    session = SessionLocal()
+    try:
+        if patch is None:
+            latest = (
+                session.query(ChampionBuildRecommendation.patch)
+                .join(Patch, Patch.version_label == ChampionBuildRecommendation.patch)
+                .filter(
+                    ChampionBuildRecommendation.tier == elo_tier,
+                    ChampionBuildRecommendation.lane == lane,
+                    ChampionBuildRecommendation.champion_id == champion_id,
+                )
+                .order_by(Patch.patch_sequence.desc())
+                .first()
+            )
+            if latest is None:
+                return None
+            patch = latest[0]
+
+        row = (
+            session.query(ChampionBuildRecommendation)
+            .filter_by(patch=patch, tier=elo_tier, lane=lane, champion_id=champion_id)
+            .one_or_none()
+        )
+        if row is None:
+            return None
+
+        return {
+            "patch": row.patch,
+            "item_build": row.item_build,
+            "item_build_games": row.item_build_games,
+            "item_build_win_rate": row.item_build_win_rate,
+            "keystone_id": row.keystone_id,
+            "primary_style_id": row.primary_style_id,
+            "sub_style_id": row.sub_style_id,
+            "rune_games": row.rune_games,
+            "rune_win_rate": row.rune_win_rate,
+            "amostra_insuficiente": row.amostra_insuficiente,
+        }
     finally:
         session.close()

@@ -112,6 +112,12 @@ export interface PowerProfile {
   classificacao: 'estrutural' | 'meta' | 'equilibrado' | 'indeterminado'
 }
 
+export interface SkillExpression {
+  ceiling_label: 'Baixo' | 'Médio' | 'Alto'
+  floor_label: 'Baixo' | 'Médio' | 'Alto'
+  amostra_insuficiente: boolean
+}
+
 export interface ChampionScoreRow {
   champion_id: string
   lane: string
@@ -132,6 +138,7 @@ export interface ChampionScoreRow {
   meta_score: number
   explicacao: ScoreExplanation
   perfil_poder: PowerProfile
+  skill_expression: SkillExpression | null
 }
 
 export async function fetchAvailablePatches(eloTier: string): Promise<string[]> {
@@ -236,6 +243,8 @@ export interface PatchDeltaRow {
   score_anterior: number
   score_atual: number
   delta: number
+  tier_anterior: string
+  tier_atual: string
 }
 
 export interface PatchNotesResult {
@@ -243,6 +252,7 @@ export interface PatchNotesResult {
   patch_anterior: string | null
   altas: PatchDeltaRow[]
   quedas: PatchDeltaRow[]
+  mudancas_tier: PatchDeltaRow[]
   comparados: number
 }
 
@@ -275,6 +285,130 @@ export async function fetchPatchChanges(): Promise<PatchChangesResult> {
   const response = await fetch(`${API_URL}/patch-notes/changes`)
   if (!response.ok) {
     throw new Error(`Falha ao buscar mudanças do patch: ${response.status}`)
+  }
+  return response.json()
+}
+
+export interface MatchupRow {
+  opponent_champion_id: string
+  games: number
+  wins: number
+  win_rate: number
+  amostra_insuficiente: boolean
+}
+
+export interface MatchupsResult {
+  patch: string | null
+  confrontos: MatchupRow[]
+}
+
+export interface MatchupFilters {
+  championId: string
+  lane: string
+  eloTier: string
+  patch?: string
+}
+
+export async function fetchMatchups(filters: MatchupFilters): Promise<MatchupsResult> {
+  const params = new URLSearchParams({
+    champion_id: filters.championId,
+    lane: filters.lane,
+    elo_tier: filters.eloTier,
+  })
+  if (filters.patch) params.set('patch', filters.patch)
+
+  const response = await fetch(`${API_URL}/matchups?${params}`)
+  if (!response.ok) {
+    throw new Error(`Falha ao buscar matchups: ${response.status}`)
+  }
+  return response.json()
+}
+
+export interface ItemMeta {
+  name: string
+  image: { full: string }
+}
+
+export interface ItemsResponse {
+  patch: string
+  items: Record<string, ItemMeta>
+}
+
+export async function fetchItems(): Promise<ItemsResponse> {
+  const response = await fetch(`${API_URL}/items`)
+  if (!response.ok) {
+    throw new Error(`Falha ao buscar itens: ${response.status}`)
+  }
+  return response.json()
+}
+
+export interface RuneMeta {
+  id: number
+  name: string
+  icon: string
+}
+
+export interface RuneTree {
+  id: number
+  name: string
+  icon: string
+  slots: { runes: RuneMeta[] }[]
+}
+
+export interface RunesResponse {
+  patch: string
+  paths: RuneTree[]
+}
+
+export async function fetchRunes(): Promise<RunesResponse> {
+  const response = await fetch(`${API_URL}/runes`)
+  if (!response.ok) {
+    throw new Error(`Falha ao buscar runas: ${response.status}`)
+  }
+  return response.json()
+}
+
+export function itemImageUrl(ddragonPatch: string, imageFile: string): string {
+  return `https://ddragon.leagueoflegends.com/cdn/${ddragonPatch}/img/item/${imageFile}`
+}
+
+export function runeIconUrl(icon: string): string {
+  return `https://ddragon.leagueoflegends.com/cdn/img/${icon}`
+}
+
+export interface BuildRecommendation {
+  patch: string
+  item_build: number[]
+  item_build_games: number
+  item_build_win_rate: number
+  keystone_id: number | null
+  primary_style_id: number | null
+  sub_style_id: number | null
+  rune_games: number
+  rune_win_rate: number
+  amostra_insuficiente: boolean
+}
+
+export interface BuildRecommendationFilters {
+  championId: string
+  lane: string
+  eloTier: string
+  patch?: string
+}
+
+export async function fetchBuildRecommendation(
+  filters: BuildRecommendationFilters,
+): Promise<BuildRecommendation | null> {
+  const params = new URLSearchParams({
+    champion_id: filters.championId,
+    lane: filters.lane,
+    elo_tier: filters.eloTier,
+  })
+  if (filters.patch) params.set('patch', filters.patch)
+
+  const response = await fetch(`${API_URL}/builds/recommended?${params}`)
+  if (!response.ok) {
+    throw new Error(`Falha ao buscar build recomendado: ${response.status}`)
   }
   return response.json()
 }

@@ -66,6 +66,18 @@ class MatchParticipant(Base):
     core_items: Mapped[list] = mapped_column(JSON)
     elo_tier: Mapped[str]
 
+    # Runas (rodada 21) — nuláveis porque as partidas ingeridas antes desta
+    # mudança não têm esse dado gravado (retroativo via
+    # app/jobs/backfill_participant_runes.py, que reprocessa
+    # `matches.raw_payload` já persistido em vez de chamar a Riot de novo).
+    # `keystone_id` é a primeira seleção do estilo primário
+    # (`perks.styles[0].selections[0].perk`); `primary_style_id`/
+    # `sub_style_id` são os dois `perks.styles[].style` (árvore primária e
+    # secundária).
+    keystone_id: Mapped[int | None]
+    primary_style_id: Mapped[int | None]
+    sub_style_id: Mapped[int | None]
+
     __table_args__ = (UniqueConstraint("match_id", "puuid"),)
 
 
@@ -406,3 +418,110 @@ class PlayerRanking(Base):
     collected_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc))
 
     __table_args__ = (UniqueConstraint("queue", "tier", "region", "puuid"),)
+
+
+class ChampionMatchup(Base):
+    """Item novo (rodada 21, backlog 3.5): "campeão A vs. campeão B" na
+    mesma rota. Duas linhas por confronto observado numa partida — uma da
+    perspectiva de cada lado — porque `win_rate` só faz sentido com um
+    ponto de vista fixo (a vitória de A é sempre a derrota de B).
+
+    Casado por `app/jobs/compute_matchups.py` agrupando
+    `match_participants` por `(match_id, resolved_position)`: quando há
+    exatamente 2 participantes de times diferentes na mesma posição, os
+    dois entram como adversários um do outro. Partidas com 0, 1 ou 3+
+    participantes na mesma posição (rota não resolvida por algum dos dois,
+    ou dado inconsistente) são ignoradas, não forçadas."""
+
+    __tablename__ = "champion_matchups"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    patch: Mapped[str]
+    tier: Mapped[str]
+    lane: Mapped[str]
+    champion_id: Mapped[str]
+    opponent_champion_id: Mapped[str]
+
+    games: Mapped[int] = mapped_column(default=0)
+    wins: Mapped[int] = mapped_column(default=0)
+    amostra_insuficiente: Mapped[bool] = mapped_column(default=False)
+    computed_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc))
+
+    __table_args__ = (
+        UniqueConstraint("patch", "tier", "lane", "champion_id", "opponent_champion_id"),
+    )
+
+
+class ChampionBuildRecommendation(Base):
+    """Item novo (rodada 21, backlog 4.1): build (itens) e runas com maior
+    win rate observado por `(patch, tier, lane, campeão)`, calculado por
+    `app/jobs/compute_build_recommendation.py`.
+
+    Não é o build mais popular — é o de maior win rate entre os que
+    atingem `settings.build_recommendation_min_games`; quando nenhum
+    atinge o piso, cai pro mais popular mesmo assim e marca
+    `amostra_insuficiente=True` (nunca omite o dado, só avisa que a
+    confiança é baixa — mesmo princípio já usado em `Baseline`/
+    `ChampionScore`). Itens e runas são escolhidos de forma independente
+    (o build de maior WR não precisa ser o mesmo jogo da combinação de
+    runas de maior WR)."""
+
+    __tablename__ = "champion_build_recommendations"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    patch: Mapped[str]
+    tier: Mapped[str]
+    lane: Mapped[str]
+    champion_id: Mapped[str]
+
+    item_build: Mapped[list] = mapped_column(JSON)
+    item_build_games: Mapped[int]
+    item_build_win_rate: Mapped[float]
+
+    keystone_id: Mapped[int | None]
+    primary_style_id: Mapped[int | None]
+    sub_style_id: Mapped[int | None]
+    rune_games: Mapped[int]
+    rune_win_rate: Mapped[float]
+
+    amostra_insuficiente: Mapped[bool] = mapped_column(default=False)
+    computed_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc))
+
+    __table_args__ = (UniqueConstraint("patch", "tier", "lane", "champion_id"),)
+
+
+class ChampionSkillExpression(Base):
+    """Item novo (rodada 21, backlog 3.3): etiqueta de "Skill Expression"
+    (floor/ceiling), calculada por `app/jobs/compute_skill_expression.py`.
+
+    **Heurística v1, não uma métrica oficial da Riot** (documento Core não
+    define fórmula — item `EM ABERTO`, decisão de produto tomada nesta
+    rodada): usa a variação do KDA por partida individual do campeão
+    dentro do grupo `(patch, tier, lane)`. `ceiling_ratio` = média do KDA
+    dos 20% melhores jogos ÷ mediana; `floor_ratio` = média do KDA dos 20%
+    piores jogos ÷ mediana — os dois normalizados por percentil dentro do
+    mesmo grupo (`ceiling_percentil`/`floor_percentil`) pra virar rótulo
+    Baixo/Médio/Alto. Os dois eixos são independentes: um campeão pode ter
+    ceiling e floor altos ao mesmo tempo (consistente e ainda assim capaz
+    de um pico), não é `floor = 100 - ceiling`."""
+
+    __tablename__ = "champion_skill_expression"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    patch: Mapped[str]
+    tier: Mapped[str]
+    lane: Mapped[str]
+    champion_id: Mapped[str]
+
+    n_games: Mapped[int]
+    mediana_kda: Mapped[float]
+    ceiling_ratio: Mapped[float]
+    floor_ratio: Mapped[float]
+    ceiling_percentil: Mapped[float]
+    floor_percentil: Mapped[float]
+    ceiling_label: Mapped[str]
+    floor_label: Mapped[str]
+    amostra_insuficiente: Mapped[bool] = mapped_column(default=False)
+    computed_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc))
+
+    __table_args__ = (UniqueConstraint("patch", "tier", "lane", "champion_id"),)

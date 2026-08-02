@@ -57,6 +57,37 @@ function DeltaTable({ title, rows }: { title: string; rows: PatchDeltaRow[] }) {
   )
 }
 
+function TierChangeTable({ rows }: { rows: PatchDeltaRow[] }) {
+  if (rows.length === 0) return null
+  return (
+    <div className="table-scroll">
+      <p className="table-caption">Campeões que mudaram de tier</p>
+      <table className="stats-table">
+        <thead>
+          <tr>
+            <th>Campeão</th>
+            <th>Rota</th>
+            <th>Tier</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr key={`${row.champion_id}-${row.lane}`}>
+              <td>{row.champion_id}</td>
+              <td>{LANE_LABELS[row.lane] ?? row.lane}</td>
+              <td>
+                <span className={`tier-badge tier-${row.tier_anterior}`}>{row.tier_anterior}</span>
+                <span aria-hidden="true"> → </span>
+                <span className={`tier-badge tier-${row.tier_atual}`}>{row.tier_atual}</span>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
 function groupByChampion(rows: PatchChangeRow[]): [string, PatchChangeRow[]][] {
   const map = new Map<string, PatchChangeRow[]>()
   for (const row of rows) {
@@ -227,6 +258,7 @@ function PatchNotesPage() {
           </p>
           <DeltaTable title="Maiores altas" rows={result.altas} />
           <DeltaTable title="Maiores quedas" rows={result.quedas} />
+          <TierChangeTable rows={result.mudancas_tier} />
         </>
       )}
     </main>
