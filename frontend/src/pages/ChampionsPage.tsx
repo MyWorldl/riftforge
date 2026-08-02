@@ -642,7 +642,7 @@ function ChampionsPage() {
   const compareRows = compareKeys.map((key) => scoreByKey.get(key)).filter((r): r is ChampionScoreRow => !!r)
 
   return (
-    <main className="center">
+    <main className="center center-wide">
       <h1>Campeões</h1>
       <p>Poder dos campeões de League of Legends por elo, rota e patch — score em camadas com tier God-E.</p>
 
