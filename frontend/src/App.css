@@ -605,6 +605,16 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  /* Vira `<Link>` (item novo: página de detalhe por campeão) quando usado
+     na tabela de Campeões — reset do estilo padrão de link, mesma cor de
+     texto de antes, sublinhado só no hover pra continuar sinalizando que
+     é clicável. */
+  color: inherit;
+  text-decoration: none;
+}
+
+.champion-cell:hover {
+  text-decoration: underline;
 }
 
 .champion-cell img {
@@ -674,6 +684,7 @@
   border: 1px solid var(--border);
   background: transparent;
   color: var(--text);
+  text-decoration: none;
   cursor: pointer;
 }
 
@@ -828,6 +839,101 @@
 
 .comparator-stat strong {
   color: var(--text-h);
+}
+
+/* Página de detalhe por campeão (ChampionDetailPage.tsx) — Explicação/
+   Histórico/Matchups/Build viraram abas aqui em vez de expandir dentro
+   da linha da tabela de Campeões, que não tinha mais espaço sobrando
+   depois do comparador e da composição (item 5.1). */
+.back-link {
+  color: var(--text);
+  text-decoration: none;
+  font-size: 14px;
+}
+
+.back-link:hover {
+  color: var(--accent);
+}
+
+.champion-detail-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.champion-detail-header img {
+  border-radius: 8px;
+}
+
+.champion-detail-title h1 {
+  margin: 0 0 4px;
+}
+
+.champion-detail-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.champion-detail-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  padding: 14px 18px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--code-bg);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.champion-detail-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.champion-detail-stat strong {
+  font-size: 18px;
+  color: var(--text-h);
+}
+
+.detail-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  border-bottom: 1px solid var(--border);
+  width: 100%;
+}
+
+.detail-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font: inherit;
+  font-size: 14px;
+  padding: 10px 14px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.detail-tab:hover {
+  color: var(--accent);
+}
+
+.detail-tab-active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+.detail-tab-panel {
+  width: 100%;
 }
 
 .icon-toggle:disabled:hover {
