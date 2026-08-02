@@ -72,6 +72,11 @@ function PlayerAnalysisPage() {
           <p className="table-caption">
             {result.partidas_analisadas} partidas recentes analisadas · comparado contra o elo{' '}
             {result.elo_tier_comparado}
+            {result.elo_tier_detectado ? (
+              <span className="explain-sub"> (detectado via ranked solo/duo)</span>
+            ) : (
+              <span className="explain-sub"> (padrão — sem entrada ranqueada em solo/duo detectada)</span>
+            )}
           </p>
           <div className="table-scroll">
             <table className="stats-table">
@@ -82,6 +87,7 @@ function PlayerAnalysisPage() {
                   <th>Partidas</th>
                   <th>Vitórias</th>
                   <th>KDA médio</th>
+                  <th>Vs. média do elo</th>
                   <th>Tier atual</th>
                 </tr>
               </thead>
@@ -93,6 +99,16 @@ function PlayerAnalysisPage() {
                     <td>{c.partidas}</td>
                     <td>{c.vitorias}</td>
                     <td>{c.kda_medio.toFixed(2)}</td>
+                    <td>
+                      {c.comparativo_baseline ? (
+                        <span className={c.comparativo_baseline.delta_pct >= 0 ? 'value-pos' : 'value-neg'}>
+                          {c.comparativo_baseline.delta_pct >= 0 ? '+' : ''}
+                          {c.comparativo_baseline.delta_pct.toFixed(1)}% WR
+                        </span>
+                      ) : (
+                        <span className="explain-sub">sem baseline</span>
+                      )}
+                    </td>
                     <td>
                       {c.score_atual ? (
                         <span className={`tier-badge tier-${c.score_atual.score_tier}`}>

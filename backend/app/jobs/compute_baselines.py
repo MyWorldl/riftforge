@@ -20,9 +20,12 @@ Uso: python -m app.jobs.compute_baselines
 import math
 
 from app.core.config import get_settings
+from app.core.logging import get_logger, new_correlation_id
 from app.core.stats import wilson_lower_bound
 from app.db.models import Baseline, ChampionLaneStat
 from app.db.session import SessionLocal, init_db
+
+log = get_logger(__name__)
 
 
 def _trimmed_mean_std(values: list[float], trim_pct: float) -> tuple[float, float]:
@@ -36,6 +39,7 @@ def _trimmed_mean_std(values: list[float], trim_pct: float) -> tuple[float, floa
 
 
 def compute() -> dict:
+    new_correlation_id()
     settings = get_settings()
     init_db()
 
@@ -78,11 +82,7 @@ def compute() -> dict:
 
 def main() -> None:
     result = compute()
-    print(
-        f"Baselines calculados: {result['baselines_criados']} grupos (rota, elo, patch); "
-        f"{result['amostra_insuficiente']} com amostra abaixo do mínimo configurado "
-        f"(marcados amostra_confiavel=False, não descartados)."
-    )
+    log.info("job_concluido", job="compute_baselines", **result)
 
 
 if __name__ == "__main__":

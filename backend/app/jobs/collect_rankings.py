@@ -24,8 +24,11 @@ from riotwatcher import ApiError
 
 from app.adapters.riot_api import PLATFORM_TO_CONTINENT, RiotApiAdapter
 from app.core.config import get_settings
+from app.core.logging import get_logger, new_correlation_id
 from app.db.models import PlayerRanking
 from app.db.session import SessionLocal, init_db
+
+log = get_logger(__name__)
 
 QUEUE = "RANKED_SOLO_5x5"
 TIERS = ("CHALLENGER", "GRANDMASTER", "MASTER")
@@ -43,6 +46,7 @@ def _top_n(league_payload: dict, tier: str, top_n: int) -> list[dict]:
 
 
 def collect() -> dict:
+    new_correlation_id()
     settings = get_settings()
     init_db()
     riot_api = RiotApiAdapter()
@@ -65,6 +69,14 @@ def collect() -> dict:
                 + _top_n(riot_api.get_grandmaster_league(QUEUE, platform_region=region), "GRANDMASTER", top_n)
                 + _top_n(riot_api.get_master_league(QUEUE, platform_region=region), "MASTER", top_n)
             )
+
+            # Revisão técnica §5.2: lido ANTES do delete-and-recompute de
+            # sempre — é o único jeito de saber "onde esse jogador estava"
+            # depois que as linhas velhas somem.
+            previous_position_by_puuid: dict[str, int] = {
+                row.puuid: row.rank_position
+                for row in session.query(PlayerRanking).filter_by(queue=QUEUE, region=region).all()
+            }
 
             for tier in TIERS:
                 session.query(PlayerRanking).filter_by(queue=QUEUE, tier=tier, region=region).delete()
@@ -94,6 +106,11 @@ def collect() -> dict:
                 except ApiError:
                     niveis_falhos += 1
 
+                previous_position = previous_position_by_puuid.get(entry["puuid"])
+                delta_posicao = (
+                    previous_position - entry["rank_position"] if previous_position is not None else None
+                )
+
                 session.add(
                     PlayerRanking(
                         queue=QUEUE,
@@ -108,6 +125,7 @@ def collect() -> dict:
                         wins=entry["wins"],
                         losses=entry["losses"],
                         rank_position=entry["rank_position"],
+                        delta_posicao=delta_posicao,
                     )
                 )
                 total_gravados += 1
@@ -127,12 +145,7 @@ def collect() -> dict:
 
 def main() -> None:
     result = collect()
-    print(
-        f"Ranking gravado: {result['jogadores_gravados']} jogadores em "
-        f"{result['regioes_cobertas']} regiões (top {get_settings().rankings_top_n_per_tier} por tier), "
-        f"{result['nomes_resolvidos']} nomes resolvidos ({result['nomes_falhos']} falharam), "
-        f"{result['niveis_resolvidos']} níveis/ícones resolvidos ({result['niveis_falhos']} falharam)."
-    )
+    log.info("job_concluido", job="collect_rankings", **result)
 
 
 if __name__ == "__main__":

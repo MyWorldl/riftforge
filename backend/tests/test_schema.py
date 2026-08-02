@@ -9,6 +9,7 @@ from app.adapters.data_dragon import DataDragonAdapter
 EXPECTED_CHAMPION_FIELDS = {"id", "key", "name", "title", "tags", "stats"}
 
 
+@pytest.mark.integration
 @pytest.mark.asyncio
 async def test_champion_schema_has_expected_fields():
     adapter = DataDragonAdapter()

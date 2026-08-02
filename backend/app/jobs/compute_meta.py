@@ -27,9 +27,12 @@ Uso: python -m app.jobs.compute_meta
 
 from collections import defaultdict
 
+from app.core.logging import get_logger, new_correlation_id
 from app.core.stats import percentile_rank
 from app.db.models import ChampionMetaContext, ChampionPerformanceScore, Patch
 from app.db.session import SessionLocal, init_db
+
+log = get_logger(__name__)
 
 TOP_N_COBERTURA = 10
 
@@ -50,6 +53,7 @@ def _linear_slope(points: list[tuple[int, float]]) -> float | None:
 
 
 def compute() -> dict:
+    new_correlation_id()
     init_db()
     session = SessionLocal()
     try:
@@ -116,7 +120,7 @@ def compute() -> dict:
 
 def main() -> None:
     result = compute()
-    print(f"Camada 4 (Meta) calculada: {result['linhas_criadas']} linhas.")
+    log.info("job_concluido", job="compute_meta", **result)
 
 
 if __name__ == "__main__":

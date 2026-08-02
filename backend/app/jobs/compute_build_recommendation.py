@@ -22,8 +22,11 @@ from collections import defaultdict
 from app.adapters.data_dragon import DataDragonAdapter
 from app.core.champions import resolve_champion_id
 from app.core.config import get_settings
+from app.core.logging import get_logger, new_correlation_id
 from app.db.models import ChampionBuildRecommendation, Match, MatchParticipant, Patch
 from app.db.session import SessionLocal, init_db
+
+log = get_logger(__name__)
 
 
 def _item_build_key(core_items: list[int]) -> tuple[int, ...]:
@@ -50,6 +53,7 @@ def _best_combo(
 
 
 def compute() -> int:
+    new_correlation_id()
     init_db()
     settings = get_settings()
     data_dragon = DataDragonAdapter()
@@ -151,7 +155,7 @@ def compute() -> int:
 
 def main() -> None:
     created = compute()
-    print(f"Recomendação de build calculada: {created} linhas (champion_build_recommendations).")
+    log.info("job_concluido", job="compute_build_recommendation", linhas_criadas=created)
 
 
 if __name__ == "__main__":

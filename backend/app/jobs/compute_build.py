@@ -43,9 +43,12 @@ from collections import defaultdict
 
 from app.adapters.data_dragon import DataDragonAdapter
 from app.core.champions import resolve_champion_id
+from app.core.logging import get_logger, new_correlation_id
 from app.core.stats import percentile_rank
 from app.db.models import ChampionBuildPatch, ChampionBuildScore, Match, MatchParticipant, Patch
 from app.db.session import SessionLocal, init_db
+
+log = get_logger(__name__)
 
 
 def _build_key(core_items: list[int]) -> tuple[int, ...]:
@@ -251,6 +254,7 @@ def _compute_smoothed_scores() -> int:
 
 
 def compute() -> dict:
+    new_correlation_id()
     init_db()
     b_patch_rows = _compute_b_patch()
     smoothed_rows = _compute_smoothed_scores()
@@ -259,10 +263,7 @@ def compute() -> dict:
 
 def main() -> None:
     result = compute()
-    print(
-        f"Camada 3 (Build) calculada: {result['linhas_b_patch']} linhas b_patch, "
-        f"{result['linhas_suavizadas']} linhas suavizadas."
-    )
+    log.info("job_concluido", job="compute_build", **result)
 
 
 if __name__ == "__main__":

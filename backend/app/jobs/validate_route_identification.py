@@ -52,8 +52,11 @@ Uso: python -m app.jobs.validate_route_identification
 
 from collections import defaultdict
 
+from app.core.logging import get_logger, new_correlation_id
 from app.db.models import MatchParticipant
 from app.db.session import SessionLocal, init_db
+
+log = get_logger(__name__)
 
 METODO_1_MAPA: dict[tuple[str, str], str] = {
     ("NONE", "JUNGLE"): "JUNGLE",
@@ -74,6 +77,7 @@ def metodo_1(raw_role: str | None, raw_lane: str | None) -> str | None:
 
 
 def validate() -> dict:
+    new_correlation_id()
     init_db()
     session = SessionLocal()
     try:
@@ -123,12 +127,14 @@ def validate() -> dict:
 
 def main() -> None:
     result = validate()
-    print(f"Participantes com raw_role/raw_lane/resolved_position: {result['participantes_avaliados']}")
-    print(f"Cobertos pelo Método 1 (5 combos canônicos): {result['cobertos_pelo_metodo_1']}")
-    print(f"Concordância geral teamPosition vs. Método 1: {result['concordancia_geral_pct']}%")
-    print("Por posição esperada (Método 1):")
-    for pos, stats in result["por_posicao"].items():
-        print(f"  {pos}: {stats['concordancia_pct']}% (n={stats['n']})")
+    log.info(
+        "job_concluido",
+        job="validate_route_identification",
+        participantes_avaliados=result["participantes_avaliados"],
+        cobertos_pelo_metodo_1=result["cobertos_pelo_metodo_1"],
+        concordancia_geral_pct=result["concordancia_geral_pct"],
+        por_posicao=result["por_posicao"],
+    )
 
 
 if __name__ == "__main__":

@@ -24,6 +24,7 @@ from collections import defaultdict
 from datetime import datetime, timezone
 
 from app.core.config import get_settings
+from app.core.logging import get_logger, new_correlation_id
 from app.core.stats import percentile_rank as _percentile_rank
 from app.core.stats import wilson_lower_bound
 from app.db.models import (
@@ -35,6 +36,8 @@ from app.db.models import (
 )
 from app.db.session import SessionLocal, init_db
 
+log = get_logger(__name__)
+
 MODEL_VERSION = "performance_v1"
 
 
@@ -43,6 +46,7 @@ def _logistic_nota(z: float, fator: float) -> float:
 
 
 def compute() -> dict:
+    new_correlation_id()
     settings = get_settings()
     init_db()
 
@@ -138,7 +142,7 @@ def compute() -> dict:
 
 def main() -> None:
     result = compute()
-    print(f"Camada 1 (Performance Real) calculada: {result['linhas_criadas']} linhas.")
+    log.info("job_concluido", job="compute_performance", **result)
 
 
 if __name__ == "__main__":

@@ -111,3 +111,13 @@ class RiotApiAdapter:
         League-V4 — diferente do continente usado por Account-V1/Match-V5."""
         region = platform_region or self._platform_region
         return self._client.summoner.by_puuid(region, puuid)
+
+    def get_league_entries_by_puuid(self, puuid: str, platform_region: str | None = None) -> list[dict]:
+        """League-V4 `by-puuid` — todas as filas ranqueadas em que o
+        jogador está (uma entrada por fila: solo/duo, flex...). Revisão
+        técnica §5.3: usado por "Análise do Jogador" pra detectar o elo
+        real do jogador em vez de assumir GOLD fixo — antes, o filtro de
+        comparação vinha sempre com esse valor padrão, mesmo pra um
+        jogador Platina ou Ferro de verdade."""
+        region = platform_region or self._platform_region
+        return self._client.league.by_puuid(region, puuid)

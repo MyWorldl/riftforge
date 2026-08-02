@@ -15,7 +15,55 @@ on:
     - cron: "0 6 * * 1"
 
 jobs:
-  test:
+  # Revisão técnica §4.4: `ruff` nunca rodava em CI, só quem lembrasse de
+  # rodar localmente pegava um erro de lint antes do merge. `mypy` fica de
+  # fora de propósito — o backend não tem anotação de tipo suficiente pra
+  # isso não virar uma lista enorme de erros pré-existentes; registrado como
+  # item futuro, não fingido como "feito" aqui.
+  lint:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run ruff
+        run: ruff check .
+
+  # Revisão técnica §1.5/§2.7: os testes de rede real (Riot API/Data
+  # Dragon, marcados `integration`) saíram do job de todo push — deixavam o
+  # CI instável por motivo alheio ao commit (chave expirando, Riot
+  # instável), e expunham `RIOT_API_KEY` num contexto que não precisa dela
+  # (princípio do menor privilégio). `unit` roda sempre, rápido, sem
+  # segredo nenhum; `integration` só no cron semanal, com a chave.
+  unit:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run unit tests
+        run: pytest -q -m "not integration"
+
+  integration:
+    if: github.event_name == 'schedule'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -32,5 +80,5 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Run tests
-        run: pytest -q
+      - name: Run integration tests
+        run: pytest -q -m integration

@@ -25,7 +25,10 @@ Uso: python -m app.jobs.backfill_participant_runes
 
 from sqlalchemy import text
 
+from app.core.logging import get_logger, new_correlation_id
 from app.db.session import SessionLocal, init_db
+
+log = get_logger(__name__)
 
 _BACKFILL_SQL = text(
     """
@@ -59,6 +62,7 @@ _BACKFILL_SQL = text(
 
 
 def backfill() -> int:
+    new_correlation_id()
     init_db()
     session = SessionLocal()
     try:
@@ -71,7 +75,7 @@ def backfill() -> int:
 
 def main() -> None:
     updated = backfill()
-    print(f"Backfill de runas concluído: {updated} linhas de match_participants atualizadas.")
+    log.info("job_concluido", job="backfill_participant_runes", linhas_atualizadas=updated)
 
 
 if __name__ == "__main__":
