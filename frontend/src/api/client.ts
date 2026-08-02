@@ -32,6 +32,32 @@ export async function fetchChampions(): Promise<ChampionsResponse> {
   return response.json()
 }
 
+export interface ChampionAbility {
+  image: { full: string }
+  name: string
+}
+
+export interface ChampionDetail {
+  passive: ChampionAbility
+  spells: ChampionAbility[]
+}
+
+export interface ChampionDetailResponse {
+  patch: string
+  champion: ChampionDetail
+}
+
+/** Item novo: cabeçalho estilo OP.GG na página de detalhe do campeão
+ *  (passiva + Q/W/E/R abaixo do nome) — `fetchChampions()` (resumo) não
+ *  traz habilidades, só o endpoint por campeão. */
+export async function fetchChampionAbilities(championId: string): Promise<ChampionDetailResponse> {
+  const response = await fetch(`${API_URL}/champions/${championId}`)
+  if (!response.ok) {
+    throw new Error(`Falha ao buscar habilidades do campeão: ${response.status}`)
+  }
+  return response.json()
+}
+
 export interface ChampionStat {
   champion_id: string
   lane: string
@@ -91,6 +117,14 @@ export async function fetchChampionHistory(filters: ChampionHistoryFilters): Pro
 
 export function championImageUrl(ddragonPatch: string, imageFile: string): string {
   return `https://ddragon.leagueoflegends.com/cdn/${ddragonPatch}/img/champion/${imageFile}`
+}
+
+export function spellImageUrl(ddragonPatch: string, imageFile: string): string {
+  return `https://ddragon.leagueoflegends.com/cdn/${ddragonPatch}/img/spell/${imageFile}`
+}
+
+export function passiveImageUrl(ddragonPatch: string, imageFile: string): string {
+  return `https://ddragon.leagueoflegends.com/cdn/${ddragonPatch}/img/passive/${imageFile}`
 }
 
 export interface LayerContribution {

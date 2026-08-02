@@ -25,3 +25,15 @@ async def get_runes() -> dict:
     version = await cached("ddragon:version", data_dragon.get_latest_version)
     paths = await cached(f"ddragon:runes:{version}", lambda: data_dragon.get_rune_paths(version))
     return {"patch": version, "paths": paths}
+
+
+async def get_champion_detail(champion_id: str) -> dict:
+    """Item novo: página de detalhe por campeão precisa de passiva+habilidades
+    (Q/W/E/R) pro cabeçalho estilo OP.GG — `get_champions` (resumo) não traz
+    isso, só `get_champion_detail` (por campeão) tem."""
+    version = await cached("ddragon:version", data_dragon.get_latest_version)
+    detail = await cached(
+        f"ddragon:champion_detail:{version}:{champion_id}",
+        lambda: data_dragon.get_champion_detail(version, champion_id),
+    )
+    return {"patch": version, "champion": detail}

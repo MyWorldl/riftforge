@@ -5,19 +5,23 @@ import {
   fetchAvailablePatches,
   fetchChampionScores,
   fetchChampions,
+  fetchPatchNotes,
   type ChampionMeta,
   type ChampionScoreRow,
+  type PatchDeltaRow,
+  type PatchNotesResult,
 } from '../api/client'
 import FlagSelect from '../components/FlagSelect'
 import { CHAMPIONS_COUNTRY_OPTIONS } from '../constants/regions'
 import {
-  IconBuild,
+  ComparatorPanel,
   IconChart,
   IconInfo,
-  IconSwords,
   LaneCell,
   LayerContributionBar,
   formatPct,
+  matchesNameSearch,
+  rowKey,
 } from '../components/championDisplay'
 import roleIconAll from '../assets/roles/all.png'
 import roleIconTop from '../assets/roles/top.png'
@@ -88,28 +92,42 @@ const LANE_ICONS: Partial<Record<string, string>> = {
   UTILITY: roleIconUtility,
 }
 
-function rowKey(row: ChampionScoreRow): string {
-  return `${row.champion_id}-${row.lane}-${row.patch}`
-}
-
 /** Item novo: cada linha agora abre uma página de detalhe própria em vez
  *  de expandir inline (ver `ChampionDetailPage.tsx`) — usa os valores da
  *  própria linha (elo/rota/patch), não o filtro da página, porque com
  *  "Todas as rotas" selecionado cada linha pode ter uma rota diferente. */
-function detailHref(row: ChampionScoreRow, tab: 'explain' | 'history' | 'matchups' | 'build'): string {
+function detailHref(row: ChampionScoreRow, tab: 'explain' | 'history'): string {
   const params = new URLSearchParams({ eloTier: row.elo_tier, lane: row.lane, patch: row.patch, tab })
   return `/campeoes/${row.champion_id}?${params}`
 }
 
-function matchesNameSearch(
-  row: ChampionScoreRow,
-  search: string,
-  championsMeta: Record<string, ChampionMeta> | null,
-): boolean {
-  if (!search) return true
-  const needle = search.trim().toLowerCase()
-  const name = championsMeta?.[row.champion_id]?.name ?? row.champion_id
-  return name.toLowerCase().includes(needle) || row.champion_id.toLowerCase().includes(needle)
+/** Item novo: "Variação" na lista de Campeões — reaproveita o mesmo diff
+ *  que já alimenta `/patch-notes` (Data Dragon§, `patch_diff.py`), em vez
+ *  de recalcular algo novo. Só compara os 2 patches mais recentes do
+ *  elo — por isso o índice é aplicado somente quando a linha exibida É
+ *  esse patch mais recente (`patch_atual`), nunca num patch histórico
+ *  filtrado manualmente. */
+function buildDeltaIndex(patchNotes: PatchNotesResult | null): Map<string, PatchDeltaRow> {
+  const index = new Map<string, PatchDeltaRow>()
+  if (!patchNotes) return index
+  for (const row of [...patchNotes.altas, ...patchNotes.quedas, ...patchNotes.mudancas_tier]) {
+    index.set(`${row.champion_id}-${row.lane}`, row)
+  }
+  return index
+}
+
+function VariationBadge({ delta }: { delta: PatchDeltaRow | undefined }) {
+  if (!delta) return <span className="delta-position delta-position-none">—</span>
+  const up = delta.delta >= 0
+  const hint =
+    delta.tier_anterior === delta.tier_atual
+      ? undefined
+      : `Tier: ${delta.tier_anterior} → ${delta.tier_atual}`
+  return (
+    <span className={`delta-position ${up ? 'delta-position-up' : 'delta-position-down'}`} title={hint}>
+      {up ? '▲' : '▼'} {Math.abs(delta.delta).toFixed(1)}
+    </span>
+  )
 }
 
 type SortKey = 'score' | 'win_rate' | 'pick_rate' | 'ban_rate'
@@ -158,84 +176,6 @@ function SortableHeader({
   )
 }
 
-/** Item 5.1 — comparador lado a lado: até 3 campeões selecionados via
- *  checkbox na tabela, mesmos dados que já vêm em `ChampionScoreRow`
- *  (sem fetch extra). Continua na lista de propósito (não virou aba da
- *  página de detalhe) — é inerentemente multi-campeão. */
-function ComparatorPanel({
-  rows,
-  championsMeta,
-  ddragonPatch,
-  onRemove,
-  onClear,
-}: {
-  rows: ChampionScoreRow[]
-  championsMeta: Record<string, ChampionMeta> | null
-  ddragonPatch: string
-  onRemove: (key: string) => void
-  onClear: () => void
-}) {
-  if (rows.length === 0) return null
-  return (
-    <div className="comparator-panel">
-      <div className="comparator-header">
-        <span>Comparando {rows.length} {rows.length === 1 ? 'campeão' : 'campeões'}</span>
-        <button type="button" className="comparator-clear" onClick={onClear}>Limpar</button>
-      </div>
-      <div className="comparator-grid">
-        {rows.map((row) => {
-          const meta = championsMeta?.[row.champion_id]
-          return (
-            <div className="comparator-card" key={rowKey(row)}>
-              <div className="comparator-card-header">
-                {meta && ddragonPatch && (
-                  <img src={championImageUrl(ddragonPatch, meta.image.full)} alt="" width={28} height={28} />
-                )}
-                <span>{meta?.name ?? row.champion_id}</span>
-                <button
-                  type="button"
-                  className="comparator-remove"
-                  onClick={() => onRemove(rowKey(row))}
-                  aria-label="Remover da comparação"
-                >
-                  ×
-                </button>
-              </div>
-              <div className="comparator-stat">
-                <span>Score</span>
-                <strong>
-                  {row.score_final.toFixed(1)}{' '}
-                  <span className={`tier-badge tier-${row.score_tier}`}>{row.score_tier}</span>
-                </strong>
-              </div>
-              <div className="comparator-stat">
-                <span>Performance</span>
-                <strong>{row.performance_score.toFixed(1)}</strong>
-              </div>
-              <div className="comparator-stat">
-                <span>Kit</span>
-                <strong>{row.kit_score !== null ? row.kit_score.toFixed(1) : '—'}</strong>
-              </div>
-              <div className="comparator-stat">
-                <span>Build</span>
-                <strong>{row.build_score.toFixed(1)}</strong>
-              </div>
-              <div className="comparator-stat">
-                <span>Meta</span>
-                <strong>{row.meta_score.toFixed(1)}</strong>
-              </div>
-              <div className="comparator-stat">
-                <span>Vitória</span>
-                <strong>{formatPct(row.win_rate)}</strong>
-              </div>
-            </div>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
-
 function ChampionsPage() {
   const [searchParams] = useSearchParams()
 
@@ -261,6 +201,8 @@ function ChampionsPage() {
   const [sortKey, setSortKey] = useState<SortKey>('score')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
   const [compareKeys, setCompareKeys] = useState<string[]>([])
+
+  const [patchNotes, setPatchNotes] = useState<PatchNotesResult | null>(null)
 
   function handleSort(key: SortKey) {
     if (key === sortKey) {
@@ -301,6 +243,16 @@ function ChampionsPage() {
       .catch(() => setAvailablePatches([]))
   }, [eloTier])
 
+  // Item novo: "Variação" — mesmo diff que já alimenta Patch Notes,
+  // buscado à parte porque `/patch-notes` compara sempre os 2 patches
+  // mais recentes do elo, independente do filtro de patch específico
+  // desta página (ver `buildDeltaIndex`/`VariationBadge`).
+  useEffect(() => {
+    fetchPatchNotes(eloTier)
+      .then(setPatchNotes)
+      .catch(() => setPatchNotes(null))
+  }, [eloTier])
+
   // Filtros aplicam na hora, sem botão "Aplicar" — um seletor não
   // precisa de confirmação extra, e remove qualquer risco de o botão
   // ficar mal posicionado se a tabela apertar o layout.
@@ -329,6 +281,8 @@ function ChampionsPage() {
 
   const scoreByKey = new Map((scores ?? []).map((row) => [rowKey(row), row]))
   const compareRows = compareKeys.map((key) => scoreByKey.get(key)).filter((r): r is ChampionScoreRow => !!r)
+
+  const deltaIndex = buildDeltaIndex(patchNotes)
 
   return (
     <main className="center center-wide">
@@ -417,6 +371,7 @@ function ChampionsPage() {
               <th>#</th>
               <th>Campeão</th>
               <SortableHeader label="Tier" sortKeyFor="score" currentKey={sortKey} currentDir={sortDir} onSort={handleSort} />
+              <th title="Diferença de score em relação ao patch anterior">Variação</th>
               <th title="Contribuição de cada camada no score (Performance/Kit/Build/Meta)">Composição</th>
               {!lane && <th>Função</th>}
               <SortableHeader label="Taxa de Vitória" sortKeyFor="win_rate" currentKey={sortKey} currentDir={sortDir} onSort={handleSort} />
@@ -430,6 +385,10 @@ function ChampionsPage() {
               const meta = championsMeta?.[row.champion_id]
               const key = rowKey(row)
               const isComparing = compareKeys.includes(key)
+              const delta =
+                row.patch === patchNotes?.patch_atual
+                  ? deltaIndex.get(`${row.champion_id}-${row.lane}`)
+                  : undefined
               return (
                 <tr key={key}>
                   <td>
@@ -460,6 +419,7 @@ function ChampionsPage() {
                     <span className={`tier-badge tier-${row.score_tier}`}>{row.score_tier}</span>
                     {row.tier_provisorio && <span className="provisional-mark" title="Amostra pequena — tier provisório, teto em A">*</span>}
                   </td>
+                  <td><VariationBadge delta={delta} /></td>
                   <td><LayerContributionBar row={row} /></td>
                   {!lane && <td><LaneCell lane={row.lane} /></td>}
                   <td>{formatPct(row.win_rate)}</td>
@@ -482,22 +442,6 @@ function ChampionsPage() {
                         aria-label="Histórico entre patches"
                       >
                         <IconChart />
-                      </Link>
-                      <Link
-                        className="icon-toggle"
-                        to={detailHref(row, 'matchups')}
-                        title="Ver matchups na rota"
-                        aria-label="Matchups na rota"
-                      >
-                        <IconSwords />
-                      </Link>
-                      <Link
-                        className="icon-toggle"
-                        to={detailHref(row, 'build')}
-                        title="Ver build recomendado"
-                        aria-label="Build recomendado"
-                      >
-                        <IconBuild />
                       </Link>
                     </div>
                   </td>
