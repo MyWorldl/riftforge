@@ -58,7 +58,11 @@ Baseado em `Core/Estrutura_roadmap/00_INDEX.md` (fonte de verdade atual — tem 
 - [x] Empacotar o frontend web com Tauri, reaproveitando o backend/API existente (`frontend/src-tauri/`). Build de release gera instaladores MSI e NSIS; em dev fala com o backend local, no build final usa o backend publicado (mesmo `.env.production` da web). Ver README § Desktop.
 
 ## Fase 11 — Backlog de melhorias futuras
-- Comparador de matchups, recomendação de build, filtro por região, histórico de tendência por patch, notificações de mudança de tier, Live Client Data API, cache distribuído (Redis).
+- [x] Comparador de matchups — ver rodada 21 abaixo.
+- [x] Recomendação de build (itens/runas) — ver rodada 21 abaixo.
+- [x] Notificação de mudança de tier após patch — ver rodada 21 abaixo.
+- [x] Histórico de tendência por patch — item 3.4, já entregue (`GET /scores/history`).
+- Filtro por região/servidor amplo (Campeões só tem Brasil funcional hoje), Live Client Data API, cache distribuído (Redis).
 
 ---
 
@@ -144,3 +148,44 @@ Feedback do usuário sobre a página recém lançada. Detalhe completo em
   cobrir 4 regiões em vez de 1 — mesmo tempo total, aproximadamente.
 
 Suite de testes: 51 → 56. `tsc -b`/`lint`/`build` do frontend limpos.
+
+## Matchups, Build recomendado, Skill Expression, Notificação de tier (2026-08-02)
+
+Pedido do usuário: implementar de uma vez os 4 itens do backlog (Fase 3/4)
+que ainda não tinham sido iniciados. Todos reaproveitam dado já coletado
+(`match_participants`), sem nenhuma chamada Riot nova:
+
+- **Matchups** (`GET /matchups`, novo): "campeão A vs. todos os B" na
+  mesma rota, casando adversários dentro da mesma partida por
+  `(match_id, resolved_position)`. `app/jobs/compute_matchups.py`.
+- **Build recomendado** (`GET /builds/recommended`, novo): item build e
+  combinação de runas com maior win rate observado, por
+  `(patch, tier, lane, campeão)`. Runas nunca tinham sido capturadas —
+  `app/jobs/backfill_participant_runes.py` extraiu de `matches.raw_payload`
+  já persistido (zero chamada Riot nova); `ingest_matches.py` grava daqui
+  pra frente. `app/jobs/compute_build_recommendation.py`. Novos proxies
+  `GET /items`/`GET /runes` (mesmo padrão de `/champions`) resolvem
+  nome/ícone no frontend.
+- **Skill Expression** (floor/ceiling, integrado em `/scores/champions`):
+  heurística v1 declarada (não é métrica oficial da Riot) baseada na
+  variação de KDA por partida — `app/jobs/compute_skill_expression.py`.
+- **Notificação de mudança de tier**: extensão de `patch_diff.py`/
+  `GET /patch-notes` já existentes (campo `mudancas_tier`) — sem sistema
+  de conta no projeto, vira seção visível na página de Patch Notes, não
+  notificação push/e-mail.
+
+UX: Matchups e Build viraram mais dois botões expansíveis na tabela de
+Campeões (mesmo padrão de "Por quê?"/"Histórico"), não páginas novas —
+decisão confirmada com o usuário antes de implementar.
+
+Achado técnico: o primeiro backfill de runas (loop em Python buscando
+`raw_payload` por página) travava contra o pooler do Supabase sem nem
+lançar exceção. Resolvido reescrevendo como um único `UPDATE ... FROM`
+em SQL puro (extração de JSON inteira dentro do Postgres) — de horas
+estimadas pra segundos na prática.
+
+Validado com dados reais do Supabase: 31.762 linhas de matchup, 5.560 de
+build recomendado, 5.560 de Skill Expression. Suite de testes: 63 → 71.
+`tsc -b` do frontend limpo. Painéis conferidos no navegador contra dados
+reais (imagens de item/runa carregando, seção de mudança de tier
+renderizando).

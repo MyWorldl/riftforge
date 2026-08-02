@@ -69,3 +69,18 @@ class DataDragonAdapter:
         diverges from ddragon's `id` (e.g. "Kai'Sa" vs "Kaisa")."""
         champions = await self.get_champions(version, locale)
         return {int(info["key"]): name for name, info in champions.items()}
+
+    async def get_items(self, version: str, locale: str = "en_US") -> dict:
+        """Item novo (rodada 21, "Recomendação de build") — proxy do
+        catálogo de itens, mesmo padrão de `get_champions`. Usado só pra
+        resolver nome/ícone no frontend a partir do ID numérico já gravado
+        em `match_participants.core_items`."""
+        data = await self._get_json(f"/cdn/{version}/data/{locale}/item.json")
+        return data["data"]
+
+    async def get_rune_paths(self, version: str, locale: str = "en_US") -> list:
+        """Item novo (rodada 21) — árvores de runas (Precisão, Domínio...),
+        cada uma com suas runas individuais e o caminho do ícone. Não tem
+        endpoint "por versão exata" como o de campeão/item — o arquivo é o
+        mesmo formato desde a introdução do Runas Reforjadas."""
+        return await self._get_json(f"/cdn/{version}/data/{locale}/runesReforged.json")

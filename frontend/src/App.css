@@ -805,6 +805,43 @@
   font-weight: 400;
 }
 
+.skill-expression-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  cursor: help;
+}
+
+.skill-expression-label {
+  font-size: 13px;
+  color: var(--text);
+}
+
+.skill-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.skill-badge.skill-level-Alto {
+  background: var(--accent);
+  color: #fff;
+}
+
+.skill-badge.skill-level-Médio {
+  border: 1px solid var(--border);
+  color: var(--text-h);
+}
+
+.skill-badge.skill-level-Baixo {
+  color: var(--text);
+  font-weight: 400;
+}
+
 .rank-tier-badge {
   display: inline-block;
   padding: 2px 8px;
@@ -1009,6 +1046,99 @@
   background: var(--code-bg);
   border-radius: 6px;
   padding: 14px 16px;
+}
+
+.matchup-panel {
+  padding: 4px 0;
+}
+
+.matchup-list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.matchup-item {
+  display: grid;
+  grid-template-columns: 28px minmax(90px, 1fr) minmax(80px, 2fr) 48px auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.matchup-name {
+  font-size: 13px;
+  color: var(--text-h);
+}
+
+.matchup-bar-cell {
+  display: flex;
+  align-items: center;
+  height: 10px;
+  background: var(--code-bg);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.matchup-bar {
+  height: 100%;
+  border-radius: 2px;
+}
+
+.matchup-value {
+  text-align: right;
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--text-h);
+}
+
+.matchup-games {
+  font-size: 12px;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.build-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 4px 0;
+}
+
+.build-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.build-section-label {
+  font-size: 13px;
+  color: var(--text-h);
+}
+
+.build-item-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.build-item-row img {
+  border-radius: 4px;
+}
+
+.build-item-unknown {
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
+  background: var(--code-bg);
+}
+
+.build-rune-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .history-chart-title {

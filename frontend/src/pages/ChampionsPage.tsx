@@ -4,14 +4,20 @@ import {
   fetchAvailablePatches,
   fetchChampionScores,
   fetchChampions,
+  fetchItems,
+  fetchRunes,
   type ChampionMeta,
   type ChampionScoreRow,
+  type ItemMeta,
   type PowerProfile,
+  type RuneTree,
   type ScoreExplanation,
 } from '../api/client'
 import FlagSelect from '../components/FlagSelect'
 import { CHAMPIONS_COUNTRY_OPTIONS } from '../constants/regions'
+import BuildRecommendationPanel from '../BuildRecommendationPanel'
 import HistoryChart from '../HistoryChart'
+import MatchupPanel from '../MatchupPanel'
 import roleIconAll from '../assets/roles/all.png'
 import roleIconTop from '../assets/roles/top.png'
 import roleIconJungle from '../assets/roles/jungle.png'
@@ -41,7 +47,7 @@ const COUNTRY_SELECT_OPTIONS = CHAMPIONS_COUNTRY_OPTIONS.map((c) => ({
   disabled: c.value !== 'br1',
 }))
 
-type ExpandedPanel = { key: string; type: 'explain' | 'history' } | null
+type ExpandedPanel = { key: string; type: 'explain' | 'history' | 'matchups' | 'build' } | null
 
 const TIER_ICONS: Record<string, string> = {
   IRON: tierIconIron,
@@ -167,6 +173,27 @@ function IconChart() {
   )
 }
 
+function IconSwords() {
+  return (
+    <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
+      <path d="M2 2l5 5M14 2 9 7" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+      <path d="M2 14l5-5M14 14 9 9" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+      <circle cx="8" cy="8" r="1.3" fill="currentColor" />
+    </svg>
+  )
+}
+
+function IconBuild() {
+  return (
+    <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
+      <rect x="2" y="2" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.3" fill="none" />
+      <rect x="9" y="2" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.3" fill="none" />
+      <rect x="2" y="9" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.3" fill="none" />
+      <rect x="9" y="9" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.3" fill="none" />
+    </svg>
+  )
+}
+
 /** Frase em linguagem natural — o ponto do item 3.1 é o usuário entender
  *  sem precisar ler a tabela de números. */
 function explanationHeadline(explanation: ScoreExplanation): string {
@@ -247,6 +274,23 @@ function ScoreExplanationPanel({ row }: { row: ChampionScoreRow }) {
       )}
 
       <PowerProfileDetail perfil={row.perfil_poder} />
+      <SkillExpressionBadges skill={row.skill_expression} />
+    </div>
+  )
+}
+
+/** Item 3.3 — heurística v1 baseada na variação de KDA por partida
+ *  (não é métrica oficial da Riot, ver `compute_skill_expression.py`). */
+function SkillExpressionBadges({ skill }: { skill: ChampionScoreRow['skill_expression'] }) {
+  if (!skill) return null
+  const hint =
+    'Aproximação baseada na variação do KDA entre as partidas do campeão, não uma métrica oficial da Riot.'
+  return (
+    <div className="skill-expression-row" title={hint}>
+      <span className="skill-expression-label">Skill Expression:</span>
+      <span className={`skill-badge skill-level-${skill.ceiling_label}`}>Ceiling: {skill.ceiling_label}</span>
+      <span className={`skill-badge skill-level-${skill.floor_label}`}>Floor: {skill.floor_label}</span>
+      {skill.amostra_insuficiente && <span className="explain-sub">(amostra pequena)</span>}
     </div>
   )
 }
@@ -301,6 +345,8 @@ function ChampionsPage() {
   const [championsMeta, setChampionsMeta] = useState<Record<string, ChampionMeta> | null>(null)
   const [ddragonPatch, setDdragonPatch] = useState<string>('')
   const [metaError, setMetaError] = useState<string | null>(null)
+  const [itemsMeta, setItemsMeta] = useState<Record<string, ItemMeta> | null>(null)
+  const [runeTrees, setRuneTrees] = useState<RuneTree[] | null>(null)
 
   const [eloTier, setEloTier] = useState('GOLD')
   const [lane, setLane] = useState('')
@@ -321,6 +367,14 @@ function ChampionsPage() {
         setDdragonPatch(data.patch)
       })
       .catch((err: Error) => setMetaError(err.message))
+    // Itens/runas só alimentam o painel de "Build" — carregados uma vez
+    // aqui (não a cada linha expandida) e passados como prop.
+    fetchItems()
+      .then((data) => setItemsMeta(data.items))
+      .catch(() => {})
+    fetchRunes()
+      .then((data) => setRuneTrees(data.paths))
+      .catch(() => {})
   }, [])
 
   // Patches disponíveis dependem do elo (nem todo patch tem dado
@@ -425,7 +479,7 @@ function ChampionsPage() {
               const meta = championsMeta?.[row.champion_id]
               const key = rowKey(row)
               const activePanel = expandedPanel?.key === key ? expandedPanel.type : null
-              const toggle = (type: 'explain' | 'history') =>
+              const toggle = (type: 'explain' | 'history' | 'matchups' | 'build') =>
                 setExpandedPanel(activePanel === type ? null : { key, type })
               const colSpan = lane ? 7 : 8
               return (
@@ -474,6 +528,24 @@ function ChampionsPage() {
                         >
                           <IconChart />
                         </button>
+                        <button
+                          type="button"
+                          className={`icon-toggle ${activePanel === 'matchups' ? 'icon-toggle-active' : ''}`}
+                          onClick={() => toggle('matchups')}
+                          title={activePanel === 'matchups' ? 'Ocultar matchups' : 'Ver matchups na rota'}
+                          aria-label="Matchups na rota"
+                        >
+                          <IconSwords />
+                        </button>
+                        <button
+                          type="button"
+                          className={`icon-toggle ${activePanel === 'build' ? 'icon-toggle-active' : ''}`}
+                          onClick={() => toggle('build')}
+                          title={activePanel === 'build' ? 'Ocultar build recomendado' : 'Ver build recomendado'}
+                          aria-label="Build recomendado"
+                        >
+                          <IconBuild />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -492,6 +564,35 @@ function ChampionsPage() {
                           championName={meta?.name ?? row.champion_id}
                           eloTier={row.elo_tier}
                           lane={row.lane}
+                        />
+                      </td>
+                    </tr>
+                  )}
+                  {activePanel === 'matchups' && (
+                    <tr className="layer-row">
+                      <td colSpan={colSpan}>
+                        <MatchupPanel
+                          championId={row.champion_id}
+                          lane={row.lane}
+                          eloTier={row.elo_tier}
+                          patch={row.patch}
+                          championsMeta={championsMeta}
+                          ddragonPatch={ddragonPatch}
+                        />
+                      </td>
+                    </tr>
+                  )}
+                  {activePanel === 'build' && (
+                    <tr className="layer-row">
+                      <td colSpan={colSpan}>
+                        <BuildRecommendationPanel
+                          championId={row.champion_id}
+                          lane={row.lane}
+                          eloTier={row.elo_tier}
+                          patch={row.patch}
+                          itemsMeta={itemsMeta}
+                          ddragonPatch={ddragonPatch}
+                          runeTrees={runeTrees}
                         />
                       </td>
                     </tr>
