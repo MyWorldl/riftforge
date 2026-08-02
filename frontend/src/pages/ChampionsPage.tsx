@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import {
   championImageUrl,
@@ -13,12 +13,14 @@ import {
 } from '../api/client'
 import FlagSelect from '../components/FlagSelect'
 import { CHAMPIONS_COUNTRY_OPTIONS } from '../constants/regions'
+import HistoryChart from '../HistoryChart'
 import {
   ComparatorPanel,
   IconChart,
   IconInfo,
   LaneCell,
   LayerContributionBar,
+  ScoreExplanationPanel,
   formatPct,
   matchesNameSearch,
   rowKey,
@@ -92,14 +94,19 @@ const LANE_ICONS: Partial<Record<string, string>> = {
   UTILITY: roleIconUtility,
 }
 
-/** Item novo: cada linha agora abre uma página de detalhe própria em vez
- *  de expandir inline (ver `ChampionDetailPage.tsx`) — usa os valores da
- *  própria linha (elo/rota/patch), não o filtro da página, porque com
- *  "Todas as rotas" selecionado cada linha pode ter uma rota diferente. */
-function detailHref(row: ChampionScoreRow, tab: 'explain' | 'history'): string {
-  const params = new URLSearchParams({ eloTier: row.elo_tier, lane: row.lane, patch: row.patch, tab })
+/** Item novo: o nome do campeão abre a página de detalhe própria
+ *  (`ChampionDetailPage.tsx` — Matchups/Build/Comparar). Explicação e
+ *  Histórico ficaram só na lista, expandindo inline na própria linha
+ *  (ver `ExpandedPanel` abaixo) — pedido explícito do usuário depois de
+ *  ver a página de detalhe pronta. Usa os valores da própria linha (elo/
+ *  rota/patch), não o filtro da página, porque com "Todas as rotas"
+ *  selecionado cada linha pode ter uma rota diferente. */
+function detailHref(row: ChampionScoreRow): string {
+  const params = new URLSearchParams({ eloTier: row.elo_tier, lane: row.lane, patch: row.patch })
   return `/campeoes/${row.champion_id}?${params}`
 }
+
+type ExpandedPanel = { key: string; type: 'explain' | 'history' } | null
 
 /** Item novo: "Variação" na lista de Campeões — reaproveita o mesmo diff
  *  que já alimenta `/patch-notes` (Data Dragon§, `patch_diff.py`), em vez
@@ -203,6 +210,7 @@ function ChampionsPage() {
   const [compareKeys, setCompareKeys] = useState<string[]>([])
 
   const [patchNotes, setPatchNotes] = useState<PatchNotesResult | null>(null)
+  const [expandedPanel, setExpandedPanel] = useState<ExpandedPanel>(null)
 
   function handleSort(key: SortKey) {
     if (key === sortKey) {
@@ -263,6 +271,7 @@ function ChampionsPage() {
     // depois da mais recente — silencioso e difícil de reproduzir.
     const controller = new AbortController()
     setCompareKeys([])
+    setExpandedPanel(null)
     setLoading(true)
     setScoresError(null)
     fetchChampionScores({ eloTier, lane: lane || undefined, patch: patch || undefined }, controller.signal)
@@ -372,7 +381,7 @@ function ChampionsPage() {
               <th>Campeão</th>
               <SortableHeader label="Tier" sortKeyFor="score" currentKey={sortKey} currentDir={sortDir} onSort={handleSort} />
               <th title="Diferença de score em relação ao patch anterior">Variação</th>
-              <th title="Contribuição de cada camada no score (Performance/Kit/Build/Meta)">Composição</th>
+              <th title="Contribuição de cada camada no score (Performance/Kit/Build/Meta)">Score</th>
               {!lane && <th>Função</th>}
               <SortableHeader label="Taxa de Vitória" sortKeyFor="win_rate" currentKey={sortKey} currentDir={sortDir} onSort={handleSort} />
               <SortableHeader label="Taxa de escolha" sortKeyFor="pick_rate" currentKey={sortKey} currentDir={sortDir} onSort={handleSort} />
@@ -389,8 +398,13 @@ function ChampionsPage() {
                 row.patch === patchNotes?.patch_atual
                   ? deltaIndex.get(`${row.champion_id}-${row.lane}`)
                   : undefined
+              const activePanel = expandedPanel?.key === key ? expandedPanel.type : null
+              const toggle = (type: 'explain' | 'history') =>
+                setExpandedPanel(activePanel === type ? null : { key, type })
+              const colSpan = lane ? 10 : 11
               return (
-                <tr key={key}>
+                <Fragment key={key}>
+                <tr>
                   <td>
                     <input
                       type="checkbox"
@@ -402,7 +416,7 @@ function ChampionsPage() {
                   </td>
                   <td>{index + 1}</td>
                   <td>
-                    <Link to={detailHref(row, 'explain')} className="champion-cell">
+                    <Link to={detailHref(row)} className="champion-cell">
                       {meta && ddragonPatch && (
                         <img
                           src={championImageUrl(ddragonPatch, meta.image.full)}
@@ -427,25 +441,47 @@ function ChampionsPage() {
                   <td>{formatPct(row.ban_rate)}</td>
                   <td>
                     <div className="actions-cell">
-                      <Link
-                        className="icon-toggle"
-                        to={detailHref(row, 'explain')}
-                        title="Por que esse tier?"
+                      <button
+                        type="button"
+                        className={`icon-toggle ${activePanel === 'explain' ? 'icon-toggle-active' : ''}`}
+                        onClick={() => toggle('explain')}
+                        title={activePanel === 'explain' ? 'Ocultar explicação' : 'Por que esse tier?'}
                         aria-label="Explicação do score"
                       >
                         <IconInfo />
-                      </Link>
-                      <Link
-                        className="icon-toggle"
-                        to={detailHref(row, 'history')}
-                        title="Ver histórico entre patches"
+                      </button>
+                      <button
+                        type="button"
+                        className={`icon-toggle ${activePanel === 'history' ? 'icon-toggle-active' : ''}`}
+                        onClick={() => toggle('history')}
+                        title={activePanel === 'history' ? 'Ocultar histórico' : 'Ver histórico entre patches'}
                         aria-label="Histórico entre patches"
                       >
                         <IconChart />
-                      </Link>
+                      </button>
                     </div>
                   </td>
                 </tr>
+                {activePanel === 'explain' && (
+                  <tr className="layer-row">
+                    <td colSpan={colSpan}>
+                      <ScoreExplanationPanel row={row} />
+                    </td>
+                  </tr>
+                )}
+                {activePanel === 'history' && (
+                  <tr className="layer-row">
+                    <td colSpan={colSpan}>
+                      <HistoryChart
+                        championId={row.champion_id}
+                        championName={meta?.name ?? row.champion_id}
+                        eloTier={row.elo_tier}
+                        lane={row.lane}
+                      />
+                    </td>
+                  </tr>
+                )}
+                </Fragment>
               )
             })}
           </tbody>

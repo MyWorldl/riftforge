@@ -16,29 +16,27 @@ import {
   type RuneTree,
 } from '../api/client'
 import BuildRecommendationPanel from '../BuildRecommendationPanel'
-import HistoryChart from '../HistoryChart'
 import MatchupPanel from '../MatchupPanel'
 import {
   ComparatorPanel,
   IconBuild,
-  IconChart,
-  IconInfo,
   IconSwords,
   LaneCell,
   LayerContributionBar,
-  ScoreExplanationPanel,
   formatPct,
   matchesNameSearch,
   rowKey,
 } from '../components/championDisplay'
 
-type TabKey = 'explain' | 'history' | 'matchups' | 'build' | 'compare'
+/** Explicação e Histórico ficaram só na lista (expandindo inline na
+ *  própria linha, ver `ChampionsPage.tsx`) — pedido explícito do usuário
+ *  depois de ver a página de detalhe pronta. Esta página guarda só o que
+ *  não cabia bem numa linha de tabela: Matchups, Build e Comparar. */
+type TabKey = 'matchups' | 'build' | 'compare'
 
-const TAB_ORDER: TabKey[] = ['explain', 'history', 'matchups', 'build', 'compare']
+const TAB_ORDER: TabKey[] = ['matchups', 'build', 'compare']
 
 const TAB_LABELS: Record<TabKey, string> = {
-  explain: 'Por que esse tier?',
-  history: 'Histórico entre patches',
   matchups: 'Matchups na rota',
   build: 'Build recomendado',
   compare: 'Comparar',
@@ -55,10 +53,6 @@ function IconCompare() {
 
 function TabIcon({ tab }: { tab: TabKey }) {
   switch (tab) {
-    case 'explain':
-      return <IconInfo />
-    case 'history':
-      return <IconChart />
     case 'matchups':
       return <IconSwords />
     case 'build':
@@ -190,11 +184,10 @@ function CompareTab({
 
 /** Item novo: página de detalhe por campeão (pedido do usuário depois que
  *  Composição + Ações não cabiam mais direito na linha da tabela).
- *  Explicação/Histórico/Matchups/Build/Comparar viram abas de uma página
- *  própria em vez de expandir dentro da linha em `ChampionsPage.tsx` —
- *  mesmos componentes de antes (`ScoreExplanationPanel`/`HistoryChart`/
- *  `MatchupPanel`/`BuildRecommendationPanel`/`ComparatorPanel`), só
- *  trocando onde moram. O comparador da lista continua existindo em
+ *  Matchups/Build/Comparar viram abas de uma página própria em vez de
+ *  expandir dentro da linha em `ChampionsPage.tsx` — mesmos componentes
+ *  de antes (`MatchupPanel`/`BuildRecommendationPanel`/`ComparatorPanel`),
+ *  só trocando onde moram. O comparador da lista continua existindo em
  *  paralelo — os dois pontos de entrada usam o mesmo componente. */
 function ChampionDetailPage() {
   const { championId = '' } = useParams()
@@ -205,7 +198,7 @@ function ChampionDetailPage() {
   const tabParam = searchParams.get('tab') as TabKey | null
 
   const [activeTab, setActiveTab] = useState<TabKey>(
-    tabParam && TAB_ORDER.includes(tabParam) ? tabParam : 'explain',
+    tabParam && TAB_ORDER.includes(tabParam) ? tabParam : 'matchups',
   )
 
   const [championsMeta, setChampionsMeta] = useState<Record<string, ChampionMeta> | null>(null)
@@ -311,7 +304,7 @@ function ChampionDetailPage() {
                 <strong>{formatPct(row.ban_rate)}</strong>
               </div>
               <div className="champion-detail-stat">
-                <span>Composição</span>
+                <span>Score</span>
                 <LayerContributionBar row={row} />
               </div>
             </div>
@@ -332,15 +325,6 @@ function ChampionDetailPage() {
           </div>
 
           <div className="detail-tab-panel">
-            {activeTab === 'explain' && <ScoreExplanationPanel row={row} />}
-            {activeTab === 'history' && (
-              <HistoryChart
-                championId={row.champion_id}
-                championName={meta?.name ?? row.champion_id}
-                eloTier={row.elo_tier}
-                lane={row.lane}
-              />
-            )}
             {activeTab === 'matchups' && (
               <MatchupPanel
                 championId={row.champion_id}
