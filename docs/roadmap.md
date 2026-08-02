@@ -62,7 +62,9 @@ Baseado em `Core/Estrutura_roadmap/00_INDEX.md` (fonte de verdade atual — tem 
 - [x] Recomendação de build (itens/runas) — ver rodada 21 abaixo.
 - [x] Notificação de mudança de tier após patch — ver rodada 21 abaixo.
 - [x] Histórico de tendência por patch — item 3.4, já entregue (`GET /scores/history`).
-- Filtro por região/servidor amplo (Campeões só tem Brasil funcional hoje), Live Client Data API, cache distribuído (Redis).
+- [x] Rubrica manual de Kit — lote piloto (10 campeões, eixos CC/Mobilidade). Ver rodada 22 abaixo.
+- [x] Paralelização do crawler (item 6.2) — ver rodada 22 abaixo.
+- Filtro por região/servidor amplo (Campeões só tem Brasil funcional hoje), Live Client Data API, cache distribuído (Redis) — adiado, sem tráfego que justifique hoje.
 
 ---
 
@@ -189,3 +191,47 @@ build recomendado, 5.560 de Skill Expression. Suite de testes: 63 → 71.
 `tsc -b` do frontend limpo. Painéis conferidos no navegador contra dados
 reais (imagens de item/runa carregando, seção de mudança de tier
 renderizando).
+
+## Rotação de credenciais, rubrica de Kit (piloto) e paralelização do crawler (2026-08-02)
+
+**Segurança**: a Riot API Key e a senha do Postgres/Supabase já tinham
+circulado em texto puro fora do `.env` várias vezes durante o
+desenvolvimento — rotacionadas as duas. Achado no processo: o Supabase
+bloqueia `ALTER ROLE postgres` via SQL direto ("only superusers can alter
+privileged roles") — a troca de senha do banco só é possível pelo
+dashboard (Project Settings → Database), não por automação via API/SQL.
+Sequência aplicada: nova senha → `.env` local → secret do GitHub Actions
+→ env var da Vercel + redeploy, nessa ordem pra minimizar a janela de
+indisponibilidade. Confirmado sem outage real desta vez (diferente do
+incidente da rodada anterior).
+
+**Rubrica manual de Kit** (backlog 5.1): lote piloto de 10 campeões
+tagueados nos eixos CC e Mobilidade (os dois que a v1 automática do Kit
+deixa `None` — Data Dragon não expõe esse sinal, ver
+`Core/13_ESTRATEGIA_DADOS_KIT.md`), seguindo a rúbrica de âncoras 0-10 de
+`Core/14_RUBRICA_KIT_CAMPEOES.md`. Notas fundamentadas nas descrições
+reais de habilidade do Data Dragon (não só conhecimento prévio — o jogo
+já teve patches depois do corte de conhecimento do modelo). Dados em
+`backend/data/kit_manual_tags.json` (versionado em texto, não numa
+tabela — mais fácil de revisar num diff do que numa linha de banco
+opaca), consumido por `compute_kit.py`: quando o campeão tem tag manual,
+`cc_score`/`mobilidade_score` deixam de ser `None` e `kit_score`
+recalcula com os 5 eixos completos em vez de 3. Resto do elenco
+(~160 campeões) continua no automático até ser tagueado — escala
+incrementalmente, não bloqueia o pipeline.
+
+**Paralelização do crawler** (backlog 6.2): `ingest_matches.py` processava
+invocadores um de cada vez; agora usa `ThreadPoolExecutor`
+(`settings.ingest_concurrency`, padrão 5). Seguro porque o limitador de
+taxa da RiotWatcher usa locks internos e uma única instância de
+`RiotApiAdapter`/`requests.Session` compartilhada entre as threads (session
+do `requests` é thread-safe pra esse uso). Cada invocador mantém sua
+própria sessão de banco, mesmo princípio de antes da paralelização.
+Testado contra o Supabase real com partidas genuinamente novas (elo Prata,
+não coberto pela coleta diária) — ingestão concorrente confirmada nos
+logs (threads intercaladas), sem erro de rate limit.
+
+Redis (item 6.1) ficou de fora por decisão: o próprio backlog marca como
+"só relevante se o uso crescer", e hoje não há tráfego que justifique.
+
+Suite de testes: 71 → 72.

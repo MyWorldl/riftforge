@@ -134,6 +134,16 @@ class Settings(BaseSettings):
     # jogos" seria 1-2 partidas isoladas, não uma tendência real.
     skill_expression_min_games: int = 20
 
+    # Item novo (rodada 22, backlog 6.2): quantos invocadores
+    # `ingest_matches.py` processa em paralelo (threads, não asyncio — o
+    # cliente da RiotWatcher usa `requests` por baixo). Seguro porque o
+    # limitador de taxa da própria RiotWatcher é thread-safe (usa locks
+    # internos) e é compartilhado entre as threads via uma única instância
+    # de `RiotApiAdapter`. Valor conservador: o rate limit real da chave
+    # (20 req/1s) tem que sobrar margem mesmo se várias threads disparem a
+    # primeira chamada antes de qualquer resposta atualizar o limitador.
+    ingest_concurrency: int = 5
+
 
 @lru_cache
 def get_settings() -> Settings:

@@ -24,11 +24,23 @@ inferido pela Riot como está (item em aberto em
 Core/Estrutura_roadmap/12_IDENTIFICACAO_ROTA.md), registrado como
 `resolution_method="riot_team_position"` por rastreabilidade.
 
+Rodada 22 (backlog 6.2): invocadores são processados em paralelo via
+threads (`settings.ingest_concurrency`), não sequencialmente. Seguro
+porque (a) o limitador de taxa da RiotWatcher usa locks internos e uma
+única instância de `RiotApiAdapter`/`requests.Session` é compartilhada
+entre as threads (`requests.Session` é thread-safe pra esse uso — o
+pooling de conexão do urllib3 por baixo já é feito pra isso), e (b) cada
+invocador continua com sua própria sessão de banco, mesmo princípio já
+usado antes de virar paralelo. Uma falha de rate limit (429) numa thread
+não derruba as outras — o try/except por invocador já existente cobre
+isso, só que agora rodando concorrente em vez de sequencial.
+
 Uso: python -m app.jobs.ingest_matches --tier GOLD --division I
 """
 
 import argparse
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from app.adapters.riot_api import RiotApiAdapter
 from app.core.config import get_settings
@@ -74,6 +86,111 @@ def _already_ingested(session, match_id: str) -> bool:
     return session.query(Match.match_id).filter_by(match_id=match_id).first() is not None
 
 
+def _process_summoner(
+    index: int,
+    puuid: str,
+    riot: RiotApiAdapter,
+    queue_id: int,
+    tier: str,
+    matches_per_summoner: int,
+    start_time: int,
+) -> dict:
+    """Todo o trabalho de um invocador — chamado de dentro de uma thread do
+    pool em `ingest()`. Sessão própria, escopada só a este invocador (mesmo
+    motivo de antes da paralelização: o Supabase derruba conexão de vida
+    longa, e agora também evita que threads diferentes compartilhem uma
+    sessão do SQLAlchemy, que não é thread-safe)."""
+    print(f"[{index}] buscando histórico de partidas...", flush=True)
+
+    session = SessionLocal()
+    try:
+        match_ids = riot.get_match_ids_by_puuid(
+            puuid, count=matches_per_summoner, queue=queue_id, start_time=start_time
+        )
+
+        new_matches = 0
+        skipped_existing = 0
+
+        for match_id in match_ids:
+            if _already_ingested(session, match_id):
+                skipped_existing += 1
+                continue
+
+            print(f"  [{index}] ingerindo partida {match_id}...", flush=True)
+            match_payload = riot.get_match(match_id)
+            info = match_payload["info"]
+            version_label = ".".join(info["gameVersion"].split(".")[:2])
+            patch = _get_or_create_patch(session, version_label)
+
+            session.add(
+                Match(
+                    match_id=match_id,
+                    patch_id=patch.id,
+                    platform_region=info.get("platformId", "").lower(),
+                    queue_id=info.get("queueId", queue_id),
+                    game_start_ts=info.get("gameStartTimestamp", 0),
+                    game_duration_s=info.get("gameDuration", 0),
+                    raw_payload=match_payload,
+                )
+            )
+
+            for participant in info["participants"]:
+                keystone_id, primary_style_id, sub_style_id = _extract_runes(participant)
+                session.add(
+                    MatchParticipant(
+                        match_id=match_id,
+                        puuid=participant["puuid"],
+                        riot_champion_id=participant["championId"],
+                        champion_name=participant["championName"],
+                        team_id=participant["teamId"],
+                        win=participant["win"],
+                        raw_role=participant.get("role"),
+                        raw_lane=participant.get("lane"),
+                        resolved_position=participant.get("teamPosition") or None,
+                        resolution_method="riot_team_position",
+                        kills=participant["kills"],
+                        deaths=participant["deaths"],
+                        assists=participant["assists"],
+                        core_items=[participant.get(slot, 0) for slot in CORE_ITEM_SLOTS],
+                        elo_tier=tier,
+                        keystone_id=keystone_id,
+                        primary_style_id=primary_style_id,
+                        sub_style_id=sub_style_id,
+                    )
+                )
+
+            for team in info["teams"]:
+                for ban in team.get("bans", []):
+                    champion_id = ban.get("championId", -1)
+                    if champion_id == -1:
+                        continue
+                    session.add(
+                        MatchBan(
+                            match_id=match_id,
+                            riot_champion_id=champion_id,
+                            team_id=team["teamId"],
+                            ban_order=ban.get("pickTurn", 0),
+                        )
+                    )
+
+            new_matches += 1
+
+        # Commit por invocador: Ctrl+C ou uma queda no meio não perde o
+        # trabalho já feito nesta execução.
+        session.commit()
+        return {"new_matches": new_matches, "skipped_existing": skipped_existing, "failed": False}
+    except Exception as exc:
+        # Uma falha pontual (conexão derrubada, timeout/429 da Riot) não
+        # deve abortar uma coleta de dezenas de minutos — o invocador é
+        # pulado e a execução segue. Como a dedup é por match_id no banco,
+        # rodar de novo depois recupera o que faltou sem recontar nada.
+        session.rollback()
+        print(f"  ! [{index}] invocador falhou, seguindo: {type(exc).__name__}: {exc}", flush=True)
+        return {"new_matches": 0, "skipped_existing": 0, "failed": True}
+    finally:
+        session.close()
+
+
 def ingest(
     queue: str = "RANKED_SOLO_5x5",
     tier: str = "GOLD",
@@ -81,6 +198,7 @@ def ingest(
     puuid_limit: int = 5,
     matches_per_summoner: int = 3,
     since_days: int | None = None,
+    concurrency: int | None = None,
 ) -> dict:
     print("Conectando ao banco...", flush=True)
     init_db()
@@ -88,8 +206,14 @@ def ingest(
     settings = get_settings()
     if since_days is None:
         since_days = settings.ingest_days_window
+    if concurrency is None:
+        concurrency = settings.ingest_concurrency
     start_time = int(time.time()) - since_days * 86400
 
+    # Uma instância só, compartilhada entre as threads: o limitador de taxa
+    # da RiotWatcher precisa ver todas as chamadas pra funcionar (limitador
+    # por instância, não global) — cada thread com seu próprio adapter
+    # ignoraria o rate limit das outras.
     riot = RiotApiAdapter()
     queue_id = QUEUE_IDS[queue]
 
@@ -98,7 +222,7 @@ def ingest(
     puuids = [entry["puuid"] for entry in entries[:puuid_limit]]
     print(
         f"{len(puuids)} invocador(es) encontrado(s). "
-        f"Coletando só partidas dos últimos {since_days} dias.",
+        f"Coletando só partidas dos últimos {since_days} dias ({concurrency} em paralelo).",
         flush=True,
     )
 
@@ -106,99 +230,18 @@ def ingest(
     skipped_existing = 0
     failed_summoners = 0
 
-    for i, puuid in enumerate(puuids, start=1):
-        print(f"[{i}/{len(puuids)}] buscando histórico de partidas...", flush=True)
-
-        # Uma sessão por invocador, não uma para a execução inteira: uma
-        # coleta grande leva dezenas de minutos, e o Supabase derruba
-        # conexão de vida longa no meio do caminho ("server closed the
-        # connection unexpectedly") — aconteceu de verdade numa coleta de
-        # 150 invocadores. Escopar por invocador limita a vida da conexão
-        # a alguns segundos.
-        session = SessionLocal()
-        try:
-            match_ids = riot.get_match_ids_by_puuid(
-                puuid, count=matches_per_summoner, queue=queue_id, start_time=start_time
-            )
-
-            for match_id in match_ids:
-                if _already_ingested(session, match_id):
-                    skipped_existing += 1
-                    continue
-
-                print(f"  ingerindo partida {match_id}...", flush=True)
-                match_payload = riot.get_match(match_id)
-                info = match_payload["info"]
-                version_label = ".".join(info["gameVersion"].split(".")[:2])
-                patch = _get_or_create_patch(session, version_label)
-
-                session.add(
-                    Match(
-                        match_id=match_id,
-                        patch_id=patch.id,
-                        platform_region=info.get("platformId", "").lower(),
-                        queue_id=info.get("queueId", queue_id),
-                        game_start_ts=info.get("gameStartTimestamp", 0),
-                        game_duration_s=info.get("gameDuration", 0),
-                        raw_payload=match_payload,
-                    )
-                )
-
-                for participant in info["participants"]:
-                    keystone_id, primary_style_id, sub_style_id = _extract_runes(participant)
-                    session.add(
-                        MatchParticipant(
-                            match_id=match_id,
-                            puuid=participant["puuid"],
-                            riot_champion_id=participant["championId"],
-                            champion_name=participant["championName"],
-                            team_id=participant["teamId"],
-                            win=participant["win"],
-                            raw_role=participant.get("role"),
-                            raw_lane=participant.get("lane"),
-                            resolved_position=participant.get("teamPosition") or None,
-                            resolution_method="riot_team_position",
-                            kills=participant["kills"],
-                            deaths=participant["deaths"],
-                            assists=participant["assists"],
-                            core_items=[participant.get(slot, 0) for slot in CORE_ITEM_SLOTS],
-                            elo_tier=tier,
-                            keystone_id=keystone_id,
-                            primary_style_id=primary_style_id,
-                            sub_style_id=sub_style_id,
-                        )
-                    )
-
-                for team in info["teams"]:
-                    for ban in team.get("bans", []):
-                        champion_id = ban.get("championId", -1)
-                        if champion_id == -1:
-                            continue
-                        session.add(
-                            MatchBan(
-                                match_id=match_id,
-                                riot_champion_id=champion_id,
-                                team_id=team["teamId"],
-                                ban_order=ban.get("pickTurn", 0),
-                            )
-                        )
-
-                new_matches += 1
-
-            # Commit por invocador: Ctrl+C ou uma queda no meio não perde o
-            # trabalho já feito nesta execução.
-            session.commit()
-        except Exception as exc:
-            # Uma falha pontual (conexão derrubada, timeout da Riot) não
-            # deve abortar uma coleta de dezenas de minutos — o invocador é
-            # pulado e a execução segue. Como a dedup é por match_id no
-            # banco, rodar de novo depois recupera o que faltou sem
-            # recontar nada.
-            session.rollback()
-            failed_summoners += 1
-            print(f"  ! invocador {i} falhou, seguindo: {type(exc).__name__}: {exc}", flush=True)
-        finally:
-            session.close()
+    with ThreadPoolExecutor(max_workers=concurrency) as executor:
+        futures = {
+            executor.submit(
+                _process_summoner, i, puuid, riot, queue_id, tier, matches_per_summoner, start_time
+            ): i
+            for i, puuid in enumerate(puuids, start=1)
+        }
+        for future in as_completed(futures):
+            result = future.result()
+            new_matches += result["new_matches"]
+            skipped_existing += result["skipped_existing"]
+            failed_summoners += int(result["failed"])
 
     return {
         "summoners": len(puuids),
@@ -222,6 +265,12 @@ def main() -> None:
         help="Janela de coleta em dias (padrão: ingest_days_window da config). "
         "Partidas mais antigas são descartadas pela própria Riot, sem gastar chamada.",
     )
+    parser.add_argument(
+        "--concurrency",
+        type=int,
+        default=None,
+        help="Quantos invocadores processar em paralelo (padrão: ingest_concurrency da config).",
+    )
     args = parser.parse_args()
 
     result = ingest(
@@ -231,6 +280,7 @@ def main() -> None:
         puuid_limit=args.puuid_limit,
         matches_per_summoner=args.matches_per_summoner,
         since_days=args.since_days,
+        concurrency=args.concurrency,
     )
     print(
         f"Ingestão concluída: {result['summoners']} invocadores, "

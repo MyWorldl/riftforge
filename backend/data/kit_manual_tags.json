@@ -1,0 +1,122 @@
+[
+  {
+    "champion_id": "Malphite",
+    "cc_score": 7,
+    "mobilidade_score": 3,
+    "tagger_id": "claude",
+    "rubrica_versao": "v1",
+    "fontes_consultadas": "Data Dragon champion detail (spells[].description), patch 16.15.1",
+    "notas": {
+      "cc": "R (Unstoppable Force) é CC duro de clique-direto com alcance longo (1000) e knockup garantido no impacto — mas cooldown muito alto (130-100s) puxa a nota pra baixo do teto. Q rouba velocidade de movimento (CC leve) e E reduz velocidade de ataque.",
+      "mobilidade": "O único deslocamento do próprio Malphite é a R, que é ao mesmo tempo seu CC principal — usada em combate, não pra reposicionamento/fuga. Sem outro dash/blink no kit."
+    }
+  },
+  {
+    "champion_id": "Zed",
+    "cc_score": 2,
+    "mobilidade_score": 8,
+    "tagger_id": "claude",
+    "rubrica_versao": "v1",
+    "fontes_consultadas": "Data Dragon champion detail (spells[].description), patch 16.15.1",
+    "notas": {
+      "cc": "Nenhum CC duro no kit — só a lentidão do E (Shadow Slash), CC leve.",
+      "mobilidade": "W (dash da sombra + troca de posição, CD moderado ~16-20s) e R (dash até o campeão-alvo, intargetável durante o trajeto) — duas ferramentas de mobilidade distintas."
+    }
+  },
+  {
+    "champion_id": "LeeSin",
+    "cc_score": 4,
+    "mobilidade_score": 9,
+    "tagger_id": "claude",
+    "rubrica_versao": "v1",
+    "fontes_consultadas": "Data Dragon champion detail (spells[].description), patch 16.15.1",
+    "notas": {
+      "cc": "R (Dragon's Rage) só gera knockup se o alvo colidir com outra unidade — CC duro pouco confiável/condicional. E (Cripple) é lentidão leve.",
+      "mobilidade": "Q (dash até o alvo marcado) e W (dash até aliado), ambos com cooldown curto e encadeáveis — um dos kits de maior mobilidade do jogo."
+    }
+  },
+  {
+    "champion_id": "Ashe",
+    "cc_score": 6,
+    "mobilidade_score": 1,
+    "tagger_id": "claude",
+    "rubrica_versao": "v1",
+    "fontes_consultadas": "Data Dragon champion detail (spells[].description), patch 16.15.1",
+    "notas": {
+      "cc": "R (Enchanted Crystal Arrow) é stun de alcance global, escalando com distância percorrida — forte mas lento/visível, dá tempo de reação. Passiva + W aplicam lentidão (CC leve) com frequência.",
+      "mobilidade": "Nenhum dash/blink nem bônus passivo de velocidade no kit."
+    }
+  },
+  {
+    "champion_id": "Vladimir",
+    "cc_score": 0,
+    "mobilidade_score": 1,
+    "tagger_id": "claude",
+    "rubrica_versao": "v1",
+    "fontes_consultadas": "Data Dragon champion detail (spells[].description), patch 16.15.1",
+    "notas": {
+      "cc": "Nenhuma habilidade do kit aplica lentidão, atordoamento, enraizamento ou qualquer outra forma de CC.",
+      "mobilidade": "W (Sanguine Pool) deixa Vladimir intargetável, mas ele não se desloca — fica no lugar. Sem dash/blink."
+    }
+  },
+  {
+    "champion_id": "Leona",
+    "cc_score": 10,
+    "mobilidade_score": 3,
+    "tagger_id": "claude",
+    "rubrica_versao": "v1",
+    "fontes_consultadas": "Data Dragon champion detail (spells[].description), patch 16.15.1",
+    "notas": {
+      "cc": "Q (stun via próximo ataque básico), E (imobiliza antes de puxar Leona pro alvo) e R (stun em área no centro, lentidão nas bordas) — três fontes de CC duro encadeáveis em combo, kit de lockdown clássico.",
+      "mobilidade": "O dash do E só funciona ofensivamente, depois de imobilizar um alvo — não serve pra reposicionamento geral ou fuga. Sem outro deslocamento no kit; Leona é conhecida por baixa mobilidade apesar do dash do E."
+    }
+  },
+  {
+    "champion_id": "Kassadin",
+    "cc_score": 5,
+    "mobilidade_score": 10,
+    "tagger_id": "claude",
+    "rubrica_versao": "v1",
+    "fontes_consultadas": "Data Dragon champion detail (spells[].description), patch 16.15.1",
+    "notas": {
+      "cc": "Q (Null Sphere) silencia o alvo a média distância (650) — forte, mas silêncio não impede movimento como um stun/root completo. E aplica lentidão (CC leve).",
+      "mobilidade": "R (Riftwalk) é um blink com cooldown de até 2s no rank máximo, reutilizável em sequência (com custo/dano crescente) — mobilidade excepcional e spammable."
+    }
+  },
+  {
+    "champion_id": "Malzahar",
+    "cc_score": 8,
+    "mobilidade_score": 0,
+    "tagger_id": "claude",
+    "rubrica_versao": "v1",
+    "fontes_consultadas": "Data Dragon champion detail (spells[].description), patch 16.15.1",
+    "notas": {
+      "cc": "Q silencia em alcance longo (900) e R é uma supressão (canalização que trava o alvo por completo) — duas fontes de CC duro. Fica abaixo do teto por serem alvo único e a R ter cooldown muito alto (140s no rank 1).",
+      "mobilidade": "Nenhuma habilidade de deslocamento no kit — nem dash, nem blink, nem bônus de velocidade. Um dos campeões mais imóveis do jogo."
+    }
+  },
+  {
+    "champion_id": "Yasuo",
+    "cc_score": 6,
+    "mobilidade_score": 9,
+    "tagger_id": "claude",
+    "rubrica_versao": "v1",
+    "fontes_consultadas": "Data Dragon champion detail (spells[].description), patch 16.15.1",
+    "notas": {
+      "cc": "Q em 2 acertos gera knockup (CC duro), com cooldown base curto (4s) mas depende de acumular estacas — razoavelmente confiável, não instantâneo. R prolonga/aproveita o knockup existente em vez de ser uma fonte nova de CC.",
+      "mobilidade": "E (dash através do alvo) tem cooldown quase zero e pode ser reutilizado a cada alvo diferente — dash muito frequente. R também é um blink adicional até um alvo no ar."
+    }
+  },
+  {
+    "champion_id": "Amumu",
+    "cc_score": 9,
+    "mobilidade_score": 2,
+    "tagger_id": "claude",
+    "rubrica_versao": "v1",
+    "fontes_consultadas": "Data Dragon champion detail (spells[].description), patch 16.15.1",
+    "notas": {
+      "cc": "Q (stun em alcance longo de 1100, cooldown base de só 3s) e R (stun em área ao redor de Amumu) — duas fontes fortes e frequentes de CC duro.",
+      "mobilidade": "O puxão do Q é engajamento (Amumu é puxado até o alvo acertado), não uma ferramenta de reposicionamento/fuga geral. Sem outro dash/blink no kit."
+    }
+  }
+]
