@@ -277,10 +277,12 @@ function ChampionDetailPage() {
               <h1>{meta?.name ?? row.champion_id}</h1>
               <div className="champion-detail-meta">
                 <LaneCell lane={row.lane} />
-                <span className={`tier-badge tier-${row.score_tier}`}>{row.score_tier}</span>
-                {row.tier_provisorio && (
-                  <span className="provisional-mark" title="Amostra pequena — tier provisório, teto em A">*</span>
-                )}
+                <span
+                  className={`tier-badge tier-badge-compact tier-${row.score_tier}`}
+                  title={row.tier_provisorio ? 'Amostra pequena — tier provisório, teto em A' : undefined}
+                >
+                  {row.score_tier}
+                </span>
                 {row.trap_flag && (
                   <span className="trap-badge" title="Alta presença (pick/ban) com win rate abaixo do esperado">
                     Trap

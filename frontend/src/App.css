@@ -638,6 +638,15 @@
   color: #fff;
 }
 
+/* Cabeçalho da página de detalhe (ChampionDetailPage.tsx): o badge padrão
+   fica grande demais ao lado do texto menor de rota/patch — versão mais
+   justa ao conteúdo, só nesse contexto. */
+.tier-badge-compact {
+  min-width: 0;
+  padding: 1px 6px;
+  font-size: 12px;
+}
+
 .tier-badge.tier-GOD { background: var(--tier-god); }
 .tier-badge.tier-S { background: var(--tier-s); }
 .tier-badge.tier-A { background: var(--tier-a); }
