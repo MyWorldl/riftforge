@@ -18,6 +18,16 @@
   box-sizing: border-box;
 }
 
+/* Item 5.1 trouxe 2 colunas novas (checkbox de comparar + Composição) pra
+   tabela de Campeões — o teto padrão de `.center` (1126px) passou a
+   cortar a coluna de Ações mesmo em telas largas (~1200px de tabela
+   contra ~1086px de área útil). Sobe o teto só nesta página, em vez de
+   globalmente, pra não esticar demais o texto corrido de páginas como a
+   Home. */
+.center-wide {
+  max-width: 1320px;
+}
+
 .app-shell {
   display: flex;
   flex-direction: column;
@@ -428,11 +438,17 @@
 }
 
 /* A tabela é larga demais para telas estreitas. Ela rola dentro deste
-   container em vez de fazer a página inteira rolar na horizontal. */
+   container em vez de fazer a página inteira rolar na horizontal.
+   `max-width` era 960px (fixo de antes das colunas de comparador/
+   composição existirem) — com as 2 colunas novas do item 5.1, isso
+   cortava a coluna de Ações (Explicação/Histórico/Matchups/Build) pra
+   fora da área visível mesmo em telas largas, sem indicar que dava pra
+   rolar. Usa o espaço inteiro que `.center` já reserva (1126px) em vez
+   de um teto menor arbitrário. */
 .table-scroll {
   align-self: flex-start;
   width: 100%;
-  max-width: 960px;
+  max-width: 100%;
   overflow-x: auto;
 }
 
@@ -705,8 +721,8 @@
    Build/Meta), reaproveitando os scores que a linha já tem. */
 .mini-contribution-bar {
   display: flex;
-  width: 90px;
-  height: 8px;
+  width: 120px;
+  height: 10px;
   border-radius: 4px;
   overflow: hidden;
   background: var(--border);
