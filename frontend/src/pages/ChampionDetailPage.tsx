@@ -2,10 +2,14 @@ import { useEffect, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import {
   championImageUrl,
+  fetchChampionAbilities,
   fetchChampionScores,
   fetchChampions,
   fetchItems,
   fetchRunes,
+  passiveImageUrl,
+  spellImageUrl,
+  type ChampionDetail,
   type ChampionMeta,
   type ChampionScoreRow,
   type ItemMeta,
@@ -15,6 +19,7 @@ import BuildRecommendationPanel from '../BuildRecommendationPanel'
 import HistoryChart from '../HistoryChart'
 import MatchupPanel from '../MatchupPanel'
 import {
+  ComparatorPanel,
   IconBuild,
   IconChart,
   IconInfo,
@@ -23,17 +28,29 @@ import {
   LayerContributionBar,
   ScoreExplanationPanel,
   formatPct,
+  matchesNameSearch,
+  rowKey,
 } from '../components/championDisplay'
 
-type TabKey = 'explain' | 'history' | 'matchups' | 'build'
+type TabKey = 'explain' | 'history' | 'matchups' | 'build' | 'compare'
 
-const TAB_ORDER: TabKey[] = ['explain', 'history', 'matchups', 'build']
+const TAB_ORDER: TabKey[] = ['explain', 'history', 'matchups', 'build', 'compare']
 
 const TAB_LABELS: Record<TabKey, string> = {
   explain: 'Por que esse tier?',
   history: 'Histórico entre patches',
   matchups: 'Matchups na rota',
   build: 'Build recomendado',
+  compare: 'Comparar',
+}
+
+function IconCompare() {
+  return (
+    <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
+      <path d="M5.5 2v12M10.5 2v12" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+      <path d="M3 5.5h5M8 10.5h5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+    </svg>
+  )
 }
 
 function TabIcon({ tab }: { tab: TabKey }) {
@@ -46,17 +63,139 @@ function TabIcon({ tab }: { tab: TabKey }) {
       return <IconSwords />
     case 'build':
       return <IconBuild />
+    case 'compare':
+      return <IconCompare />
   }
+}
+
+/** Abaixo do nome do campeão, estilo OP.GG: passiva + Q/W/E/R. Busca sob
+ *  demanda (item novo, `GET /champions/{id}`) — o resumo que alimenta o
+ *  resto do site (`fetchChampions`) não traz habilidade nenhuma. */
+function AbilityRow({ ddragonPatch, detail }: { ddragonPatch: string; detail: ChampionDetail | null }) {
+  if (!detail || !ddragonPatch) return null
+  const spellKeys = ['Q', 'W', 'E', 'R']
+  return (
+    <div className="champion-detail-abilities">
+      <img
+        src={passiveImageUrl(ddragonPatch, detail.passive.image.full)}
+        alt={detail.passive.name}
+        title={`Passiva — ${detail.passive.name}`}
+        width={32}
+        height={32}
+        className="ability-icon ability-icon-passive"
+      />
+      {detail.spells.map((spell, index) => (
+        <div className="ability-icon-wrap" key={spellKeys[index] ?? index}>
+          <img
+            src={spellImageUrl(ddragonPatch, spell.image.full)}
+            alt={spell.name}
+            title={`${spellKeys[index] ?? ''} — ${spell.name}`}
+            width={32}
+            height={32}
+            className="ability-icon"
+          />
+          <span className="ability-key">{spellKeys[index]}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+/** Aba "Comparar" (item novo, pedido do usuário): compara o campeão desta
+ *  página contra outros escolhidos aqui — mesmo `ComparatorPanel` da lista
+ *  de Campeões, só que a seleção começa com o campeão atual em vez de
+ *  vazia. Busca a lista inteira do elo uma vez (mesma chamada que
+ *  `ChampionsPage` já faz) pra alimentar a busca de "adicionar campeão". */
+function CompareTab({
+  row,
+  eloTier,
+  championsMeta,
+  ddragonPatch,
+}: {
+  row: ChampionScoreRow
+  eloTier: string
+  championsMeta: Record<string, ChampionMeta> | null
+  ddragonPatch: string
+}) {
+  const [allRows, setAllRows] = useState<ChampionScoreRow[] | null>(null)
+  const [search, setSearch] = useState('')
+  const [selectedKeys, setSelectedKeys] = useState<string[]>([rowKey(row)])
+
+  useEffect(() => {
+    fetchChampionScores({ eloTier })
+      .then(setAllRows)
+      .catch(() => setAllRows(null))
+  }, [eloTier])
+
+  const rowsByKey = new Map((allRows ?? []).map((r) => [rowKey(r), r]))
+  const selectedRows = selectedKeys.map((key) => rowsByKey.get(key)).filter((r): r is ChampionScoreRow => !!r)
+
+  const candidates = (allRows ?? [])
+    .filter((r) => !selectedKeys.includes(rowKey(r)))
+    .filter((r) => matchesNameSearch(r, search, championsMeta))
+    .slice(0, 8)
+
+  function addChampion(key: string) {
+    setSelectedKeys((prev) => (prev.length >= 3 ? prev : [...prev, key]))
+  }
+
+  return (
+    <div>
+      <ComparatorPanel
+        rows={selectedRows}
+        championsMeta={championsMeta}
+        ddragonPatch={ddragonPatch}
+        onRemove={(key) => setSelectedKeys((prev) => prev.filter((k) => k !== key))}
+        onClear={() => setSelectedKeys([rowKey(row)])}
+      />
+
+      {selectedKeys.length < 3 && (
+        <div className="compare-tab-picker">
+          <input
+            type="text"
+            placeholder="Adicionar campeão pra comparar"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          {search && (
+            <ul className="compare-tab-suggestions">
+              {candidates.length === 0 && <li className="explain-sub">Nenhum campeão encontrado.</li>}
+              {candidates.map((r) => {
+                const meta = championsMeta?.[r.champion_id]
+                return (
+                  <li key={rowKey(r)}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        addChampion(rowKey(r))
+                        setSearch('')
+                      }}
+                    >
+                      {meta && ddragonPatch && (
+                        <img src={championImageUrl(ddragonPatch, meta.image.full)} alt="" width={22} height={22} />
+                      )}
+                      <span>{meta?.name ?? r.champion_id}</span>
+                      <span className="explain-sub">{r.lane}</span>
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+        </div>
+      )}
+    </div>
+  )
 }
 
 /** Item novo: página de detalhe por campeão (pedido do usuário depois que
  *  Composição + Ações não cabiam mais direito na linha da tabela).
- *  Explicação/Histórico/Matchups/Build viram abas de uma página própria em
- *  vez de expandir dentro da linha em `ChampionsPage.tsx` — mesmos
- *  componentes de antes (`ScoreExplanationPanel`/`HistoryChart`/
- *  `MatchupPanel`/`BuildRecommendationPanel`), só trocando onde moram.
- *  O comparador continua na lista de propósito — é uma feature de
- *  múltiplos campeões, não encaixa como aba de um campeão só. */
+ *  Explicação/Histórico/Matchups/Build/Comparar viram abas de uma página
+ *  própria em vez de expandir dentro da linha em `ChampionsPage.tsx` —
+ *  mesmos componentes de antes (`ScoreExplanationPanel`/`HistoryChart`/
+ *  `MatchupPanel`/`BuildRecommendationPanel`/`ComparatorPanel`), só
+ *  trocando onde moram. O comparador da lista continua existindo em
+ *  paralelo — os dois pontos de entrada usam o mesmo componente. */
 function ChampionDetailPage() {
   const { championId = '' } = useParams()
   const [searchParams] = useSearchParams()
@@ -73,6 +212,7 @@ function ChampionDetailPage() {
   const [ddragonPatch, setDdragonPatch] = useState('')
   const [itemsMeta, setItemsMeta] = useState<Record<string, ItemMeta> | null>(null)
   const [runeTrees, setRuneTrees] = useState<RuneTree[] | null>(null)
+  const [abilities, setAbilities] = useState<ChampionDetail | null>(null)
 
   const [row, setRow] = useState<ChampionScoreRow | null | undefined>(undefined)
   const [error, setError] = useState<string | null>(null)
@@ -92,6 +232,13 @@ function ChampionDetailPage() {
       .then((data) => setRuneTrees(data.paths))
       .catch(() => {})
   }, [])
+
+  useEffect(() => {
+    setAbilities(null)
+    fetchChampionAbilities(championId)
+      .then((data) => setAbilities(data.champion))
+      .catch(() => setAbilities(null))
+  }, [championId])
 
   useEffect(() => {
     // Sem endpoint dedicado a "score de um campeão só" — reaproveita
@@ -127,9 +274,11 @@ function ChampionDetailPage() {
 
       {row && (
         <>
+          {/* Cabeçalho estilo OP.GG: retrato + nome + habilidades à
+              esquerda, taxas + composição à direita. */}
           <div className="champion-detail-header">
             {meta && ddragonPatch && (
-              <img src={championImageUrl(ddragonPatch, meta.image.full)} alt="" width={56} height={56} />
+              <img src={championImageUrl(ddragonPatch, meta.image.full)} alt="" width={64} height={64} />
             )}
             <div className="champion-detail-title">
               <h1>{meta?.name ?? row.champion_id}</h1>
@@ -144,29 +293,27 @@ function ChampionDetailPage() {
                     Trap
                   </span>
                 )}
-                <span className="explain-sub">
-                  {row.patch} · {eloTier}
-                </span>
               </div>
+              <AbilityRow ddragonPatch={ddragonPatch} detail={abilities} />
             </div>
-          </div>
 
-          <div className="champion-detail-stats">
-            <div className="champion-detail-stat">
-              <span>Taxa de Vitória</span>
-              <strong>{formatPct(row.win_rate)}</strong>
-            </div>
-            <div className="champion-detail-stat">
-              <span>Taxa de escolha</span>
-              <strong>{formatPct(row.pick_rate)}</strong>
-            </div>
-            <div className="champion-detail-stat">
-              <span>Taxa de banimento</span>
-              <strong>{formatPct(row.ban_rate)}</strong>
-            </div>
-            <div className="champion-detail-stat">
-              <span>Composição</span>
-              <LayerContributionBar row={row} />
+            <div className="champion-detail-side-stats">
+              <div className="champion-detail-stat">
+                <span>Taxa de Vitória</span>
+                <strong>{formatPct(row.win_rate)}</strong>
+              </div>
+              <div className="champion-detail-stat">
+                <span>Taxa de escolha</span>
+                <strong>{formatPct(row.pick_rate)}</strong>
+              </div>
+              <div className="champion-detail-stat">
+                <span>Taxa de banimento</span>
+                <strong>{formatPct(row.ban_rate)}</strong>
+              </div>
+              <div className="champion-detail-stat">
+                <span>Composição</span>
+                <LayerContributionBar row={row} />
+              </div>
             </div>
           </div>
 
@@ -214,6 +361,9 @@ function ChampionDetailPage() {
                 ddragonPatch={ddragonPatch}
                 runeTrees={runeTrees}
               />
+            )}
+            {activeTab === 'compare' && (
+              <CompareTab key={championId} row={row} eloTier={eloTier} championsMeta={championsMeta} ddragonPatch={ddragonPatch} />
             )}
           </div>
         </>

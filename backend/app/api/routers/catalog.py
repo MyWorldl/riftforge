@@ -10,6 +10,13 @@ async def list_champions() -> dict:
     return await catalog_service.get_champions()
 
 
+@router.get("/champions/{champion_id}")
+async def get_champion_detail(champion_id: str) -> dict:
+    """Item novo: cabeçalho estilo OP.GG da página de detalhe (passiva +
+    Q/W/E/R do campeão) — `list_champions` (resumo) não traz habilidades."""
+    return await catalog_service.get_champion_detail(champion_id)
+
+
 @router.get("/items")
 async def list_items() -> dict:
     """Item novo (rodada 21, "Recomendação de build") — proxy do catálogo

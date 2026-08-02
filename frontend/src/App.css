@@ -855,18 +855,36 @@
   color: var(--accent);
 }
 
+/* Item novo: cabeçalho estilo OP.GG — retrato+nome+habilidades à
+   esquerda, taxas+composição empilhadas à direita (antes era uma barra
+   horizontal única abaixo do nome). */
 .champion-detail-header {
   display: flex;
-  align-items: center;
-  gap: 14px;
+  align-items: flex-start;
+  gap: 18px;
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--code-bg);
+  width: 100%;
+  box-sizing: border-box;
+  flex-wrap: wrap;
 }
 
-.champion-detail-header img {
+.champion-detail-header > img {
   border-radius: 8px;
 }
 
+.champion-detail-title {
+  flex: 1;
+  min-width: 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 .champion-detail-title h1 {
-  margin: 0 0 4px;
+  margin: 0;
 }
 
 .champion-detail-meta {
@@ -876,28 +894,58 @@
   flex-wrap: wrap;
 }
 
-.champion-detail-stats {
+.champion-detail-abilities {
   display: flex;
-  flex-wrap: wrap;
-  gap: 24px;
-  padding: 14px 18px;
+  align-items: center;
+  gap: 8px;
+}
+
+.ability-icon {
+  border-radius: 6px;
+}
+
+.ability-icon-passive {
+  border-radius: 50%;
   border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--code-bg);
-  width: 100%;
-  box-sizing: border-box;
+}
+
+.ability-icon-wrap {
+  position: relative;
+}
+
+.ability-key {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 1px 3px;
+  border-radius: 3px;
+  background: var(--accent);
+  color: #fff;
+}
+
+.champion-detail-side-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 150px;
+  padding-left: 18px;
+  border-left: 1px solid var(--border);
 }
 
 .champion-detail-stat {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   font-size: 13px;
   color: var(--text);
 }
 
 .champion-detail-stat strong {
-  font-size: 18px;
+  font-size: 16px;
   color: var(--text-h);
 }
 
@@ -934,6 +982,61 @@
 
 .detail-tab-panel {
   width: 100%;
+}
+
+/* Aba "Comparar" da página de detalhe — busca pra adicionar mais
+   campeões à comparação já em andamento (o campeão da página entra
+   pré-selecionado). */
+.compare-tab-picker {
+  position: relative;
+  max-width: 320px;
+  margin-top: 12px;
+}
+
+.compare-tab-picker input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.compare-tab-suggestions {
+  position: absolute;
+  z-index: 5;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.compare-tab-suggestions li button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  font: inherit;
+  font-size: 13px;
+  padding: 6px 8px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--text-h);
+  text-align: left;
+  cursor: pointer;
+}
+
+.compare-tab-suggestions li button:hover {
+  background: var(--code-bg);
+}
+
+.compare-tab-suggestions li button img {
+  border-radius: 4px;
 }
 
 .icon-toggle:disabled:hover {

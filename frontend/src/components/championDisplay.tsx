@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 import {
+  championImageUrl,
   fetchChampionExplanation,
   type ChampionExplanation,
+  type ChampionMeta,
   type ChampionScoreRow,
   type PowerProfile,
   type ScoreExplanation,
@@ -21,6 +23,21 @@ import roleIconUtility from '../assets/roles/utility.png'
 
 export function formatPct(value: number | null): string {
   return value == null ? '—' : `${(value * 100).toFixed(1)}%`
+}
+
+export function rowKey(row: ChampionScoreRow): string {
+  return `${row.champion_id}-${row.lane}-${row.patch}`
+}
+
+export function matchesNameSearch(
+  row: ChampionScoreRow,
+  search: string,
+  championsMeta: Record<string, ChampionMeta> | null,
+): boolean {
+  if (!search) return true
+  const needle = search.trim().toLowerCase()
+  const name = championsMeta?.[row.champion_id]?.name ?? row.champion_id
+  return name.toLowerCase().includes(needle) || row.champion_id.toLowerCase().includes(needle)
 }
 
 const LANE_LABELS: Record<string, string> = {
@@ -329,6 +346,85 @@ export function ScoreExplanationPanel({ row }: { row: ChampionScoreRow }) {
 
       <PowerProfileDetail perfil={data.perfil_poder} />
       <SkillExpressionBadges skill={row.skill_expression} />
+    </div>
+  )
+}
+
+/** Item 5.1 — comparador lado a lado: até 3 campeões, mesmos dados que já
+ *  vêm em `ChampionScoreRow` (sem fetch extra). Usado tanto na lista de
+ *  Campeões (`ChampionsPage.tsx`) quanto na aba "Comparar" da página de
+ *  detalhe (`ChampionDetailPage.tsx`) — mesmo componente, dois pontos de
+ *  entrada diferentes pra montar a seleção. */
+export function ComparatorPanel({
+  rows,
+  championsMeta,
+  ddragonPatch,
+  onRemove,
+  onClear,
+}: {
+  rows: ChampionScoreRow[]
+  championsMeta: Record<string, ChampionMeta> | null
+  ddragonPatch: string
+  onRemove: (key: string) => void
+  onClear: () => void
+}) {
+  if (rows.length === 0) return null
+  return (
+    <div className="comparator-panel">
+      <div className="comparator-header">
+        <span>Comparando {rows.length} {rows.length === 1 ? 'campeão' : 'campeões'}</span>
+        <button type="button" className="comparator-clear" onClick={onClear}>Limpar</button>
+      </div>
+      <div className="comparator-grid">
+        {rows.map((row) => {
+          const meta = championsMeta?.[row.champion_id]
+          return (
+            <div className="comparator-card" key={rowKey(row)}>
+              <div className="comparator-card-header">
+                {meta && ddragonPatch && (
+                  <img src={championImageUrl(ddragonPatch, meta.image.full)} alt="" width={28} height={28} />
+                )}
+                <span>{meta?.name ?? row.champion_id}</span>
+                <button
+                  type="button"
+                  className="comparator-remove"
+                  onClick={() => onRemove(rowKey(row))}
+                  aria-label="Remover da comparação"
+                >
+                  ×
+                </button>
+              </div>
+              <div className="comparator-stat">
+                <span>Score</span>
+                <strong>
+                  {row.score_final.toFixed(1)}{' '}
+                  <span className={`tier-badge tier-${row.score_tier}`}>{row.score_tier}</span>
+                </strong>
+              </div>
+              <div className="comparator-stat">
+                <span>Performance</span>
+                <strong>{row.performance_score.toFixed(1)}</strong>
+              </div>
+              <div className="comparator-stat">
+                <span>Kit</span>
+                <strong>{row.kit_score !== null ? row.kit_score.toFixed(1) : '—'}</strong>
+              </div>
+              <div className="comparator-stat">
+                <span>Build</span>
+                <strong>{row.build_score.toFixed(1)}</strong>
+              </div>
+              <div className="comparator-stat">
+                <span>Meta</span>
+                <strong>{row.meta_score.toFixed(1)}</strong>
+              </div>
+              <div className="comparator-stat">
+                <span>Vitória</span>
+                <strong>{formatPct(row.win_rate)}</strong>
+              </div>
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }
