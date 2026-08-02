@@ -33,11 +33,22 @@ original, renormalizado para somar 100%) — nunca trata o eixo ausente
 como zero, mesmo princípio já usado na média móvel de Build
 (Core/Estrutura_roadmap/16_BASELINES_CALIBRACAO.md §7.1).
 
+Rodada 22 (backlog 5.1): CC e Mobilidade passam a ficar disponíveis pros
+campeões tagueados manualmente em `data/kit_manual_tags.json`, seguindo a
+rúbrica de `Core/Estrutura_roadmap/14_RUBRICA_KIT_CAMPEOES.md`. O arquivo
+nasce com um lote piloto de ~10 campeões (item em aberto §10 do
+documento) — o resto do elenco continua sem os dois eixos até ser
+tagueado. Não é uma tabela no banco de propósito: o tagueamento é dado de
+julgamento humano versionado em texto (git), não gerado por um job, então
+fica mais fácil de revisar num diff do que numa linha de banco opaca.
+
 Uso: python -m app.jobs.compute_kit [--patch 16.14]
 """
 
 import argparse
 import asyncio
+import json
+from pathlib import Path
 
 from app.adapters.data_dragon import DataDragonAdapter
 from app.core.stats import percentile_rank
@@ -45,8 +56,18 @@ from app.db.models import ChampionKitScore
 from app.db.session import SessionLocal, init_db
 
 MODEL_VERSION = "automatica_v1"
+MODEL_VERSION_COM_MANUAL = "automatica_v1+manual_v1"
 AXIS_WEIGHTS = {"dano": 0.25, "mobilidade": 0.20, "alcance": 0.15, "resiliencia": 0.10, "cc": 0.30}
 CONCURRENCY = 10
+MANUAL_TAGS_PATH = Path(__file__).resolve().parent.parent.parent / "data" / "kit_manual_tags.json"
+
+
+def _load_manual_tags() -> dict[str, dict]:
+    if not MANUAL_TAGS_PATH.exists():
+        return {}
+    with MANUAL_TAGS_PATH.open(encoding="utf-8") as f:
+        tags = json.load(f)
+    return {tag["champion_id"]: tag for tag in tags}
 
 
 async def _resolve_version(data_dragon: DataDragonAdapter, patch_prefix: str | None) -> str:
@@ -106,6 +127,7 @@ def compute(patch_prefix: str | None = None) -> dict:
         raw_reach[champion_id] = base_range + (avg_spell_range or 0)
 
     reach_values = list(raw_reach.values())
+    manual_tags = _load_manual_tags()
 
     session = SessionLocal()
     try:
@@ -127,6 +149,11 @@ def compute(patch_prefix: str | None = None) -> dict:
                 available["dano"] = float(max(attack, magic))
                 available["resiliencia"] = float(defense)
 
+            tag = manual_tags.get(champion_id)
+            if tag:
+                available["cc"] = float(tag["cc_score"])
+                available["mobilidade"] = float(tag["mobilidade_score"])
+
             weight_sum = sum(AXIS_WEIGHTS[axis] for axis in available)
             kit_score = sum(AXIS_WEIGHTS[axis] * score for axis, score in available.items()) / weight_sum * 10
 
@@ -134,13 +161,13 @@ def compute(patch_prefix: str | None = None) -> dict:
                 ChampionKitScore(
                     patch=version_label,
                     champion_id=champion_id,
-                    cc_score=None,
+                    cc_score=available.get("cc"),
                     dano_score=available.get("dano"),
-                    mobilidade_score=None,
+                    mobilidade_score=available.get("mobilidade"),
                     alcance_score=available["alcance"],
                     resiliencia_score=available.get("resiliencia"),
                     kit_score=kit_score,
-                    versao_calculo=MODEL_VERSION,
+                    versao_calculo=MODEL_VERSION_COM_MANUAL if tag else MODEL_VERSION,
                     eixos_disponiveis=list(available.keys()),
                 )
             )
