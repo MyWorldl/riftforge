@@ -323,3 +323,43 @@ Nenhuma mudança de schema ou lógica de cálculo — só reorganização de
 frontend e um endpoint novo (proxy fino do Data Dragon, mesmo padrão de
 `/champions`/`/items`/`/runes`). `tsc -b`/`npm run build` limpos e
 verificação manual no navegador a cada uma das 3 rodadas.
+
+## Seções 6-7 da revisão técnica: gaps de feature, acessibilidade, SEO, paleta e responsividade (2026-08-08)
+
+Pesquisa prévia (3 agentes em paralelo) mostrou que o filtro de região
+completo — citado junto no pedido original como item de backlog — é uma
+migração de arquitetura (nenhuma das 9 tabelas do pipeline de score tem
+coluna de região), não um ajuste de UI; ficou de fora deste lote, a
+decidir como plano próprio depois. O resto das seções 6-7 do documento
+de revisão (`Core/Revisao_2026-08-02_RiftForge.md`) foi entregue em 5
+lotes pequenos e independentes, cada um verificado e pushado em
+separado — detalhe completo em `17_ESTADO_IMPLEMENTADO.md` §rodada 25:
+
+- **Lote H (gaps de feature):** widget "Melhores altas do patch" +
+  "Cobertura de meta por rota" na Home (novo `GET /meta/coverage`, dado
+  já calculado pela Camada 4); filtro por classe em Campeões
+  (`ChampionMeta.tags`, já buscado e nunca usado); dropdown de Tier
+  desabilita elos sem dado coletado (só GOLD hoje).
+- **Lote I (acessibilidade):** `FlagSelect` navegável por teclado
+  (padrão ARIA "select-only combobox"); `role="status"`/`role="alert"`
+  nos estados de carregamento/erro; `ErrorBoundary` global.
+- **Lote J (idioma/SEO):** `lang="pt-BR"` (era `"en"`), meta description
+  e Open Graph estáticos, `<title>` por rota.
+- **Lote K (paleta/assets):** hex hardcoded viraram variáveis CSS
+  (`--ring-win`/`-loss`, `--layer-kit`/`-build`/`-meta`); corrigido bug
+  real do badge "Trap" não acompanhar o tema escuro; `--tier-d`/`-e`
+  mais distinguíveis; assets mortos removidos; ícones de tier saíram do
+  bundle JS pra `public/tiers/`.
+- **Lote L (responsividade):** tokens de espaço/raio/texto; 3
+  breakpoints (768/1024/1280px) verificados por medição de
+  `scrollWidth`/`clientWidth` (não só inspeção visual) nas 7 páginas —
+  achou e corrigiu 3 bugs reais de overflow horizontal que a inspeção
+  visual sozinha deixaria passar (`.top-bar` sem `flex-wrap`, afetando
+  *toda* página no celular; `.role-filter` do Lote H; grid da aba
+  Matchups). Tabelas continuam com scroll horizontal, agora com um
+  gradiente sutil reforçando que rolam.
+
+`ruff check .`, `tsc -b`, `npm run build` e `npm run lint` limpos a cada
+lote; suite de testes do backend +2 (92 no total). Cada lote testado
+contra o backend local rodando com o Supabase de produção antes do
+commit, com confirmação explícita do usuário antes de cada push.
