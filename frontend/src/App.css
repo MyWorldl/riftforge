@@ -97,6 +97,18 @@
   border-color: var(--accent-border);
 }
 
+/* Item novo (revisão técnica §7.1): confirmado no navegador (375px) que
+   marca + abas + ações nunca quebravam linha — ~100px de overflow
+   horizontal em toda página (o header é compartilhado por `AppLayout`).
+   `.nav-row` abaixo já tinha `flex-wrap`; este não tinha. */
+@media (max-width: 767px) {
+  .top-bar {
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+  }
+}
+
 .nav-row {
   display: flex;
   justify-content: center;
@@ -394,6 +406,26 @@
   color: var(--text-h);
 }
 
+/* Item novo (revisão técnica §7.1): `flex-wrap` já evitava overflow
+   horizontal, mas quebrar no meio de uma linha de filtros (2-3 por
+   linha, larguras desencontradas) fica desalinhado — em coluna cada
+   filtro ocupa a largura inteira, mais previsível em telas estreitas. */
+@media (max-width: 767px) {
+  .filters {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filters label,
+  .filters .flag-select {
+    width: 100%;
+  }
+
+  .filters .flag-select-trigger {
+    width: 100%;
+  }
+}
+
 .flag-select {
   position: relative;
 }
@@ -498,6 +530,7 @@
 
 .role-filter {
   display: flex;
+  flex-wrap: wrap;
   align-self: flex-start;
   gap: 2px;
   width: fit-content;
@@ -557,10 +590,26 @@
    rolar. Usa o espaço inteiro que `.center` já reserva (1126px) em vez
    de um teto menor arbitrário. */
 .table-scroll {
+  position: relative;
   align-self: flex-start;
   width: 100%;
   max-width: 100%;
   overflow-x: auto;
+}
+
+/* Item novo (revisão técnica §7.1): tabelas continuam rolando na
+   horizontal (não viram cards) — só reforça visualmente que há mais
+   coluna pra ver, com um gradiente na borda direita em vez de deixar o
+   corte parecer acidental. Decorativo, sem afetar a11y. */
+.table-scroll::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 20px;
+  background: linear-gradient(to right, transparent, var(--bg));
+  pointer-events: none;
 }
 
 .stats-table {
@@ -1453,6 +1502,16 @@
   align-self: flex-start;
 }
 
+/* Item novo (revisão técnica §7.1): 3 cards lado a lado sobram ~110px
+   cada em 375px — cabe, mas espreme avatar/nome/stats. Empilha vertical
+   abaixo de 768px (a ordem no DOM já é 1º/2º/3º, então já sai certo). */
+@media (max-width: 767px) {
+  .podium {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
 .podium-card {
   flex: 1;
   display: flex;
@@ -1598,6 +1657,21 @@
   grid-template-columns: 28px minmax(90px, 1fr) minmax(80px, 2fr) 48px auto;
   align-items: center;
   gap: 10px;
+}
+
+/* Item novo (revisão técnica §7.1): os pisos de minmax() (90px+80px)
+   somados às colunas fixas passavam de 335px de área útil em 375px —
+   overflow horizontal na aba Matchups da página de detalhe, fora de
+   qualquer tabela. */
+@media (max-width: 480px) {
+  .matchup-item {
+    grid-template-columns: 22px minmax(60px, 1fr) minmax(50px, 1.5fr) 36px auto;
+    gap: 6px;
+  }
+
+  .matchup-games {
+    font-size: 11px;
+  }
 }
 
 .matchup-name {
