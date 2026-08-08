@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import JSON, BigInteger, ForeignKey, Index, UniqueConstraint
+from sqlalchemy import JSON, BigInteger, ForeignKey, Index, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -104,15 +104,25 @@ class MatchBan(Base):
 
 
 class ChampionLaneStat(Base):
-    """Participant-level aggregate: games/wins/KDA for a champion in a lane, per tier and patch."""
+    """Participant-level aggregate: games/wins/KDA for a champion in a lane, per tier and patch.
+
+    `id`/`patch`/`tier`/`lane`/`champion_id` são `BigInteger`/`Text`
+    explícitos (em vez do `Mapped[int]`/`Mapped[str]` genérico usado no
+    resto do arquivo) porque é isso que já existe fisicamente no Postgres
+    desde que esta tabela foi criada (a primeira do pipeline de score) —
+    descoberto no primeiro `alembic revision --autogenerate` contra o
+    banco real. BIGINT/TEXT sem limite não têm custo extra sobre
+    INTEGER/VARCHAR no Postgres; o objetivo aqui é só parar o
+    autogenerate de reportar esse diff cosmético pra sempre, não mudar o
+    schema físico."""
 
     __tablename__ = "champion_lane_stats"
 
-    id: Mapped[int] = mapped_column(primary_key=True)
-    patch: Mapped[str]
-    tier: Mapped[str]
-    lane: Mapped[str]
-    champion_id: Mapped[str]
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    patch: Mapped[str] = mapped_column(Text)
+    tier: Mapped[str] = mapped_column(Text)
+    lane: Mapped[str] = mapped_column(Text)
+    champion_id: Mapped[str] = mapped_column(Text)
     games: Mapped[int] = mapped_column(default=0)
     wins: Mapped[int] = mapped_column(default=0)
     kills: Mapped[int] = mapped_column(default=0)
@@ -123,27 +133,31 @@ class ChampionLaneStat(Base):
 
 
 class ChampionBanStat(Base):
-    """Ban counts are match-wide (not lane-specific), tracked separately from lane stats."""
+    """Ban counts are match-wide (not lane-specific), tracked separately from lane stats.
+
+    Mesma nota de `ChampionLaneStat` sobre `BigInteger`/`Text` explícitos."""
 
     __tablename__ = "champion_ban_stats"
 
-    id: Mapped[int] = mapped_column(primary_key=True)
-    patch: Mapped[str]
-    tier: Mapped[str]
-    champion_id: Mapped[str]
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    patch: Mapped[str] = mapped_column(Text)
+    tier: Mapped[str] = mapped_column(Text)
+    champion_id: Mapped[str] = mapped_column(Text)
     bans: Mapped[int] = mapped_column(default=0)
 
     __table_args__ = (UniqueConstraint("patch", "tier", "champion_id"),)
 
 
 class SegmentTotal(Base):
-    """Denominator for pick rate / ban rate: unique matches processed per tier+patch."""
+    """Denominator for pick rate / ban rate: unique matches processed per tier+patch.
+
+    Mesma nota de `ChampionLaneStat` sobre `BigInteger`/`Text` explícitos."""
 
     __tablename__ = "segment_totals"
 
-    id: Mapped[int] = mapped_column(primary_key=True)
-    patch: Mapped[str]
-    tier: Mapped[str]
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    patch: Mapped[str] = mapped_column(Text)
+    tier: Mapped[str] = mapped_column(Text)
     total_matches: Mapped[int] = mapped_column(default=0)
 
     __table_args__ = (UniqueConstraint("patch", "tier"),)
