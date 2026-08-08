@@ -13,6 +13,11 @@
      fundos — no claro precisam ser mais escuros, no escuro mais claros. */
   --pos: #1a7f37;
   --neg: #b3261e;
+  /* Item novo (revisão técnica §7.3): fundo/borda do badge Trap
+     reaproveitando o mesmo tom de --neg, em vez do hex próprio que tinha
+     ficado preso no claro e nunca acompanhava --neg no escuro. */
+  --neg-bg: rgba(179, 38, 30, 0.12);
+  --neg-border: rgba(179, 38, 30, 0.4);
   /* Perfil de poder (item 3.2): estrutural (Kit+Build) vs. meta
      (Performance+Meta). Cores distintas do verde/vermelho acima de
      propósito — não é "bom/ruim", é "de onde vem o poder". O badge é
@@ -34,8 +39,21 @@
   --tier-a: #7a1fd6;
   --tier-b: #1a5bb8;
   --tier-c: #1f7a3d;
-  --tier-d: #5c5c5c;
-  --tier-e: #4a4a4a;
+  /* D/E ficavam quase indistinguíveis (#5c5c5c vs #4a4a4a, diferença de
+     luminância pequena demais) — afastados mantendo os dois acima do
+     piso AA (5.09:1 / 10.87:1 contra branco). */
+  --tier-d: #6e6e6e;
+  --tier-e: #3d3d3d;
+  /* Item novo (revisão técnica §7.3): cores fixas do anel de vitória/
+     derrota (Rankings) e dos segmentos Kit/Build/Meta da mini-barra de
+     contribuição (Campeões) — escolhidas pelo usuário sem variar por
+     tema (mesma lógica dos grupos --power/--tier acima), só que ainda hex
+     solto em 5 lugares diferentes em vez de uma variável. */
+  --ring-win: #8b5cf6;
+  --ring-loss: #f4306b;
+  --layer-kit: #6366f1;
+  --layer-build: #0ea5e9;
+  --layer-meta: #10b981;
   /* Pódio do Rankings — usados só como borda/texto de acento, não texto
      branco sobre a cor, então não precisam do mesmo tratamento AA acima. */
   --podium-gold: #c9a227;
@@ -86,6 +104,8 @@
     --social-bg: rgba(47, 48, 58, 0.5);
     --pos: #3fb950;
     --neg: #f85149;
+    --neg-bg: rgba(248, 81, 73, 0.15);
+    --neg-border: rgba(248, 81, 73, 0.4);
     --shadow:
       rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
   }
@@ -112,6 +132,8 @@
   --social-bg: rgba(47, 48, 58, 0.5);
   --pos: #3fb950;
   --neg: #f85149;
+  --neg-bg: rgba(248, 81, 73, 0.15);
+  --neg-border: rgba(248, 81, 73, 0.4);
   --shadow:
     rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
 }
@@ -128,6 +150,8 @@
   --social-bg: rgba(244, 243, 236, 0.5);
   --pos: #1a7f37;
   --neg: #b3261e;
+  --neg-bg: rgba(179, 38, 30, 0.12);
+  --neg-border: rgba(179, 38, 30, 0.4);
   --shadow:
     rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
 }

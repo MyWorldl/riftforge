@@ -44,21 +44,22 @@ function DeltaPositionBadge({ delta }: { delta: number | null }) {
 }
 
 /** Anel de vitória/derrota: fatia proporcional à taxa real, vitória em
- *  roxo vibrante (#8B5CF6) e derrota em rosa-carmim (#F4306B) — cores
- *  fixas escolhidas pelo usuário, sem variar por tema. */
+ *  roxo vibrante e derrota em rosa-carmim (`--ring-win`/`--ring-loss`,
+ *  `index.css`) — cores fixas escolhidas pelo usuário, sem variar por
+ *  tema. */
 function WinRateRing({ winRate }: { winRate: number }) {
   const radius = 15
   const circumference = 2 * Math.PI * radius
   const winLength = (winRate / 100) * circumference
   return (
     <svg width="32" height="32" viewBox="0 0 36 36" className="win-rate-ring" aria-hidden="true">
-      <circle cx="18" cy="18" r={radius} fill="none" stroke="#F4306B" strokeWidth="4" />
+      <circle cx="18" cy="18" r={radius} fill="none" stroke="var(--ring-loss)" strokeWidth="4" />
       <circle
         cx="18"
         cy="18"
         r={radius}
         fill="none"
-        stroke="#8B5CF6"
+        stroke="var(--ring-win)"
         strokeWidth="4"
         strokeDasharray={`${winLength} ${circumference}`}
         strokeLinecap="round"
