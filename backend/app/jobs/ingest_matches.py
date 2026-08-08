@@ -44,7 +44,7 @@ import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from app.adapters.riot_api import RiotApiAdapter
+from app.adapters.riot_api import PLATFORM_TO_CONTINENT, RiotApiAdapter
 from app.core.config import get_settings
 from app.core.logging import get_logger
 from app.db.models import Match, MatchBan, MatchParticipant, Patch
@@ -98,14 +98,18 @@ def _patch_sequence(version_label: str) -> int:
 def _get_or_create_patch(session, version_label: str) -> Patch:
     patch = session.query(Patch).filter_by(version_label=version_label).one_or_none()
     if patch is None:
-        patch = Patch(version_label=version_label, patch_sequence=_patch_sequence(version_label))
+        patch = Patch(
+            version_label=version_label, patch_sequence=_patch_sequence(version_label)
+        )
         session.add(patch)
         session.flush()
     return patch
 
 
 def _already_ingested(session, match_id: str) -> bool:
-    return session.query(Match.match_id).filter_by(match_id=match_id).first() is not None
+    return (
+        session.query(Match.match_id).filter_by(match_id=match_id).first() is not None
+    )
 
 
 def _process_summoner(
@@ -117,6 +121,7 @@ def _process_summoner(
     matches_per_summoner: int,
     start_time: int,
     run_id: str,
+    region: str,
 ) -> dict:
     """Todo o trabalho de um invocador — chamado de dentro de uma thread do
     pool em `ingest()`. Sessão própria, escopada só a este invocador (mesmo
@@ -151,6 +156,22 @@ def _process_summoner(
             version_label = ".".join(info["gameVersion"].split(".")[:2])
             patch = _get_or_create_patch(session, version_label)
 
+            # Item novo (filtro de região, piloto br1+euw1): sanity check —
+            # a região de fato retornada pela Riot deve bater com a região
+            # pedida via `--region`. Um mismatch aqui significaria etiquetar
+            # partida de uma região com o rótulo de outra (silencioso e
+            # grave); só aviso, não erro, porque a Riot ocasionalmente tem
+            # inconsistência de `platformId` que não justifica abortar a
+            # ingestão inteira.
+            actual_region = info.get("platformId", "").lower()
+            if actual_region != region:
+                thread_log.warning(
+                    "regiao_divergente",
+                    esperada=region,
+                    recebida=actual_region,
+                    match_id=match_id,
+                )
+
             # Sanitiza uma cópia pra gravar em `raw_payload` — o payload
             # bruto original (`info["participants"]`, usado no loop abaixo)
             # continua intacto, com PUUID, porque `MatchParticipant.puuid`
@@ -180,7 +201,9 @@ def _process_summoner(
             )
 
             for participant in info["participants"]:
-                keystone_id, primary_style_id, sub_style_id = _extract_runes(participant)
+                keystone_id, primary_style_id, sub_style_id = _extract_runes(
+                    participant
+                )
                 session.add(
                     MatchParticipant(
                         match_id=match_id,
@@ -196,7 +219,9 @@ def _process_summoner(
                         kills=participant["kills"],
                         deaths=participant["deaths"],
                         assists=participant["assists"],
-                        core_items=[participant.get(slot, 0) for slot in CORE_ITEM_SLOTS],
+                        core_items=[
+                            participant.get(slot, 0) for slot in CORE_ITEM_SLOTS
+                        ],
                         elo_tier=tier,
                         keystone_id=keystone_id,
                         primary_style_id=primary_style_id,
@@ -223,14 +248,20 @@ def _process_summoner(
         # Commit por invocador: Ctrl+C ou uma queda no meio não perde o
         # trabalho já feito nesta execução.
         session.commit()
-        return {"new_matches": new_matches, "skipped_existing": skipped_existing, "failed": False}
+        return {
+            "new_matches": new_matches,
+            "skipped_existing": skipped_existing,
+            "failed": False,
+        }
     except Exception as exc:
         # Uma falha pontual (conexão derrubada, timeout/429 da Riot) não
         # deve abortar uma coleta de dezenas de minutos — o invocador é
         # pulado e a execução segue. Como a dedup é por match_id no banco,
         # rodar de novo depois recupera o que faltou sem recontar nada.
         session.rollback()
-        thread_log.warning("invocador_falhou", erro_tipo=type(exc).__name__, erro=str(exc))
+        thread_log.warning(
+            "invocador_falhou", erro_tipo=type(exc).__name__, erro=str(exc)
+        )
         return {"new_matches": 0, "skipped_existing": 0, "failed": True}
     finally:
         session.close()
@@ -244,13 +275,19 @@ def ingest(
     matches_per_summoner: int = 3,
     since_days: int | None = None,
     concurrency: int | None = None,
+    region: str | None = None,
 ) -> dict:
+    settings = get_settings()
+    # Item novo (filtro de região, piloto br1+euw1): `None` cai no default
+    # de sempre (`riot_platform_region`, "br1") — omitir `--region` continua
+    # se comportando exatamente como antes desta mudança.
+    region = region or settings.riot_platform_region
+
     run_id = uuid.uuid4().hex[:12]
-    run_log = log.bind(run_id=run_id, tier=tier, division=division)
+    run_log = log.bind(run_id=run_id, tier=tier, division=division, region=region)
     run_log.info("job_iniciado", job="ingest_matches")
     init_db()
 
-    settings = get_settings()
     if since_days is None:
         since_days = settings.ingest_days_window
     if concurrency is None:
@@ -261,7 +298,18 @@ def ingest(
     # da RiotWatcher precisa ver todas as chamadas pra funcionar (limitador
     # por instância, não global) — cada thread com seu próprio adapter
     # ignoraria o rate limit das outras.
-    riot = RiotApiAdapter()
+    #
+    # Item novo (filtro de região, piloto br1+euw1): `platform_region`/
+    # `continent_region` explícitos — é essa linha que faz `--region euw1`
+    # de fato bater no shard de Match-V5 da Europa em vez de silenciosamente
+    # ingerir partida de `br1` sob o rótulo errado (ver o sanity check em
+    # `_process_summoner`, que existe justamente pra pegar um bug aqui).
+    riot = RiotApiAdapter(
+        platform_region=region,
+        continent_region=PLATFORM_TO_CONTINENT.get(
+            region, settings.riot_continent_region
+        ),
+    )
     queue_id = QUEUE_IDS[queue]
 
     entries = riot.get_league_entries(queue, tier, division)
@@ -280,7 +328,16 @@ def ingest(
     with ThreadPoolExecutor(max_workers=concurrency) as executor:
         futures = {
             executor.submit(
-                _process_summoner, i, puuid, riot, queue_id, tier, matches_per_summoner, start_time, run_id
+                _process_summoner,
+                i,
+                puuid,
+                riot,
+                queue_id,
+                tier,
+                matches_per_summoner,
+                start_time,
+                run_id,
+                region,
             ): i
             for i, puuid in enumerate(puuids, start=1)
         }
@@ -307,10 +364,17 @@ def ingest(
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Ingere partidas brutas da Riot API no banco próprio.")
+    parser = argparse.ArgumentParser(
+        description="Ingere partidas brutas da Riot API no banco próprio."
+    )
     parser.add_argument("--queue", default="RANKED_SOLO_5x5", choices=list(QUEUE_IDS))
     parser.add_argument("--tier", default="GOLD")
     parser.add_argument("--division", default="I")
+    parser.add_argument(
+        "--region",
+        default=None,
+        help="Região de plataforma (ex: br1, euw1). Padrão: riot_platform_region da config.",
+    )
     parser.add_argument("--puuid-limit", type=int, default=5)
     parser.add_argument("--matches-per-summoner", type=int, default=3)
     parser.add_argument(
@@ -336,6 +400,7 @@ def main() -> None:
         matches_per_summoner=args.matches_per_summoner,
         since_days=args.since_days,
         concurrency=args.concurrency,
+        region=args.region,
     )
 
 
