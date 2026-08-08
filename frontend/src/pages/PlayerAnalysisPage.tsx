@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { fetchPlayerLookup, HttpError, type PlayerLookupResult } from '../api/client'
+import { useDocumentTitle } from '../hooks/useDocumentTitle'
 
 const LANE_LABELS: Record<string, string> = {
   TOP: 'Topo',
@@ -15,6 +16,8 @@ function PlayerAnalysisPage() {
   const region = searchParams.get('region')
   const gameName = searchParams.get('gameName')
   const tagLine = searchParams.get('tagLine')
+
+  useDocumentTitle(gameName && tagLine ? `${gameName}#${tagLine} — RiftForge` : 'Análise do Jogador — RiftForge')
 
   const [result, setResult] = useState<PlayerLookupResult | null>(null)
   const [loading, setLoading] = useState(false)

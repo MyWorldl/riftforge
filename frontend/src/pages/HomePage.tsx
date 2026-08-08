@@ -13,6 +13,7 @@ import {
   type PatchNotesResult,
 } from '../api/client'
 import { LANE_LABELS } from '../components/championDisplay'
+import { useDocumentTitle } from '../hooks/useDocumentTitle'
 
 const DEFAULT_ELO_TIER = 'GOLD'
 
@@ -100,6 +101,7 @@ function PatchHighlights() {
 }
 
 function HomePage() {
+  useDocumentTitle('RiftForge')
   const navigate = useNavigate()
   const [region, setRegion] = useState('br1')
   const [riotId, setRiotId] = useState('')
