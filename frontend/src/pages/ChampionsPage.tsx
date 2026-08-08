@@ -12,6 +12,7 @@ import {
   type PatchNotesResult,
 } from '../api/client'
 import FlagSelect from '../components/FlagSelect'
+import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { CHAMPIONS_COUNTRY_OPTIONS } from '../constants/regions'
 import HistoryChart from '../HistoryChart'
 import {
@@ -208,6 +209,7 @@ function SortableHeader({
 }
 
 function ChampionsPage() {
+  useDocumentTitle('Campeões — RiftForge')
   const [searchParams] = useSearchParams()
 
   const [championsMeta, setChampionsMeta] = useState<Record<string, ChampionMeta> | null>(null)

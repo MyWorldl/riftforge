@@ -10,6 +10,7 @@ import {
   type PatchDeltaRow,
   type PatchNotesResult,
 } from '../api/client'
+import { useDocumentTitle } from '../hooks/useDocumentTitle'
 
 const ELO_TIERS = [
   'IRON', 'BRONZE', 'SILVER', 'GOLD', 'PLATINUM',
@@ -195,6 +196,7 @@ function ChampionChangeCard({
 }
 
 function PatchNotesPage() {
+  useDocumentTitle('Patch Notes — RiftForge')
   const [eloTier, setEloTier] = useState('GOLD')
   const [result, setResult] = useState<PatchNotesResult | null>(null)
   const [error, setError] = useState<string | null>(null)

@@ -1,3 +1,5 @@
+import { useDocumentTitle } from '../hooks/useDocumentTitle'
+
 // Servidos como asset estático do próprio site (frontend/public/downloads)
 // em vez de GitHub Release — o repositório é privado, então um link de
 // release não seria baixável por um visitante comum sem acesso ao repo.
@@ -15,6 +17,7 @@ const CHECKSUMS_SHA256 = {
 }
 
 function DesktopPage() {
+  useDocumentTitle('Desktop — RiftForge')
   return (
     <main className="center">
       <h1>Desktop</h1>

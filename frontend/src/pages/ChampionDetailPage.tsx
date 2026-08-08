@@ -27,6 +27,7 @@ import {
   matchesNameSearch,
   rowKey,
 } from '../components/championDisplay'
+import { useDocumentTitle } from '../hooks/useDocumentTitle'
 
 /** Explicação e Histórico ficaram só na lista (expandindo inline na
  *  própria linha, ver `ChampionsPage.tsx`) — pedido explícito do usuário
@@ -209,6 +210,8 @@ function ChampionDetailPage() {
 
   const [row, setRow] = useState<ChampionScoreRow | null | undefined>(undefined)
   const [error, setError] = useState<string | null>(null)
+
+  useDocumentTitle(`${championsMeta?.[championId]?.name ?? championId} — RiftForge`)
 
   useEffect(() => {
     fetchChampions()
