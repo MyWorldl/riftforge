@@ -138,10 +138,10 @@ function RankingsPage() {
           />
         </label>
 
-        {loading && <span className="filters-loading">Buscando...</span>}
+        {loading && <span className="filters-loading" role="status">Buscando...</span>}
       </div>
 
-      {error && <p className="error">Backend indisponível: {error}</p>}
+      {error && <p className="error" role="alert">Backend indisponível: {error}</p>}
 
       {!error && filteredRows && filteredRows.length === 0 && (
         <p className="empty-state">

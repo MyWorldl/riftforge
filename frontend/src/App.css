@@ -485,6 +485,11 @@
   background: var(--accent-bg);
 }
 
+.flag-select-option-focus {
+  outline: 2px solid var(--accent-border);
+  outline-offset: -2px;
+}
+
 .filters-loading {
   font-size: 14px;
   color: var(--text);

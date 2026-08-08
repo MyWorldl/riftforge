@@ -254,7 +254,7 @@ function PatchNotesPage() {
         </a>.
       </p>
 
-      {changesError && <p className="error">Backend indisponível: {changesError}</p>}
+      {changesError && <p className="error" role="alert">Backend indisponível: {changesError}</p>}
 
       {changes && changes.patch_anterior && grouped && (
         <>
@@ -300,10 +300,10 @@ function PatchNotesPage() {
             ))}
           </select>
         </label>
-        {loading && <span className="filters-loading">Buscando...</span>}
+        {loading && <span className="filters-loading" role="status">Buscando...</span>}
       </div>
 
-      {error && <p className="error">Backend indisponível: {error}</p>}
+      {error && <p className="error" role="alert">Backend indisponível: {error}</p>}
 
       {!error && result && !result.patch_anterior && (
         <p className="empty-state">

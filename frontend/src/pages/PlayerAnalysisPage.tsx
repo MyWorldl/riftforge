@@ -55,7 +55,7 @@ function PlayerAnalysisPage() {
         <strong>{gameName}#{tagLine}</strong>
       </p>
 
-      {loading && <p className="filters-loading">Buscando...</p>}
+      {loading && <p className="filters-loading" role="status">Buscando...</p>}
 
       {unavailable && (
         <p className="empty-state">
@@ -65,7 +65,7 @@ function PlayerAnalysisPage() {
         </p>
       )}
 
-      {error && <p className="error">Não foi possível buscar esse jogador: {error}</p>}
+      {error && <p className="error" role="alert">Não foi possível buscar esse jogador: {error}</p>}
 
       {result && (
         <>
