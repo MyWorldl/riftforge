@@ -358,7 +358,7 @@ function ChampionsPage() {
           />
         </label>
 
-        {loading && <span className="filters-loading">Buscando...</span>}
+        {loading && <span className="filters-loading" role="status">Buscando...</span>}
       </div>
 
       <ComparatorPanel
@@ -396,8 +396,8 @@ function ChampionsPage() {
         ))}
       </div>
 
-      {metaError && <p className="error">Não foi possível carregar dados do Data Dragon: {metaError}</p>}
-      {scoresError && <p className="error">Backend indisponível: {scoresError}</p>}
+      {metaError && <p className="error" role="alert">Não foi possível carregar dados do Data Dragon: {metaError}</p>}
+      {scoresError && <p className="error" role="alert">Backend indisponível: {scoresError}</p>}
 
       {!scoresError && scores && scores.length === 0 && (
         <p className="empty-state">
