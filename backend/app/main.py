@@ -9,7 +9,7 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
-from app.api.routers import builds, catalog, health, matchups, patch_notes, player, rankings, riot_proxy, scores, stats
+from app.api.routers import builds, catalog, health, matchups, meta, patch_notes, player, rankings, riot_proxy, scores, stats
 from app.core.config import get_settings
 from app.core.limiter import limiter
 from app.core.logging import get_logger, new_correlation_id
@@ -61,7 +61,10 @@ app.add_middleware(SlowAPIMiddleware)
 # ser cacheadas pelo CDN da Vercel — hoje nenhuma resposta mandava
 # `Cache-Control`, então o CDN nunca guardava nada. `/player/lookup` e
 # `/riot/*` ficam de fora de propósito: são específicos por request.
-_CACHEABLE_PREFIXES = ("/champions", "/items", "/runes", "/scores", "/stats", "/matchups", "/builds", "/rankings", "/patch-notes")
+_CACHEABLE_PREFIXES = (
+    "/champions", "/items", "/runes", "/scores", "/stats", "/matchups", "/builds", "/rankings", "/patch-notes",
+    "/meta",
+)
 
 
 @app.middleware("http")
@@ -82,3 +85,4 @@ app.include_router(stats.router)
 app.include_router(scores.router)
 app.include_router(matchups.router)
 app.include_router(builds.router)
+app.include_router(meta.router)

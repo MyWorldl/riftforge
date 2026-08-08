@@ -202,6 +202,112 @@
   color: #fff;
 }
 
+/* Item novo (revisão técnica §6): "melhores subidas do patch" + "contexto
+   por rota" na Home — reaproveitam dado que já existia, só ganharam um
+   lugar pra aparecer. */
+.home-highlights {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  width: 100%;
+  max-width: 900px;
+}
+
+.home-highlights-col {
+  flex: 1;
+  min-width: 280px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--code-bg);
+}
+
+.home-highlights-col h2 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.home-highlights-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.home-highlights-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.home-highlights-list img {
+  border-radius: 4px;
+}
+
+.home-highlights-name {
+  flex: 1;
+  color: var(--text-h);
+}
+
+.home-highlights-link {
+  align-self: flex-start;
+  color: var(--accent);
+  text-decoration: none;
+  font-size: 13px;
+}
+
+.home-highlights-link:hover {
+  text-decoration: underline;
+}
+
+.home-coverage-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.home-coverage-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.home-coverage-label {
+  width: 70px;
+  color: var(--text);
+}
+
+.home-coverage-bar-cell {
+  flex: 1;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.home-coverage-bar {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+
+.home-coverage-value {
+  width: 36px;
+  text-align: right;
+  color: var(--text-h);
+  font-weight: 600;
+}
+
 .placeholder-page {
   color: var(--text);
 }
