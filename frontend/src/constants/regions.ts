@@ -1,10 +1,10 @@
-import flagBr1 from '../assets/flags/br1.png'
+import flagBr1 from '../assets/flags/br.svg'
 import flagNa1 from '../assets/flags/na1.svg'
 import flagLan from '../assets/flags/lan.svg'
 import flagLas from '../assets/flags/las.svg'
 import flagEuw1 from '../assets/flags/euw1.svg'
 import flagEun1 from '../assets/flags/eun1.svg'
-import flagKr from '../assets/flags/kr.jpg'
+import flagKr from '../assets/flags/kr.svg'
 import flagJp1 from '../assets/flags/jp1.svg'
 
 export interface RegionOption {
