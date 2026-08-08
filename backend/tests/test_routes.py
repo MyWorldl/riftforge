@@ -3,7 +3,7 @@ das ~500 linhas de `main.py` (hoje dividido em `app/api/routers/`) tinha
 cobertura de rota HTTP, só as funções puras por trás delas."""
 
 from app.core.config import get_settings
-from app.db.models import ChampionScore, Patch
+from app.db.models import ChampionMetaContext, ChampionScore, Patch
 
 
 def _seed_patch(db_session, version_label: str, sequence: int) -> Patch:
@@ -113,6 +113,54 @@ def test_rankings_empty(client):
     response = client.get("/rankings?region=br1")
     assert response.status_code == 200
     assert response.json() == []
+
+
+def test_meta_coverage_empty_db(client):
+    response = client.get("/meta/coverage?elo_tier=GOLD")
+    assert response.status_code == 200
+    assert response.json() == {"patch": None, "elo_tier": "GOLD", "cobertura": []}
+
+
+def test_meta_coverage_with_data(client, db_session):
+    _seed_patch(db_session, "16.14", 16014)
+    db_session.add_all(
+        [
+            ChampionMetaContext(
+                patch="16.14",
+                tier="GOLD",
+                lane="JUNGLE",
+                champion_id="Ahri",
+                cobertura=0.5,
+                nota_cobertura=50.0,
+                slope_performance=0.0,
+                patches_usados_tendencia=1,
+                nota_tendencia=50.0,
+                meta_score=50.0,
+            ),
+            ChampionMetaContext(
+                patch="16.14",
+                tier="GOLD",
+                lane="TOP",
+                champion_id="Ahri",
+                cobertura=0.8,
+                nota_cobertura=80.0,
+                slope_performance=0.0,
+                patches_usados_tendencia=1,
+                nota_tendencia=50.0,
+                meta_score=50.0,
+            ),
+        ]
+    )
+    db_session.commit()
+
+    response = client.get("/meta/coverage?elo_tier=GOLD")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["patch"] == "16.14"
+    assert {(row["lane"], row["cobertura"]) for row in body["cobertura"]} == {
+        ("JUNGLE", 0.5),
+        ("TOP", 0.8),
+    }
 
 
 def test_patch_notes_with_fewer_than_two_patches(client, db_session):

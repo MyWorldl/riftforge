@@ -68,7 +68,17 @@ const ELO_TIERS = [
   'EMERALD', 'DIAMOND', 'MASTER', 'GRANDMASTER', 'CHALLENGER',
 ]
 
-const TIER_SELECT_OPTIONS = ELO_TIERS.map((t) => ({ value: t, label: t, flag: TIER_ICONS[t] }))
+/** Item novo (revisão técnica §6, Tier 3): hoje o CI só coleta partidas em
+ *  GOLD (`collect-matches.yml`) — os outros elos sempre caem no estado
+ *  vazio. Mesmo tratamento que `COUNTRY_SELECT_OPTIONS` já dá pra região:
+ *  desabilita no dropdown em vez de deixar escolher e mostrar uma
+ *  mensagem de operador ("rode o pipeline..."). */
+const TIER_SELECT_OPTIONS = ELO_TIERS.map((t) => ({
+  value: t,
+  label: t,
+  flag: TIER_ICONS[t],
+  disabled: t !== 'GOLD',
+}))
 
 const LANES = [
   { value: '', label: 'Todas as rotas' },
@@ -77,6 +87,20 @@ const LANES = [
   { value: 'MIDDLE', label: 'Meio' },
   { value: 'BOTTOM', label: 'Atirador' },
   { value: 'UTILITY', label: 'Suporte' },
+]
+
+/** Item novo (revisão técnica §6, Tier 1): `ChampionMeta.tags` já vem do
+ *  Data Dragon (`client.ts`) e nunca foi usado na UI. Classes fixas do
+ *  próprio Data Dragon (não mudam por patch) — filtra client-side sobre
+ *  `championsMeta`, mesmo padrão de `matchesNameSearch`. */
+const CHAMPION_CLASSES = [
+  { value: '', label: 'Todas as classes' },
+  { value: 'Fighter', label: 'Lutador' },
+  { value: 'Tank', label: 'Tanque' },
+  { value: 'Mage', label: 'Mago' },
+  { value: 'Assassin', label: 'Assassino' },
+  { value: 'Marksman', label: 'Atirador' },
+  { value: 'Support', label: 'Suporte' },
 ]
 
 /** Ícones oficiais de posição da Riot (position-select do client),
@@ -205,6 +229,7 @@ function ChampionsPage() {
   const [loading, setLoading] = useState(false)
 
   const [search, setSearch] = useState('')
+  const [classFilter, setClassFilter] = useState('')
   const [sortKey, setSortKey] = useState<SortKey>('score')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
   const [compareKeys, setCompareKeys] = useState<string[]>([])
@@ -285,7 +310,11 @@ function ChampionsPage() {
     return () => controller.abort()
   }, [eloTier, lane, patch])
 
-  const filteredScores = scores ? scores.filter((row) => matchesNameSearch(row, search, championsMeta)) : null
+  const filteredScores = scores
+    ? scores
+        .filter((row) => matchesNameSearch(row, search, championsMeta))
+        .filter((row) => !classFilter || championsMeta?.[row.champion_id]?.tags.includes(classFilter))
+    : null
   const displayedScores = filteredScores ? sortScores(filteredScores, sortKey, sortDir) : null
 
   const scoreByKey = new Map((scores ?? []).map((row) => [rowKey(row), row]))
@@ -350,6 +379,19 @@ function ChampionsPage() {
             title={l.label}
           >
             <img src={LANE_ICONS[l.value]} alt={l.label} width={18} height={18} />
+          </button>
+        ))}
+      </div>
+
+      <div className="role-filter">
+        {CHAMPION_CLASSES.map((c) => (
+          <button
+            key={c.value}
+            type="button"
+            className={`role-filter-btn ${classFilter === c.value ? 'role-filter-btn-active' : ''}`}
+            onClick={() => setClassFilter(c.value)}
+          >
+            {c.label}
           </button>
         ))}
       </div>

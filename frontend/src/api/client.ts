@@ -337,6 +337,29 @@ export async function fetchPatchNotes(eloTier: string, signal?: AbortSignal): Pr
   return response.json()
 }
 
+export interface LaneCoverage {
+  lane: string
+  cobertura: number
+}
+
+export interface MetaCoverageResult {
+  patch: string | null
+  elo_tier: string
+  cobertura: LaneCoverage[]
+}
+
+/** Item novo (revisão técnica §6, "contexto por rota"): saúde do metagame
+ *  por rota — reaproveita `cobertura`/`nota_cobertura` já calculados por
+ *  `compute_meta.py`, nunca expostos antes. */
+export async function fetchMetaCoverage(eloTier: string, signal?: AbortSignal): Promise<MetaCoverageResult> {
+  const params = new URLSearchParams({ elo_tier: eloTier })
+  const response = await fetch(`${API_URL}/meta/coverage?${params}`, { signal })
+  if (!response.ok) {
+    throw new Error(`Falha ao buscar contexto de meta: ${response.status}`)
+  }
+  return response.json()
+}
+
 export interface PatchChangeRow {
   champion_id: string
   category: 'stat' | 'spell' | 'passive'

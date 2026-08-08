@@ -40,7 +40,7 @@ export function matchesNameSearch(
   return name.toLowerCase().includes(needle) || row.champion_id.toLowerCase().includes(needle)
 }
 
-const LANE_LABELS: Record<string, string> = {
+export const LANE_LABELS: Record<string, string> = {
   TOP: 'Topo',
   JUNGLE: 'Selva',
   MIDDLE: 'Meio',
