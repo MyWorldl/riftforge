@@ -92,6 +92,16 @@ class Settings(BaseSettings):
     # padrão de `cors_origins`.
     rankings_platform_regions: str = "br1,na1,euw1,kr"
 
+    # Item novo (filtro de região, piloto br1+euw1): regiões que as 9 jobs
+    # de compute do pipeline de score processam a cada execução — mesmo
+    # formato de `rankings_platform_regions`. Fica em "br1" por padrão de
+    # propósito (só o CI, via `env:` do workflow, muda pra "br1,euw1" —
+    # assim um `pytest`/dev local nunca tenta euw1 sem opt-in explícito).
+    # Adicionar uma região aqui depois de já ter dado ingerido é o único
+    # passo de configuração necessário pras jobs de compute passarem a
+    # processá-la — nenhuma delas precisa de mudança de código.
+    pipeline_platform_regions: str = "br1"
+
     # Parâmetros de calibração do modelo de score (Core/Estrutura_roadmap/
     # 02_MODELO_SCORE_TIERS.md, 16_BASELINES_CALIBRACAO.md) — nunca hardcoded
     # no código de cálculo, conforme 05_BOAS_PRATICAS_CODIGO.md §7.

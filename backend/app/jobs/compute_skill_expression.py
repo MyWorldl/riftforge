@@ -55,33 +55,51 @@ def compute() -> int:
     settings = get_settings()
     data_dragon = DataDragonAdapter()
 
+    # Item novo (filtro de região, piloto br1+euw1): mesmo padrão de
+    # `collect_rankings.py` — delete escopado por região, `Match.
+    # platform_region` entra na query e na chave de agrupamento.
+    regioes = [
+        r.strip() for r in settings.pipeline_platform_regions.split(",") if r.strip()
+    ]
+
     session = SessionLocal()
     try:
-        session.query(ChampionSkillExpression).delete()
+        for region in regioes:
+            session.query(ChampionSkillExpression).filter_by(region=region).delete()
 
         rows = (
-            session.query(MatchParticipant, Patch.version_label)
+            session.query(MatchParticipant, Patch.version_label, Match.platform_region)
             .join(Match, Match.match_id == MatchParticipant.match_id)
             .join(Patch, Patch.id == Match.patch_id)
+            .filter(Match.platform_region.in_(regioes))
             .all()
         )
 
-        by_group: dict[tuple[str, str, str], list[MatchParticipant]] = defaultdict(list)
-        for participant, version_label in rows:
+        by_group: dict[tuple[str, str, str, str], list[MatchParticipant]] = defaultdict(
+            list
+        )
+        for participant, version_label, region in rows:
             lane = participant.resolved_position or "UNKNOWN"
-            by_group[(version_label, participant.elo_tier, lane)].append(participant)
+            by_group[(version_label, participant.elo_tier, lane, region)].append(
+                participant
+            )
 
         all_versions = asyncio.run(data_dragon.get_versions())
         name_cache: dict[str, dict[int, str]] = {}
 
         def names_for(version_label: str) -> dict[int, str]:
             if version_label not in name_cache:
-                version = next((v for v in all_versions if v.startswith(version_label)), all_versions[0])
-                name_cache[version_label] = asyncio.run(data_dragon.get_champion_name_by_riot_id(version))
+                version = next(
+                    (v for v in all_versions if v.startswith(version_label)),
+                    all_versions[0],
+                )
+                name_cache[version_label] = asyncio.run(
+                    data_dragon.get_champion_name_by_riot_id(version)
+                )
             return name_cache[version_label]
 
         created = 0
-        for (version_label, tier, lane), participants in by_group.items():
+        for (version_label, tier, lane, region), participants in by_group.items():
             names = names_for(version_label)
 
             by_champion: dict[int, list[MatchParticipant]] = defaultdict(list)
@@ -99,8 +117,12 @@ def compute() -> int:
                 piores = kdas[:quintil]
                 melhores = kdas[-quintil:]
 
-                ceiling_ratio = (sum(melhores) / len(melhores)) / mediana if mediana > 0 else 1.0
-                floor_ratio = (sum(piores) / len(piores)) / mediana if mediana > 0 else 1.0
+                ceiling_ratio = (
+                    (sum(melhores) / len(melhores)) / mediana if mediana > 0 else 1.0
+                )
+                floor_ratio = (
+                    (sum(piores) / len(piores)) / mediana if mediana > 0 else 1.0
+                )
 
                 raw_by_champion[riot_champion_id] = {
                     "n_games": n,
@@ -116,9 +138,13 @@ def compute() -> int:
             floor_values = [s["floor_ratio"] for s in raw_by_champion.values()]
 
             for riot_champion_id, stats in raw_by_champion.items():
-                ceiling_percentil = percentile_rank(ceiling_values, stats["ceiling_ratio"])
+                ceiling_percentil = percentile_rank(
+                    ceiling_values, stats["ceiling_ratio"]
+                )
                 floor_percentil = percentile_rank(floor_values, stats["floor_ratio"])
-                champion_id = resolve_champion_id(names, riot_champion_id, stats["champion_name"])
+                champion_id = resolve_champion_id(
+                    names, riot_champion_id, stats["champion_name"]
+                )
 
                 session.add(
                     ChampionSkillExpression(
@@ -126,6 +152,7 @@ def compute() -> int:
                         tier=tier,
                         lane=lane,
                         champion_id=champion_id,
+                        region=region,
                         n_games=stats["n_games"],
                         mediana_kda=stats["mediana_kda"],
                         ceiling_ratio=stats["ceiling_ratio"],
@@ -134,7 +161,8 @@ def compute() -> int:
                         floor_percentil=floor_percentil,
                         ceiling_label=_label(ceiling_percentil),
                         floor_label=_label(floor_percentil),
-                        amostra_insuficiente=stats["n_games"] < settings.skill_expression_min_games,
+                        amostra_insuficiente=stats["n_games"]
+                        < settings.skill_expression_min_games,
                     )
                 )
                 created += 1

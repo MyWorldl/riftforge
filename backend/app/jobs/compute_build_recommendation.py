@@ -36,12 +36,14 @@ def _item_build_key(core_items: list[int]) -> tuple[int, ...]:
 def _rune_key(participant: MatchParticipant) -> tuple[int, int, int] | None:
     if participant.keystone_id is None:
         return None
-    return (participant.keystone_id, participant.primary_style_id, participant.sub_style_id)
+    return (
+        participant.keystone_id,
+        participant.primary_style_id,
+        participant.sub_style_id,
+    )
 
 
-def _best_combo(
-    counts: dict, min_games: int
-) -> tuple[object, int, int, bool]:
+def _best_combo(counts: dict, min_games: int) -> tuple[object, int, int, bool]:
     """Escolhe a combinação (build ou runa) de maior win rate entre as que
     atingem `min_games`; sem nenhuma qualificada, cai pra mais popular e
     marca amostra insuficiente. `counts` mapeia chave -> [games, wins]."""
@@ -58,33 +60,51 @@ def compute() -> int:
     settings = get_settings()
     data_dragon = DataDragonAdapter()
 
+    # Item novo (filtro de região, piloto br1+euw1): mesmo padrão de
+    # `collect_rankings.py` — delete escopado por região, `Match.
+    # platform_region` entra na query e na chave de agrupamento.
+    regioes = [
+        r.strip() for r in settings.pipeline_platform_regions.split(",") if r.strip()
+    ]
+
     session = SessionLocal()
     try:
-        session.query(ChampionBuildRecommendation).delete()
+        for region in regioes:
+            session.query(ChampionBuildRecommendation).filter_by(region=region).delete()
 
         rows = (
-            session.query(MatchParticipant, Patch.version_label)
+            session.query(MatchParticipant, Patch.version_label, Match.platform_region)
             .join(Match, Match.match_id == MatchParticipant.match_id)
             .join(Patch, Patch.id == Match.patch_id)
+            .filter(Match.platform_region.in_(regioes))
             .all()
         )
 
-        by_group: dict[tuple[str, str, str], list[MatchParticipant]] = defaultdict(list)
-        for participant, version_label in rows:
+        by_group: dict[tuple[str, str, str, str], list[MatchParticipant]] = defaultdict(
+            list
+        )
+        for participant, version_label, region in rows:
             lane = participant.resolved_position or "UNKNOWN"
-            by_group[(version_label, participant.elo_tier, lane)].append(participant)
+            by_group[(version_label, participant.elo_tier, lane, region)].append(
+                participant
+            )
 
         all_versions = asyncio.run(data_dragon.get_versions())
         name_cache: dict[str, dict[int, str]] = {}
 
         def names_for(version_label: str) -> dict[int, str]:
             if version_label not in name_cache:
-                version = next((v for v in all_versions if v.startswith(version_label)), all_versions[0])
-                name_cache[version_label] = asyncio.run(data_dragon.get_champion_name_by_riot_id(version))
+                version = next(
+                    (v for v in all_versions if v.startswith(version_label)),
+                    all_versions[0],
+                )
+                name_cache[version_label] = asyncio.run(
+                    data_dragon.get_champion_name_by_riot_id(version)
+                )
             return name_cache[version_label]
 
         created = 0
-        for (version_label, tier, lane), participants in by_group.items():
+        for (version_label, tier, lane, region), participants in by_group.items():
             names = names_for(version_label)
 
             by_champion: dict[int, list[MatchParticipant]] = defaultdict(list)
@@ -92,8 +112,12 @@ def compute() -> int:
                 by_champion[p.riot_champion_id].append(p)
 
             for riot_champion_id, champ_participants in by_champion.items():
-                item_counts: dict[tuple[int, ...], list[int]] = defaultdict(lambda: [0, 0])
-                rune_counts: dict[tuple[int, int, int], list[int]] = defaultdict(lambda: [0, 0])
+                item_counts: dict[tuple[int, ...], list[int]] = defaultdict(
+                    lambda: [0, 0]
+                )
+                rune_counts: dict[tuple[int, int, int], list[int]] = defaultdict(
+                    lambda: [0, 0]
+                )
 
                 for p in champ_participants:
                     item_key = _item_build_key(p.core_items)
@@ -134,9 +158,12 @@ def compute() -> int:
                         tier=tier,
                         lane=lane,
                         champion_id=champion_id,
+                        region=region,
                         item_build=list(best_item_build),
                         item_build_games=item_games,
-                        item_build_win_rate=item_wins / item_games if item_games else 0.0,
+                        item_build_win_rate=item_wins / item_games
+                        if item_games
+                        else 0.0,
                         keystone_id=keystone_id,
                         primary_style_id=primary_style_id,
                         sub_style_id=sub_style_id,
@@ -155,7 +182,9 @@ def compute() -> int:
 
 def main() -> None:
     created = compute()
-    log.info("job_concluido", job="compute_build_recommendation", linhas_criadas=created)
+    log.info(
+        "job_concluido", job="compute_build_recommendation", linhas_criadas=created
+    )
 
 
 if __name__ == "__main__":

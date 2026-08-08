@@ -42,19 +42,33 @@ def compute() -> dict:
     new_correlation_id()
     settings = get_settings()
     init_db()
+    # Item novo (filtro de região, piloto br1+euw1): `region` chega de
+    # graça (herdado de `ChampionLaneStat.region`) — só precisa entrar na
+    # chave do agrupamento e no delete escopado, mesmo padrão de
+    # `collect_rankings.py`.
+    regioes = [
+        r.strip() for r in settings.pipeline_platform_regions.split(",") if r.strip()
+    ]
 
     session = SessionLocal()
     try:
-        session.query(Baseline).delete()
+        for region in regioes:
+            session.query(Baseline).filter_by(region=region).delete()
 
-        groups: dict[tuple[str, str, str], list[float]] = {}
-        for row in session.query(ChampionLaneStat).all():
+        groups: dict[tuple[str, str, str, str], list[float]] = {}
+        for row in (
+            session.query(ChampionLaneStat)
+            .filter(ChampionLaneStat.region.in_(regioes))
+            .all()
+        ):
             wr_adjusted = wilson_lower_bound(row.wins, row.games, settings.wilson_z)
-            groups.setdefault((row.patch, row.tier, row.lane), []).append(wr_adjusted)
+            groups.setdefault((row.patch, row.tier, row.lane, row.region), []).append(
+                wr_adjusted
+            )
 
         created = 0
         insufficient = 0
-        for (patch, tier, lane), wr_values in groups.items():
+        for (patch, tier, lane, region), wr_values in groups.items():
             media, desvio = _trimmed_mean_std(wr_values, settings.baseline_trim_pct)
             confiavel = len(wr_values) >= settings.baseline_min_champions
             if not confiavel:
@@ -65,6 +79,7 @@ def compute() -> dict:
                     patch=patch,
                     tier=tier,
                     lane=lane,
+                    region=region,
                     media_wr=media,
                     desvio_wr=desvio,
                     n_campeoes_amostra=len(wr_values),

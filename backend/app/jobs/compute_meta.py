@@ -27,6 +27,7 @@ Uso: python -m app.jobs.compute_meta
 
 from collections import defaultdict
 
+from app.core.config import get_settings
 from app.core.logging import get_logger, new_correlation_id
 from app.core.stats import percentile_rank
 from app.db.models import ChampionMetaContext, ChampionPerformanceScore, Patch
@@ -55,24 +56,49 @@ def _linear_slope(points: list[tuple[int, float]]) -> float | None:
 def compute() -> dict:
     new_correlation_id()
     init_db()
+    # Item novo (filtro de região, piloto br1+euw1): region chega de graça
+    # (herdado de ChampionPerformanceScore) — entra na chave de agrupamento
+    # e no histórico de tendência (tendência nunca deve misturar partidas
+    # de regiões diferentes), e no delete escopado.
+    regioes = [
+        r.strip()
+        for r in get_settings().pipeline_platform_regions.split(",")
+        if r.strip()
+    ]
+
     session = SessionLocal()
     try:
-        session.query(ChampionMetaContext).delete()
+        for region in regioes:
+            session.query(ChampionMetaContext).filter_by(region=region).delete()
 
-        patch_sequence = {p.version_label: p.patch_sequence for p in session.query(Patch).all()}
-        performance_rows = session.query(ChampionPerformanceScore).all()
+        patch_sequence = {
+            p.version_label: p.patch_sequence for p in session.query(Patch).all()
+        }
+        performance_rows = (
+            session.query(ChampionPerformanceScore)
+            .filter(ChampionPerformanceScore.region.in_(regioes))
+            .all()
+        )
 
-        by_group: dict[tuple[str, str, str], list[ChampionPerformanceScore]] = defaultdict(list)
-        history_by_champion: dict[tuple[str, str, str], list[tuple[int, float]]] = defaultdict(list)
+        by_group: dict[tuple[str, str, str, str], list[ChampionPerformanceScore]] = (
+            defaultdict(list)
+        )
+        history_by_champion: dict[
+            tuple[str, str, str, str], list[tuple[int, float]]
+        ] = defaultdict(list)
 
         for row in performance_rows:
-            by_group[(row.patch, row.tier, row.lane)].append(row)
+            by_group[(row.patch, row.tier, row.lane, row.region)].append(row)
             seq = patch_sequence.get(row.patch, 0)
-            history_by_champion[(row.tier, row.lane, row.champion_id)].append((seq, row.performance_score))
+            history_by_champion[
+                (row.tier, row.lane, row.champion_id, row.region)
+            ].append((seq, row.performance_score))
 
         created = 0
-        for (patch, tier, lane), group_rows in by_group.items():
-            top_picks = sorted(group_rows, key=lambda r: r.pick_rate, reverse=True)[:TOP_N_COBERTURA]
+        for (patch, tier, lane, region), group_rows in by_group.items():
+            top_picks = sorted(group_rows, key=lambda r: r.pick_rate, reverse=True)[
+                :TOP_N_COBERTURA
+            ]
             cobertura_count = sum(1 for r in top_picks if r.win_rate_raw >= 0.50)
             cobertura = cobertura_count / TOP_N_COBERTURA
             nota_cobertura = cobertura * 100
@@ -82,7 +108,10 @@ def compute() -> dict:
             patches_usados_by_champion: dict[str, int] = {}
 
             for row in group_rows:
-                history = sorted(history_by_champion[(tier, lane, row.champion_id)], key=lambda pt: pt[0])
+                history = sorted(
+                    history_by_champion[(tier, lane, row.champion_id, region)],
+                    key=lambda pt: pt[0],
+                )
                 relevant = [pt for pt in history if pt[0] <= current_seq][-3:]
                 slope = _linear_slope(relevant)
                 slope_by_champion[row.champion_id] = slope if slope is not None else 0.0
@@ -101,10 +130,13 @@ def compute() -> dict:
                         tier=tier,
                         lane=lane,
                         champion_id=row.champion_id,
+                        region=region,
                         cobertura=cobertura,
                         nota_cobertura=nota_cobertura,
                         slope_performance=slope,
-                        patches_usados_tendencia=patches_usados_by_champion[row.champion_id],
+                        patches_usados_tendencia=patches_usados_by_champion[
+                            row.champion_id
+                        ],
                         nota_tendencia=nota_tendencia,
                         meta_score=meta_score,
                     )
