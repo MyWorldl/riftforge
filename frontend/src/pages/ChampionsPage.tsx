@@ -32,16 +32,6 @@ import roleIconJungle from '../assets/roles/jungle.png'
 import roleIconMiddle from '../assets/roles/middle.png'
 import roleIconBottom from '../assets/roles/bottom.png'
 import roleIconUtility from '../assets/roles/utility.png'
-import tierIconIron from '../assets/tiers/iron.png'
-import tierIconBronze from '../assets/tiers/bronze.png'
-import tierIconSilver from '../assets/tiers/silver.png'
-import tierIconGold from '../assets/tiers/gold.png'
-import tierIconPlatinum from '../assets/tiers/platinum.png'
-import tierIconEmerald from '../assets/tiers/emerald.png'
-import tierIconDiamond from '../assets/tiers/diamond.png'
-import tierIconMaster from '../assets/tiers/master.png'
-import tierIconGrandmaster from '../assets/tiers/grandmaster.png'
-import tierIconChallenger from '../assets/tiers/challenger.png'
 
 /** Só `br1` é funcional hoje (ver comentário em `CHAMPIONS_COUNTRY_OPTIONS`
  *  em `constants/regions.ts`) — os demais ficam visíveis no dropdown mas
@@ -51,17 +41,22 @@ const COUNTRY_SELECT_OPTIONS = CHAMPIONS_COUNTRY_OPTIONS.map((c) => ({
   disabled: c.value !== 'br1',
 }))
 
+/** Item novo (revisão técnica §7.6): esses 10 PNGs (~95KB) só aparecem se
+ *  o usuário abrir o dropdown de Tier — antes vinham como `import`
+ *  (bundlados no chunk JS inicial via Vite), agora ficam em
+ *  `public/tiers/` e são carregados só quando o `<img>` realmente
+ *  renderiza, por caminho de string comum. */
 const TIER_ICONS: Record<string, string> = {
-  IRON: tierIconIron,
-  BRONZE: tierIconBronze,
-  SILVER: tierIconSilver,
-  GOLD: tierIconGold,
-  PLATINUM: tierIconPlatinum,
-  EMERALD: tierIconEmerald,
-  DIAMOND: tierIconDiamond,
-  MASTER: tierIconMaster,
-  GRANDMASTER: tierIconGrandmaster,
-  CHALLENGER: tierIconChallenger,
+  IRON: '/tiers/iron.png',
+  BRONZE: '/tiers/bronze.png',
+  SILVER: '/tiers/silver.png',
+  GOLD: '/tiers/gold.png',
+  PLATINUM: '/tiers/platinum.png',
+  EMERALD: '/tiers/emerald.png',
+  DIAMOND: '/tiers/diamond.png',
+  MASTER: '/tiers/master.png',
+  GRANDMASTER: '/tiers/grandmaster.png',
+  CHALLENGER: '/tiers/challenger.png',
 }
 
 const ELO_TIERS = [
