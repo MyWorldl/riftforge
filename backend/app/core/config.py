@@ -21,6 +21,13 @@ class Settings(BaseSettings):
 
     database_url: str = "sqlite:///./riftforge.db"
 
+    # Só usada pelo Alembic (`alembic/env.py`), nunca pelo app em si — deve
+    # apontar pra conexão DIRETA do Supabase (porta 5432), nunca o pooler
+    # pgbouncer (porta 6543) usado em `database_url` acima: DDL sob
+    # pgbouncer transaction-mode é instável. `None` (padrão) faz o Alembic
+    # cair em `database_url` (SQLite em dev local).
+    migrations_database_url: str | None = None
+
     # Janela de coleta, em dias. Só partidas mais recentes que isso são
     # ingeridas. Existe porque o histórico de um invocador se estende por
     # mais de um ano, mas o modelo só consome os 3 patches mais recentes
