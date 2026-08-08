@@ -289,3 +289,37 @@ Suite de testes: 72 → 88. `ruff check .`, `tsc -b`, `npm run build` e
 `npm run lint` (oxlint — roda no CI Linux; localmente bloqueado por
 política de Controle de Aplicativo do Windows nesta máquina, não é um
 problema do código) todos limpos.
+
+## Página de detalhe por campeão e "Variação" em Campeões (2026-08-08)
+
+Depois de ver a tabela de Campeões na tela real, o usuário reportou a
+coluna de Ações cortada (a mini-barra de composição do Lote G tinha
+apertado demais a linha) e sugeriu, com screenshots do OP.GG como
+referência, mover parte do conteúdo pra uma página própria por campeão.
+Três rodadas de ajuste até o formato final — detalhe completo em
+`Core/Estrutura_roadmap/17_ESTADO_IMPLEMENTADO.md` §rodada 24. Resumo:
+
+1. **Correção de layout:** `.table-scroll`/`.center` tinham teto de
+   largura menor do que a tabela (com comparador + composição do Lote G)
+   passou a precisar — `.center-wide` (1320px, só em Campeões) resolveu.
+2. **Página de detalhe** (`/campeoes/:championId`, `ChampionDetailPage.tsx`,
+   nova): Explicação/Histórico/Matchups/Build viraram abas, reaproveitando
+   os componentes que já existiam. Comparador extraído pra um módulo
+   compartilhado (`components/championDisplay.tsx`) usado tanto na lista
+   quanto na página nova.
+3. **Segunda rodada:** coluna "Variação" na lista (delta de score vs.
+   patch anterior, reaproveita `patch_diff.py`); ícones de Matchups/Build
+   removidos da lista (redundantes com a página); cabeçalho da página
+   reformulado estilo OP.GG (retrato+nome+habilidades à esquerda — novo
+   endpoint `GET /champions/{id}` pra Q/W/E/R —, taxas+score à direita);
+   nova aba "Comparar" na página (mesmo comparador da lista, começando
+   com o próprio campeão selecionado).
+4. **Terceira rodada:** Explicação/Histórico voltaram a expandir inline
+   na lista (só Matchups/Build/Comparar ficam na página); "Composição"
+   renomeada pra "Score"; badge de tier do cabeçalho da página reduzido e
+   o asterisco de tier provisório removido de lá (mantido na lista).
+
+Nenhuma mudança de schema ou lógica de cálculo — só reorganização de
+frontend e um endpoint novo (proxy fino do Data Dragon, mesmo padrão de
+`/champions`/`/items`/`/runes`). `tsc -b`/`npm run build` limpos e
+verificação manual no navegador a cada uma das 3 rodadas.
