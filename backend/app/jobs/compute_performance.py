@@ -49,44 +49,79 @@ def compute() -> dict:
     new_correlation_id()
     settings = get_settings()
     init_db()
+    # Item novo (filtro de região, piloto br1+euw1): region chega de graça
+    # (herdado das 4 tabelas upstream, todas já region-aware desde o Lote
+    # O) — só precisa entrar em cada chave de agrupamento e no delete
+    # escopado, mesmo padrão de `collect_rankings.py`.
+    regioes = [
+        r.strip() for r in settings.pipeline_platform_regions.split(",") if r.strip()
+    ]
 
     session = SessionLocal()
     try:
-        session.query(ChampionPerformanceScore).delete()
+        for region in regioes:
+            session.query(ChampionPerformanceScore).filter_by(region=region).delete()
 
-        lane_rows = session.query(ChampionLaneStat).all()
-        baselines = {(b.patch, b.tier, b.lane): b for b in session.query(Baseline).all()}
-        segment_totals = {(s.patch, s.tier): s.total_matches for s in session.query(SegmentTotal).all()}
-        ban_stats = {(b.patch, b.tier, b.champion_id): b.bans for b in session.query(ChampionBanStat).all()}
+        lane_rows = (
+            session.query(ChampionLaneStat)
+            .filter(ChampionLaneStat.region.in_(regioes))
+            .all()
+        )
+        baselines = {
+            (b.patch, b.tier, b.lane, b.region): b
+            for b in session.query(Baseline).filter(Baseline.region.in_(regioes)).all()
+        }
+        segment_totals = {
+            (s.patch, s.tier, s.region): s.total_matches
+            for s in session.query(SegmentTotal)
+            .filter(SegmentTotal.region.in_(regioes))
+            .all()
+        }
+        ban_stats = {
+            (b.patch, b.tier, b.champion_id, b.region): b.bans
+            for b in session.query(ChampionBanStat)
+            .filter(ChampionBanStat.region.in_(regioes))
+            .all()
+        }
 
-        # Universo de campeões por (patch, tier) — necessário porque ban rate
-        # não é segmentado por rota (ver docstring do módulo).
-        champions_by_patch_tier: dict[tuple[str, str], set[str]] = defaultdict(set)
+        # Universo de campeões por (patch, tier, region) — necessário porque
+        # ban rate não é segmentado por rota (ver docstring do módulo).
+        champions_by_patch_tier: dict[tuple[str, str, str], set[str]] = defaultdict(set)
         for row in lane_rows:
-            champions_by_patch_tier[(row.patch, row.tier)].add(row.champion_id)
-        for patch, tier, champion_id in ban_stats:
-            champions_by_patch_tier[(patch, tier)].add(champion_id)
+            champions_by_patch_tier[(row.patch, row.tier, row.region)].add(
+                row.champion_id
+            )
+        for patch, tier, champion_id, region in ban_stats:
+            champions_by_patch_tier[(patch, tier, region)].add(champion_id)
 
-        ban_rate_by_group: dict[tuple[str, str], dict[str, float]] = {}
-        for (patch, tier), champions in champions_by_patch_tier.items():
-            total = segment_totals.get((patch, tier), 0)
-            ban_rate_by_group[(patch, tier)] = {
-                champion_id: (ban_stats.get((patch, tier, champion_id), 0) / total if total else 0.0)
+        ban_rate_by_group: dict[tuple[str, str, str], dict[str, float]] = {}
+        for (patch, tier, region), champions in champions_by_patch_tier.items():
+            total = segment_totals.get((patch, tier, region), 0)
+            ban_rate_by_group[(patch, tier, region)] = {
+                champion_id: (
+                    ban_stats.get((patch, tier, champion_id, region), 0) / total
+                    if total
+                    else 0.0
+                )
                 for champion_id in champions
             }
 
-        by_lane_group: dict[tuple[str, str, str], list[ChampionLaneStat]] = defaultdict(list)
+        by_lane_group: dict[tuple[str, str, str, str], list[ChampionLaneStat]] = (
+            defaultdict(list)
+        )
         for row in lane_rows:
-            by_lane_group[(row.patch, row.tier, row.lane)].append(row)
+            by_lane_group[(row.patch, row.tier, row.lane, row.region)].append(row)
 
         created = 0
         for group_key, rows in by_lane_group.items():
-            patch, tier, lane = group_key
-            total_matches = segment_totals.get((patch, tier), 0)
-            ban_rates = ban_rate_by_group.get((patch, tier), {})
+            patch, tier, lane, region = group_key
+            total_matches = segment_totals.get((patch, tier, region), 0)
+            ban_rates = ban_rate_by_group.get((patch, tier, region), {})
             baseline = baselines.get(group_key)
 
-            pick_rates = [(row.games / total_matches if total_matches else 0.0) for row in rows]
+            pick_rates = [
+                (row.games / total_matches if total_matches else 0.0) for row in rows
+            ]
             kdas = [(row.kills + row.assists) / max(row.deaths, 1) for row in rows]
             ban_rate_values = list(ban_rates.values())
 
@@ -108,7 +143,9 @@ def compute() -> dict:
 
                 nota_kda = _percentile_rank(kdas, kda)
 
-                performance_score = 0.65 * nota_wr + 0.25 * nota_presenca + 0.10 * nota_kda
+                performance_score = (
+                    0.65 * nota_wr + 0.25 * nota_presenca + 0.10 * nota_kda
+                )
 
                 session.add(
                     ChampionPerformanceScore(
@@ -116,6 +153,7 @@ def compute() -> dict:
                         tier=tier,
                         lane=lane,
                         champion_id=row.champion_id,
+                        region=region,
                         n_matches=row.games,
                         win_rate_raw=(row.wins / row.games if row.games else 0.0),
                         win_rate_adjusted=wr_adjusted,

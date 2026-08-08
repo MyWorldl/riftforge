@@ -71,15 +71,39 @@ def compute() -> dict:
     new_correlation_id()
     init_db()
     settings = get_settings()
+    # Item novo (filtro de região, piloto br1+euw1): region chega de graça
+    # (herdado das 3 camadas derivadas de partida) — só `ChampionKitScore`
+    # fica de fora (Data-Dragon-only, sem região). Delete escopado por
+    # região, mesmo padrão de `collect_rankings.py`.
+    regioes = [
+        r.strip() for r in settings.pipeline_platform_regions.split(",") if r.strip()
+    ]
 
     session = SessionLocal()
     try:
-        session.query(ChampionScore).delete()
+        for region in regioes:
+            session.query(ChampionScore).filter_by(region=region).delete()
 
-        performance_rows = session.query(ChampionPerformanceScore).all()
-        build_by_key = {(r.patch, r.tier, r.lane, r.champion_id): r for r in session.query(ChampionBuildScore).all()}
-        meta_by_key = {(r.patch, r.tier, r.lane, r.champion_id): r for r in session.query(ChampionMetaContext).all()}
-        kit_by_patch_champion = {(r.patch, r.champion_id): r for r in session.query(ChampionKitScore).all()}
+        performance_rows = (
+            session.query(ChampionPerformanceScore)
+            .filter(ChampionPerformanceScore.region.in_(regioes))
+            .all()
+        )
+        build_by_key = {
+            (r.patch, r.tier, r.lane, r.champion_id, r.region): r
+            for r in session.query(ChampionBuildScore)
+            .filter(ChampionBuildScore.region.in_(regioes))
+            .all()
+        }
+        meta_by_key = {
+            (r.patch, r.tier, r.lane, r.champion_id, r.region): r
+            for r in session.query(ChampionMetaContext)
+            .filter(ChampionMetaContext.region.in_(regioes))
+            .all()
+        }
+        kit_by_patch_champion = {
+            (r.patch, r.champion_id): r for r in session.query(ChampionKitScore).all()
+        }
 
         created = 0
         skipped_missing_layer = 0
@@ -87,9 +111,9 @@ def compute() -> dict:
         traps = 0
 
         for perf in performance_rows:
-            key4 = (perf.patch, perf.tier, perf.lane, perf.champion_id)
-            build = build_by_key.get(key4)
-            meta = meta_by_key.get(key4)
+            key5 = (perf.patch, perf.tier, perf.lane, perf.champion_id, perf.region)
+            build = build_by_key.get(key5)
+            meta = meta_by_key.get(key5)
 
             if build is None or meta is None:
                 # Não deveria acontecer no pipeline atual (Build e Meta usam
@@ -109,9 +133,14 @@ def compute() -> dict:
                 components["kit"] = kit.kit_score
 
             weight_sum = sum(LAYER_WEIGHTS[name] for name in components)
-            score_final = sum(score * LAYER_WEIGHTS[name] for name, score in components.items()) / weight_sum
+            score_final = (
+                sum(score * LAYER_WEIGHTS[name] for name, score in components.items())
+                / weight_sum
+            )
 
-            confianca = min(100.0, (perf.n_matches / settings.n_referencia_confianca) * 100)
+            confianca = min(
+                100.0, (perf.n_matches / settings.n_referencia_confianca) * 100
+            )
             tier_provisorio = confianca < settings.confianca_minima_pct
 
             score_tier = _assign_tier(score_final)
@@ -126,6 +155,7 @@ def compute() -> dict:
                     elo_tier=perf.tier,
                     lane=perf.lane,
                     champion_id=perf.champion_id,
+                    region=perf.region,
                     performance_score=perf.performance_score,
                     kit_score=kit.kit_score if kit else None,
                     build_score=build.build_score,

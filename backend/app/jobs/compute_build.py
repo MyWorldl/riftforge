@@ -43,9 +43,16 @@ from collections import defaultdict
 
 from app.adapters.data_dragon import DataDragonAdapter
 from app.core.champions import resolve_champion_id
+from app.core.config import get_settings
 from app.core.logging import get_logger, new_correlation_id
 from app.core.stats import percentile_rank
-from app.db.models import ChampionBuildPatch, ChampionBuildScore, Match, MatchParticipant, Patch
+from app.db.models import (
+    ChampionBuildPatch,
+    ChampionBuildScore,
+    Match,
+    MatchParticipant,
+    Patch,
+)
 from app.db.session import SessionLocal, init_db
 
 log = get_logger(__name__)
@@ -100,29 +107,51 @@ def _compute_b_patch() -> int:
         nonlocal all_versions
         if all_versions is None:
             all_versions = asyncio.run(data_dragon.get_versions())
-        version = next((v for v in all_versions if v.startswith(version_prefix)), all_versions[0])
+        version = next(
+            (v for v in all_versions if v.startswith(version_prefix)), all_versions[0]
+        )
         return asyncio.run(data_dragon.get_champion_name_by_riot_id(version))
+
+    # Item novo (filtro de região, piloto br1+euw1): mesmo padrão de
+    # `collect_rankings.py` — delete escopado por região, `Match.
+    # platform_region` entra na query e na chave de agrupamento.
+    regioes = [
+        r.strip()
+        for r in get_settings().pipeline_platform_regions.split(",")
+        if r.strip()
+    ]
 
     session = SessionLocal()
     try:
-        session.query(ChampionBuildPatch).delete()
+        for region in regioes:
+            session.query(ChampionBuildPatch).filter_by(region=region).delete()
 
         rows = (
-            session.query(MatchParticipant, Patch.version_label)
+            session.query(MatchParticipant, Patch.version_label, Match.platform_region)
             .join(Match, Match.match_id == MatchParticipant.match_id)
             .join(Patch, Patch.id == Match.patch_id)
+            .filter(Match.platform_region.in_(regioes))
             .all()
         )
 
-        by_lane_group: dict[tuple[str, str, str], list[MatchParticipant]] = defaultdict(list)
-        for participant, version_label in rows:
+        by_lane_group: dict[tuple[str, str, str, str], list[MatchParticipant]] = (
+            defaultdict(list)
+        )
+        for participant, version_label, region in rows:
             lane = participant.resolved_position or "UNKNOWN"
-            by_lane_group[(version_label, participant.elo_tier, lane)].append(participant)
+            by_lane_group[(version_label, participant.elo_tier, lane, region)].append(
+                participant
+            )
 
         name_cache: dict[str, dict[int, str]] = {}
         created = 0
 
-        for (version_label, tier, lane), group_participants in by_lane_group.items():
+        for (
+            version_label,
+            tier,
+            lane,
+            region,
+        ), group_participants in by_lane_group.items():
             if version_label not in name_cache:
                 name_cache[version_label] = resolve_names(version_label)
             names = name_cache[version_label]
@@ -137,7 +166,9 @@ def _compute_b_patch() -> int:
                 total_wins = sum(int(p.win) for p in champ_participants)
                 wr_medio = total_wins / total_games if total_games else 0.0
 
-                build_counts: dict[tuple[int, ...], list[int]] = defaultdict(lambda: [0, 0])
+                build_counts: dict[tuple[int, ...], list[int]] = defaultdict(
+                    lambda: [0, 0]
+                )
                 for p in champ_participants:
                     key = _build_key(p.core_items)
                     build_counts[key][0] += 1
@@ -149,7 +180,8 @@ def _compute_b_patch() -> int:
                 nota_flex = (entropia / h_max * 100) if h_max > 0 else 0.0
 
                 wr_otimo = max(
-                    (wins / games for games, wins in build_counts.values() if games), default=wr_medio
+                    (wins / games for games, wins in build_counts.values() if games),
+                    default=wr_medio,
                 )
                 delta_dep = wr_otimo - wr_medio
 
@@ -172,10 +204,14 @@ def _compute_b_patch() -> int:
             for riot_champion_id, stats in champion_stats.items():
                 nota_dep = 100 - percentile_rank(dep_values, stats["delta_dep"])
                 nota_spike = percentile_rank(spike_values, stats["delta_spike"])
-                b_patch = 0.40 * stats["nota_flex"] + 0.30 * nota_dep + 0.30 * nota_spike
+                b_patch = (
+                    0.40 * stats["nota_flex"] + 0.30 * nota_dep + 0.30 * nota_spike
+                )
 
                 champion_name = resolve_champion_id(
-                    names, riot_champion_id, by_champion[riot_champion_id][0].champion_name
+                    names,
+                    riot_champion_id,
+                    by_champion[riot_champion_id][0].champion_name,
                 )
 
                 session.add(
@@ -184,13 +220,16 @@ def _compute_b_patch() -> int:
                         tier=tier,
                         lane=lane,
                         champion_id=champion_name,
+                        region=region,
                         n_builds_distintos=stats["n_builds_distintos"],
                         entropia_itens=stats["entropia_itens"],
                         nota_flex=stats["nota_flex"],
                         wr_build_otimo=stats["wr_build_otimo"],
                         wr_build_medio=stats["wr_build_medio"],
                         nota_dep=nota_dep,
-                        item_atual=str(stats["item_atual"]) if stats["item_atual"] else None,
+                        item_atual=str(stats["item_atual"])
+                        if stats["item_atual"]
+                        else None,
                         delta_spike=stats["delta_spike"],
                         nota_spike=nota_spike,
                         b_patch=b_patch,
@@ -206,15 +245,32 @@ def _compute_b_patch() -> int:
 
 
 def _compute_smoothed_scores() -> int:
+    regioes = [
+        r.strip()
+        for r in get_settings().pipeline_platform_regions.split(",")
+        if r.strip()
+    ]
+
     session = SessionLocal()
     try:
-        session.query(ChampionBuildScore).delete()
+        for region in regioes:
+            session.query(ChampionBuildScore).filter_by(region=region).delete()
 
-        entries_by_key: dict[tuple[str, str, str], list[ChampionBuildPatch]] = defaultdict(list)
-        for row in session.query(ChampionBuildPatch).all():
-            entries_by_key[(row.tier, row.lane, row.champion_id)].append(row)
+        entries_by_key: dict[tuple[str, str, str, str], list[ChampionBuildPatch]] = (
+            defaultdict(list)
+        )
+        for row in (
+            session.query(ChampionBuildPatch)
+            .filter(ChampionBuildPatch.region.in_(regioes))
+            .all()
+        ):
+            entries_by_key[(row.tier, row.lane, row.champion_id, row.region)].append(
+                row
+            )
 
-        patch_sequence = {p.version_label: p.patch_sequence for p in session.query(Patch).all()}
+        patch_sequence = {
+            p.version_label: p.patch_sequence for p in session.query(Patch).all()
+        }
 
         created = 0
         for entries in entries_by_key.values():
@@ -241,6 +297,7 @@ def _compute_smoothed_scores() -> int:
                         tier=entry.tier,
                         lane=entry.lane,
                         champion_id=entry.champion_id,
+                        region=entry.region,
                         build_score=build_score,
                         patches_disponiveis=patches_disponiveis,
                     )

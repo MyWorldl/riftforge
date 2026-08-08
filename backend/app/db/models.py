@@ -30,7 +30,9 @@ class Match(Base):
     queue_id: Mapped[int]
     game_start_ts: Mapped[int] = mapped_column(BigInteger)
     game_duration_s: Mapped[int]
-    ingested_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc))
+    ingested_at: Mapped[datetime] = mapped_column(
+        default=lambda: datetime.now(timezone.utc)
+    )
     raw_payload: Mapped[dict] = mapped_column(JSON)
 
     # Revisão técnica §1.7: `purge_puuid.py` filtra por `game_start_ts` pra
@@ -123,13 +125,29 @@ class ChampionLaneStat(Base):
     tier: Mapped[str] = mapped_column(Text)
     lane: Mapped[str] = mapped_column(Text)
     champion_id: Mapped[str] = mapped_column(Text)
+    # Item novo (filtro de região, piloto br1+euw1): sem default no lado
+    # Python de propósito, seguindo o precedente de `PlayerRanking.region`
+    # — todo call-site de construção de linha passa `region=` explícito.
+    # O schema tem `server_default='br1'` (ver migração Alembic
+    # `add_region_to_champion_tables`) como rede de segurança, não como
+    # comportamento esperado do código.
+    region: Mapped[str]
     games: Mapped[int] = mapped_column(default=0)
     wins: Mapped[int] = mapped_column(default=0)
     kills: Mapped[int] = mapped_column(default=0)
     deaths: Mapped[int] = mapped_column(default=0)
     assists: Mapped[int] = mapped_column(default=0)
 
-    __table_args__ = (UniqueConstraint("patch", "tier", "lane", "champion_id"),)
+    __table_args__ = (
+        UniqueConstraint(
+            "patch",
+            "tier",
+            "lane",
+            "champion_id",
+            "region",
+            name="uq_champion_lane_stats",
+        ),
+    )
 
 
 class ChampionBanStat(Base):
@@ -143,9 +161,14 @@ class ChampionBanStat(Base):
     patch: Mapped[str] = mapped_column(Text)
     tier: Mapped[str] = mapped_column(Text)
     champion_id: Mapped[str] = mapped_column(Text)
+    region: Mapped[str]
     bans: Mapped[int] = mapped_column(default=0)
 
-    __table_args__ = (UniqueConstraint("patch", "tier", "champion_id"),)
+    __table_args__ = (
+        UniqueConstraint(
+            "patch", "tier", "champion_id", "region", name="uq_champion_ban_stats"
+        ),
+    )
 
 
 class SegmentTotal(Base):
@@ -158,9 +181,12 @@ class SegmentTotal(Base):
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     patch: Mapped[str] = mapped_column(Text)
     tier: Mapped[str] = mapped_column(Text)
+    region: Mapped[str]
     total_matches: Mapped[int] = mapped_column(default=0)
 
-    __table_args__ = (UniqueConstraint("patch", "tier"),)
+    __table_args__ = (
+        UniqueConstraint("patch", "tier", "region", name="uq_segment_totals"),
+    )
 
 
 class Baseline(Base):
@@ -175,12 +201,15 @@ class Baseline(Base):
     patch: Mapped[str]
     tier: Mapped[str]
     lane: Mapped[str]
+    region: Mapped[str]
     media_wr: Mapped[float]
     desvio_wr: Mapped[float]
     n_campeoes_amostra: Mapped[int]
     amostra_confiavel: Mapped[bool]
 
-    __table_args__ = (UniqueConstraint("patch", "tier", "lane"),)
+    __table_args__ = (
+        UniqueConstraint("patch", "tier", "lane", "region", name="uq_baselines"),
+    )
 
 
 class ChampionPerformanceScore(Base):
@@ -197,6 +226,7 @@ class ChampionPerformanceScore(Base):
     tier: Mapped[str]
     lane: Mapped[str]
     champion_id: Mapped[str]
+    region: Mapped[str]
 
     n_matches: Mapped[int]
     win_rate_raw: Mapped[float]
@@ -212,9 +242,20 @@ class ChampionPerformanceScore(Base):
     performance_score: Mapped[float]
 
     model_version: Mapped[str]
-    computed_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc))
+    computed_at: Mapped[datetime] = mapped_column(
+        default=lambda: datetime.now(timezone.utc)
+    )
 
-    __table_args__ = (UniqueConstraint("patch", "tier", "lane", "champion_id"),)
+    __table_args__ = (
+        UniqueConstraint(
+            "patch",
+            "tier",
+            "lane",
+            "champion_id",
+            "region",
+            name="uq_champion_performance_scores",
+        ),
+    )
 
 
 class ChampionKitScore(Base):
@@ -249,7 +290,9 @@ class ChampionKitScore(Base):
 
     versao_calculo: Mapped[str]
     eixos_disponiveis: Mapped[list] = mapped_column(JSON)
-    computed_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc))
+    computed_at: Mapped[datetime] = mapped_column(
+        default=lambda: datetime.now(timezone.utc)
+    )
 
     __table_args__ = (UniqueConstraint("patch", "champion_id"),)
 
@@ -267,6 +310,7 @@ class ChampionBuildPatch(Base):
     tier: Mapped[str]
     lane: Mapped[str]
     champion_id: Mapped[str]
+    region: Mapped[str]
 
     n_builds_distintos: Mapped[int]
     entropia_itens: Mapped[float]
@@ -279,7 +323,16 @@ class ChampionBuildPatch(Base):
     nota_spike: Mapped[float]
     b_patch: Mapped[float]
 
-    __table_args__ = (UniqueConstraint("patch", "tier", "lane", "champion_id"),)
+    __table_args__ = (
+        UniqueConstraint(
+            "patch",
+            "tier",
+            "lane",
+            "champion_id",
+            "region",
+            name="uq_champion_build_patch",
+        ),
+    )
 
 
 class ChampionBuildScore(Base):
@@ -295,11 +348,21 @@ class ChampionBuildScore(Base):
     tier: Mapped[str]
     lane: Mapped[str]
     champion_id: Mapped[str]
+    region: Mapped[str]
 
     build_score: Mapped[float]
     patches_disponiveis: Mapped[int]
 
-    __table_args__ = (UniqueConstraint("patch", "tier", "lane", "champion_id"),)
+    __table_args__ = (
+        UniqueConstraint(
+            "patch",
+            "tier",
+            "lane",
+            "champion_id",
+            "region",
+            name="uq_champion_build_scores",
+        ),
+    )
 
 
 class ChampionMetaContext(Base):
@@ -320,6 +383,7 @@ class ChampionMetaContext(Base):
     tier: Mapped[str]
     lane: Mapped[str]
     champion_id: Mapped[str]
+    region: Mapped[str]
 
     cobertura: Mapped[float]
     nota_cobertura: Mapped[float]
@@ -328,7 +392,16 @@ class ChampionMetaContext(Base):
     nota_tendencia: Mapped[float]
     meta_score: Mapped[float]
 
-    __table_args__ = (UniqueConstraint("patch", "tier", "lane", "champion_id"),)
+    __table_args__ = (
+        UniqueConstraint(
+            "patch",
+            "tier",
+            "lane",
+            "champion_id",
+            "region",
+            name="uq_champion_meta_context",
+        ),
+    )
 
 
 class ChampionScore(Base):
@@ -356,6 +429,7 @@ class ChampionScore(Base):
     elo_tier: Mapped[str]
     lane: Mapped[str]
     champion_id: Mapped[str]
+    region: Mapped[str]
 
     performance_score: Mapped[float]
     kit_score: Mapped[float | None]
@@ -370,10 +444,19 @@ class ChampionScore(Base):
     trap_flag: Mapped[bool]
 
     model_version: Mapped[str]
-    computed_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc))
+    computed_at: Mapped[datetime] = mapped_column(
+        default=lambda: datetime.now(timezone.utc)
+    )
 
     __table_args__ = (
-        UniqueConstraint("patch", "elo_tier", "lane", "champion_id"),
+        UniqueConstraint(
+            "patch",
+            "elo_tier",
+            "lane",
+            "champion_id",
+            "region",
+            name="uq_champion_scores",
+        ),
         # Revisão técnica §1.7: `champion_id` é a última coluna do índice
         # único acima — `/scores/history` filtra só por `champion_id` +
         # `elo_tier` (sem `patch`), o que varria a tabela inteira sem um
@@ -410,11 +493,13 @@ class ChampionPatchChange(Base):
     field_label: Mapped[str]
     before_value: Mapped[str]
     after_value: Mapped[str]
-    computed_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc))
+    computed_at: Mapped[datetime] = mapped_column(
+        default=lambda: datetime.now(timezone.utc)
+    )
 
 
 class PlayerRanking(Base):
-    """"Rankings" (rodada 19, filtro por região na rodada 20) — snapshot do
+    """ "Rankings" (rodada 19, filtro por região na rodada 20) — snapshot do
     ranking de jogadores das ligas apex (Desafiante/Grão-Mestre/Mestre)
     direto da Riot, não um conceito de classificação inventado pelo app
     (decisão explícita do usuário). Populado por
@@ -453,7 +538,9 @@ class PlayerRanking(Base):
     # region) — sem posição anterior, não há delta pra mostrar, e mostrar
     # zero seria uma afirmação falsa ("não mudou") em vez de "sem dado".
     delta_posicao: Mapped[int | None]
-    collected_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc))
+    collected_at: Mapped[datetime] = mapped_column(
+        default=lambda: datetime.now(timezone.utc)
+    )
 
     __table_args__ = (UniqueConstraint("queue", "tier", "region", "puuid"),)
 
@@ -479,14 +566,25 @@ class ChampionMatchup(Base):
     lane: Mapped[str]
     champion_id: Mapped[str]
     opponent_champion_id: Mapped[str]
+    region: Mapped[str]
 
     games: Mapped[int] = mapped_column(default=0)
     wins: Mapped[int] = mapped_column(default=0)
     amostra_insuficiente: Mapped[bool] = mapped_column(default=False)
-    computed_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc))
+    computed_at: Mapped[datetime] = mapped_column(
+        default=lambda: datetime.now(timezone.utc)
+    )
 
     __table_args__ = (
-        UniqueConstraint("patch", "tier", "lane", "champion_id", "opponent_champion_id"),
+        UniqueConstraint(
+            "patch",
+            "tier",
+            "lane",
+            "champion_id",
+            "opponent_champion_id",
+            "region",
+            name="uq_champion_matchups",
+        ),
     )
 
 
@@ -511,6 +609,7 @@ class ChampionBuildRecommendation(Base):
     tier: Mapped[str]
     lane: Mapped[str]
     champion_id: Mapped[str]
+    region: Mapped[str]
 
     item_build: Mapped[list] = mapped_column(JSON)
     item_build_games: Mapped[int]
@@ -523,9 +622,20 @@ class ChampionBuildRecommendation(Base):
     rune_win_rate: Mapped[float]
 
     amostra_insuficiente: Mapped[bool] = mapped_column(default=False)
-    computed_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc))
+    computed_at: Mapped[datetime] = mapped_column(
+        default=lambda: datetime.now(timezone.utc)
+    )
 
-    __table_args__ = (UniqueConstraint("patch", "tier", "lane", "champion_id"),)
+    __table_args__ = (
+        UniqueConstraint(
+            "patch",
+            "tier",
+            "lane",
+            "champion_id",
+            "region",
+            name="uq_champion_build_recommendations",
+        ),
+    )
 
 
 class ChampionSkillExpression(Base):
@@ -550,6 +660,7 @@ class ChampionSkillExpression(Base):
     tier: Mapped[str]
     lane: Mapped[str]
     champion_id: Mapped[str]
+    region: Mapped[str]
 
     n_games: Mapped[int]
     mediana_kda: Mapped[float]
@@ -560,6 +671,17 @@ class ChampionSkillExpression(Base):
     ceiling_label: Mapped[str]
     floor_label: Mapped[str]
     amostra_insuficiente: Mapped[bool] = mapped_column(default=False)
-    computed_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc))
+    computed_at: Mapped[datetime] = mapped_column(
+        default=lambda: datetime.now(timezone.utc)
+    )
 
-    __table_args__ = (UniqueConstraint("patch", "tier", "lane", "champion_id"),)
+    __table_args__ = (
+        UniqueConstraint(
+            "patch",
+            "tier",
+            "lane",
+            "champion_id",
+            "region",
+            name="uq_champion_skill_expression",
+        ),
+    )
