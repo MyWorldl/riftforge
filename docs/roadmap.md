@@ -399,3 +399,38 @@ cada lote. Cada lote de backend verificado contra o Supabase de
 produção real antes do commit; o lote de CI (euw1 real) verificado por
 disparo manual com cota reduzida antes de liberar o cron diário —
 confirmação explícita do usuário antes de cada push.
+
+## Recomendação de Campeão v0+v1 (2026-08-09)
+
+`Core/Revisao_2026-08-02_RiftForge.md` §6 (Tier 2) listava "recomendação
+de campeão" como item de alto valor nunca construído, com um caminho
+v0→v1→v2. **v2 (contrapick) já tinha saído de escopo antes deste plano
+começar** — já existe desde a rodada 21 como a aba Matchups da página de
+detalhe do campeão. Este trabalho cobriu só v0+v1, em 4 lotes (U-X),
+detalhe completo em `Core/Estrutura_roadmap/17_ESTADO_IMPLEMENTADO.md`
+§rodada 27:
+
+- **v0 (filtro inteligente):** nova página `/recomendacao` — rota + elo
+  + região + tier mínimo filtram `/scores/champions` (já existente),
+  ordenado por `score_final`. Sem filtro de "poder estrutural vs. meta"
+  de propósito — exigiria reintroduzir um campo (`pesos_usados`) que uma
+  revisão anterior já tinha removido do payload em lote por custo.
+- **v1 (perfil de jogo):** endpoint novo `GET /scores/kit-profile`
+  (trio dedicado, `ChampionKitScore` não tem elo/rota/região como
+  `ChampionScore` tem) expõe os eixos 0-10 de Dano/Alcance/Resiliência
+  por campeão. Toggle "usar perfil de jogo" (default desligado) +
+  3 sliders reordenam por distância euclidiana aos eixos declarados —
+  quem não tem Kit calculado pro patch cai no fim da lista, não some.
+- Nenhuma mudança de schema, job ou CI — trabalho 100% aditivo do lado
+  de leitura, reaproveitando o motor de score já existente.
+- Verificação contra o Supabase de produção pegou um bug real antes do
+  próximo lote: `SELECT DISTINCT` com `ORDER BY` em coluna fora da
+  lista quebra no Postgres (SQLite deixava passar nos testes).
+
++4 testes novos (`/scores/kit-profile`); `pytest`/`ruff check .`/
+`tsc -b`/`npm run build`/`npm run lint` limpos a cada lote. Verificado
+no navegador contra dado real: filtro de tier mínimo nos dois extremos
+(`E` retorna todo mundo, `GOD` retorna vazio sem quebrar), toggle de
+perfil de jogo reordenando de verdade (maximizar Dano sobe assassinos/
+lutadores conhecidos), link de cada resultado abrindo a página de
+detalhe com os parâmetros certos.
