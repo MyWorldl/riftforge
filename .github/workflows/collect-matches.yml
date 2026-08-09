@@ -27,7 +27,7 @@ concurrency:
 jobs:
   coletar:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 150
     defaults:
       run:
         working-directory: backend
@@ -35,6 +35,10 @@ jobs:
       RIOT_API_KEY: ${{ secrets.RIOT_API_KEY }}
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
       PUUID_LIMIT: ${{ github.event.inputs.puuid_limit || '100' }}
+      # Piloto de região (rodada 25): br1 continua sendo a única região com
+      # coleta real até este lote — euw1 entra aqui e nos steps de ingestão
+      # abaixo. Ver Core/Estrutura_roadmap/17_ESTADO_IMPLEMENTADO.md.
+      PIPELINE_PLATFORM_REGIONS: "br1,euw1"
     steps:
       - uses: actions/checkout@v4
 
@@ -49,12 +53,28 @@ jobs:
       # explícita. Todas gravam elo_tier="GOLD" — o balde é o mesmo, o que
       # a divisão faz é tornar a amostra representativa do ouro inteiro em
       # vez de só a divisão mais alta.
-      - name: Coletar partidas (Gold I-IV)
+      - name: Coletar partidas BR1 (Gold I-IV)
         run: |
           for DIV in I II III IV; do
-            echo "::group::Gold $DIV"
+            echo "::group::BR1 Gold $DIV"
             python -m app.jobs.ingest_matches \
-              --tier GOLD --division "$DIV" \
+              --region br1 --tier GOLD --division "$DIV" \
+              --puuid-limit "$PUUID_LIMIT" --matches-per-summoner 20
+            echo "::endgroup::"
+          done
+
+      # Piloto EUW1 (rodada 25, filtro de região): step separado do BR1 em
+      # vez de aninhar um segundo loop dentro do de cima — mais fácil de
+      # triar log por região e de divergir parâmetros por região depois,
+      # se precisar. Bucket de cota Match-V5 totalmente separado do BR1
+      # (`americas` vs. `europe`), então isso roda em paralelo de cota real,
+      # não compete pelo mesmo limite.
+      - name: Coletar partidas EUW1 (Gold I-IV)
+        run: |
+          for DIV in I II III IV; do
+            echo "::group::EUW1 Gold $DIV"
+            python -m app.jobs.ingest_matches \
+              --region euw1 --tier GOLD --division "$DIV" \
               --puuid-limit "$PUUID_LIMIT" --matches-per-summoner 20
             echo "::endgroup::"
           done
