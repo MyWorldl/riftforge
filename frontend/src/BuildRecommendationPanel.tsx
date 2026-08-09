@@ -13,6 +13,7 @@ interface BuildRecommendationPanelProps {
   lane: string
   eloTier: string
   patch: string
+  region: string
   itemsMeta: Record<string, ItemMeta> | null
   ddragonPatch: string
   runeTrees: RuneTree[] | null
@@ -39,6 +40,7 @@ export default function BuildRecommendationPanel({
   lane,
   eloTier,
   patch,
+  region,
   itemsMeta,
   ddragonPatch,
   runeTrees,
@@ -49,10 +51,10 @@ export default function BuildRecommendationPanel({
   useEffect(() => {
     setBuild(undefined)
     setError(null)
-    fetchBuildRecommendation({ championId, lane, eloTier, patch: patch || undefined })
+    fetchBuildRecommendation({ championId, lane, eloTier, patch: patch || undefined, region })
       .then(setBuild)
       .catch((err: Error) => setError(err.message))
-  }, [championId, lane, eloTier, patch])
+  }, [championId, lane, eloTier, patch, region])
 
   if (error) return <p className="error">Não foi possível carregar o build recomendado: {error}</p>
   if (build === undefined) return <p className="filters-loading">Buscando build recomendado...</p>

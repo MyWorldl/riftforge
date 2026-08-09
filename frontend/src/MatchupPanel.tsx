@@ -6,6 +6,7 @@ interface MatchupPanelProps {
   lane: string
   eloTier: string
   patch: string
+  region: string
   championsMeta: Record<string, ChampionMeta> | null
   ddragonPatch: string
 }
@@ -15,6 +16,7 @@ export default function MatchupPanel({
   lane,
   eloTier,
   patch,
+  region,
   championsMeta,
   ddragonPatch,
 }: MatchupPanelProps) {
@@ -24,10 +26,10 @@ export default function MatchupPanel({
   useEffect(() => {
     setRows(null)
     setError(null)
-    fetchMatchups({ championId, lane, eloTier, patch: patch || undefined })
+    fetchMatchups({ championId, lane, eloTier, patch: patch || undefined, region })
       .then((result) => setRows(result.confrontos))
       .catch((err: Error) => setError(err.message))
-  }, [championId, lane, eloTier, patch])
+  }, [championId, lane, eloTier, patch, region])
 
   if (error) return <p className="error">Não foi possível carregar matchups: {error}</p>
   if (!rows) return <p className="filters-loading">Buscando confrontos...</p>
