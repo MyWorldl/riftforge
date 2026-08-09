@@ -8,6 +8,7 @@ import {
   type PlayerRoadmapStep,
 } from '../api/client'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
+import RoadmapEvolutionChart from '../RoadmapEvolutionChart'
 
 const LANE_LABELS: Record<string, string> = {
   TOP: 'Topo',
@@ -203,6 +204,7 @@ function PlayerAnalysisPage() {
                     </ul>
                   </>
                 )}
+                <RoadmapEvolutionChart ativos={result.roadmap.ativos} concluidos={result.roadmap.concluidos} />
               </>
             )}
           </section>

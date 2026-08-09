@@ -335,15 +335,26 @@ function ChampionDetailPage() {
 
           <div className="detail-tab-panel">
             {activeTab === 'matchups' && (
-              <MatchupPanel
-                championId={row.champion_id}
-                lane={row.lane}
-                eloTier={row.elo_tier}
-                patch={row.patch}
-                region={region}
-                championsMeta={championsMeta}
-                ddragonPatch={ddragonPatch}
-              />
+              <>
+                <MatchupPanel
+                  championId={row.champion_id}
+                  lane={row.lane}
+                  eloTier={row.elo_tier}
+                  patch={row.patch}
+                  region={region}
+                  championsMeta={championsMeta}
+                  ddragonPatch={ddragonPatch}
+                />
+                {/* Sprint 4 item 23: mesmo painel, agora também com URL
+                    própria — compartilhável sem depender de reabrir esta
+                    aba a partir da lista de Campeões. */}
+                <Link
+                  to={`/matchups/${row.champion_id}?lane=${row.lane}&eloTier=${row.elo_tier}&region=${region}`}
+                  className="matchups-page-link"
+                >
+                  Ver página completa de matchups →
+                </Link>
+              </>
             )}
             {activeTab === 'build' && (
               <BuildRecommendationPanel

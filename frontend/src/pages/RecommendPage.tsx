@@ -12,6 +12,7 @@ import {
 import FlagSelect from '../components/FlagSelect'
 import { formatPct } from '../components/championDisplay'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
+import { useFilterParam } from '../hooks/useFilterParam'
 import { CHAMPIONS_COUNTRY_OPTIONS, CHAMPIONS_ENABLED_REGIONS } from '../constants/regions'
 import { DEFAULT_PLAYSTYLE, TIER_ORDER, rankChampions, type PlaystylePreference } from '../lib/recommendation'
 
@@ -62,10 +63,11 @@ function detailHref(championId: string, eloTier: string, lane: string, patch: st
 function RecommendPage() {
   useDocumentTitle('Recomendação de Campeão — RiftForge')
 
-  const [lane, setLane] = useState('TOP')
-  const [eloTier, setEloTier] = useState('GOLD')
-  const [region, setRegion] = useState('br1')
-  const [minTier, setMinTier] = useState('C')
+  // Item 18 (revisão técnica, Sprint 4): mesmo tratamento de ChampionsPage.tsx.
+  const [lane, setLane] = useFilterParam('lane', 'TOP')
+  const [eloTier, setEloTier] = useFilterParam('eloTier', 'GOLD')
+  const [region, setRegion] = useFilterParam('region', 'br1')
+  const [minTier, setMinTier] = useFilterParam('minTier', 'C')
   const [useProfile, setUseProfile] = useState(false)
   const [preference, setPreference] = useState<PlaystylePreference>(DEFAULT_PLAYSTYLE)
 

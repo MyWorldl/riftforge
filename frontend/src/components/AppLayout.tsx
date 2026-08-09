@@ -108,9 +108,33 @@ function IconSettings() {
 function AppLayout() {
   return (
     <div className="app-shell">
+      {/* Sprint 4 item 21 (revisão técnica §7.4, acessibilidade): sem isso,
+          quem navega por teclado precisava passar por marca + 2 <nav> +
+          tema + configurações antes de chegar no conteúdo real de CADA
+          página — invisível até receber foco, visível (posicionado sobre
+          o header) quando o Tab chega nele.
+
+          `onClick` com `preventDefault` em vez de deixar o `href="#..."`
+          nativo agir: o app usa `HashRouter` (rotas vivem em
+          `window.location.hash`), então um link de âncora comum pra
+          `#main-content` seria interpretado como troca de ROTA pelo
+          React Router, não como salto de foco na mesma página — o clique
+          não fazia nada de visível (nem navegava, nem focava). Foco
+          manual via `.focus()` funciona nos dois tipos de router. */}
+      <a
+        href="#main-content"
+        className="skip-link"
+        onClick={(e) => {
+          e.preventDefault()
+          document.getElementById('main-content')?.focus()
+        }}
+      >
+        Pular para o conteúdo
+      </a>
+
       <header className="top-bar">
         <NavLink to="/" className="brand">RiftForge</NavLink>
-        <nav className="top-bar-tabs">
+        <nav className="top-bar-tabs" aria-label="Seções">
           <span className="top-bar-game-selector">
             League of Legends
             <IconChevronDown />
@@ -141,7 +165,7 @@ function AppLayout() {
         </div>
       </header>
 
-      <nav className="nav-row">
+      <nav className="nav-row" aria-label="Principal">
         {NAV_ITEMS.map((item) => (
           <NavLink
             key={item.to}
@@ -155,6 +179,14 @@ function AppLayout() {
         ))}
       </nav>
 
+      {/* Alvo do skip-link acima — `tabIndex={-1}` pra receber foco
+          programático sem entrar na ordem normal de Tab (não é um link
+          nem controle real, só o ponto de pouso). Cada página continua
+          renderizando seu próprio `<main>`; este `span` fica antes dele
+          de propósito, sem envolvê-lo, pra não mexer no layout flex do
+          `.app-shell` (um wrapper por cima do `<main>` quebraria o
+          `flex: 1` que `.center` depende). */}
+      <span id="main-content" tabIndex={-1} className="skip-link-target" />
       <Outlet />
 
       <footer className="riot-disclaimer">

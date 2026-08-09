@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import {
   championImageUrl,
   fetchAvailablePatches,
@@ -13,6 +13,7 @@ import {
 } from '../api/client'
 import FlagSelect from '../components/FlagSelect'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
+import { useFilterParam } from '../hooks/useFilterParam'
 import { CHAMPIONS_COUNTRY_OPTIONS, CHAMPIONS_ENABLED_REGIONS } from '../constants/regions'
 import HistoryChart from '../HistoryChart'
 import {
@@ -192,16 +193,18 @@ function SortableHeader({
   currentKey,
   currentDir,
   onSort,
+  className,
 }: {
   label: string
   sortKeyFor: SortKey
   currentKey: SortKey
   currentDir: 'asc' | 'desc'
   onSort: (key: SortKey) => void
+  className?: string
 }) {
   const active = currentKey === sortKeyFor
   return (
-    <th className="sortable-th" onClick={() => onSort(sortKeyFor)}>
+    <th className={`sortable-th ${className ?? ''}`} onClick={() => onSort(sortKeyFor)}>
       {label}
       <span className={`sort-caret ${active ? 'sort-caret-active' : ''}`}>
         {active ? (currentDir === 'asc' ? '▲' : '▼') : '↕'}
@@ -212,19 +215,22 @@ function SortableHeader({
 
 function ChampionsPage() {
   useDocumentTitle('Campeões — RiftForge')
-  const [searchParams] = useSearchParams()
 
   const [championsMeta, setChampionsMeta] = useState<Record<string, ChampionMeta> | null>(null)
   const [ddragonPatch, setDdragonPatch] = useState<string>('')
   const [metaError, setMetaError] = useState<string | null>(null)
 
-  // Estado inicial lido da URL — volta da página de detalhe (ver
-  // `detailHref`/`backHref` em `ChampionDetailPage.tsx`) restaura o
-  // filtro em vez de resetar sempre pra GOLD/todas as rotas.
-  const [eloTier, setEloTier] = useState(() => searchParams.get('eloTier') || 'GOLD')
-  const [lane, setLane] = useState(() => searchParams.get('lane') || '')
-  const [patch, setPatch] = useState(() => searchParams.get('patch') || '') // '' = mais recente
-  const [country, setCountry] = useState('br1')
+  // Item 18 (revisão técnica, Sprint 4): filtro fica na URL, não em
+  // `useState` solto — link compartilhável, sobrevive a recarregar a
+  // página, e o botão voltar do navegador desfaz uma troca de filtro.
+  // Mesmo mecanismo que já trazia o estado de volta da página de detalhe
+  // (`detailHref`/`backHref` em `ChampionDetailPage.tsx`), agora fonte
+  // única em vez de só leitura inicial.
+  const [eloTier, setEloTier] = useFilterParam('eloTier', 'GOLD')
+  const [lane, setLane] = useFilterParam('lane', '')
+  const [patch, setPatch] = useFilterParam('patch', '') // '' = mais recente
+  const [country, setCountry] = useFilterParam('region', 'br1')
+  const [search, setSearch] = useFilterParam('search', '')
 
   const [availablePatches, setAvailablePatches] = useState<string[]>([])
 
@@ -232,7 +238,6 @@ function ChampionsPage() {
   const [scoresError, setScoresError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
-  const [search, setSearch] = useState('')
   const [classFilter, setClassFilter] = useState('')
   const [sortKey, setSortKey] = useState<SortKey>('score')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
@@ -275,9 +280,10 @@ function ChampionsPage() {
     fetchAvailablePatches(eloTier, country)
       .then((patches) => {
         setAvailablePatches(patches)
-        setPatch((current) => (current && patches.includes(current) ? current : ''))
+        if (patch && !patches.includes(patch)) setPatch('')
       })
       .catch(() => setAvailablePatches([]))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eloTier, country])
 
   // Item novo: "Variação" — mesmo diff que já alimenta Patch Notes,
@@ -384,6 +390,7 @@ function ChampionsPage() {
             className={`role-filter-btn ${lane === l.value ? 'role-filter-btn-active' : ''}`}
             onClick={() => setLane(l.value)}
             title={l.label}
+            aria-pressed={lane === l.value}
           >
             <img src={LANE_ICONS[l.value]} alt={l.label} width={18} height={18} />
           </button>
@@ -397,6 +404,7 @@ function ChampionsPage() {
             type="button"
             className={`role-filter-btn ${classFilter === c.value ? 'role-filter-btn-active' : ''}`}
             onClick={() => setClassFilter(c.value)}
+            aria-pressed={classFilter === c.value}
           >
             {c.label}
           </button>
@@ -429,12 +437,12 @@ function ChampionsPage() {
               <th>#</th>
               <th>Campeão</th>
               <SortableHeader label="Tier" sortKeyFor="score" currentKey={sortKey} currentDir={sortDir} onSort={handleSort} />
-              <th title="Diferença de score em relação ao patch anterior">Variação</th>
+              <th title="Diferença de score em relação ao patch anterior" className="col-hide-tablet">Variação</th>
               <th title="Contribuição de cada camada no score (Performance/Kit/Build/Meta)">Score</th>
-              {!lane && <th>Função</th>}
+              {!lane && <th className="col-hide-tablet">Função</th>}
               <SortableHeader label="Taxa de Vitória" sortKeyFor="win_rate" currentKey={sortKey} currentDir={sortDir} onSort={handleSort} />
-              <SortableHeader label="Taxa de escolha" sortKeyFor="pick_rate" currentKey={sortKey} currentDir={sortDir} onSort={handleSort} />
-              <SortableHeader label="Taxa de banimento" sortKeyFor="ban_rate" currentKey={sortKey} currentDir={sortDir} onSort={handleSort} />
+              <SortableHeader label="Taxa de escolha" sortKeyFor="pick_rate" currentKey={sortKey} currentDir={sortDir} onSort={handleSort} className="col-hide-tablet" />
+              <SortableHeader label="Taxa de banimento" sortKeyFor="ban_rate" currentKey={sortKey} currentDir={sortDir} onSort={handleSort} className="col-hide-tablet" />
               <th></th>
             </tr>
           </thead>
@@ -472,6 +480,7 @@ function ChampionsPage() {
                           alt=""
                           width={32}
                           height={32}
+                          loading="lazy"
                         />
                       )}
                       <span>{meta?.name ?? row.champion_id}</span>
@@ -482,12 +491,12 @@ function ChampionsPage() {
                     <span className={`tier-badge tier-${row.score_tier}`}>{row.score_tier}</span>
                     {row.tier_provisorio && <span className="provisional-mark" title="Amostra pequena — tier provisório, teto em A">*</span>}
                   </td>
-                  <td><VariationBadge delta={delta} /></td>
+                  <td className="col-hide-tablet"><VariationBadge delta={delta} /></td>
                   <td><LayerContributionBar row={row} /></td>
-                  {!lane && <td><LaneCell lane={row.lane} /></td>}
+                  {!lane && <td className="col-hide-tablet"><LaneCell lane={row.lane} /></td>}
                   <td>{formatPct(row.win_rate)}</td>
-                  <td>{formatPct(row.pick_rate)}</td>
-                  <td>{formatPct(row.ban_rate)}</td>
+                  <td className="col-hide-tablet">{formatPct(row.pick_rate)}</td>
+                  <td className="col-hide-tablet">{formatPct(row.ban_rate)}</td>
                   <td>
                     <div className="actions-cell">
                       <button

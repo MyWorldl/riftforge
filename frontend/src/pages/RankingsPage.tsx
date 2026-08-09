@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { fetchChampions, fetchRankings, profileIconUrl, type RankingRow } from '../api/client'
 import FlagSelect from '../components/FlagSelect'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
+import { useFilterParam } from '../hooks/useFilterParam'
 import { RANKINGS_REGIONS } from '../constants/regions'
 
 const TIERS = [
@@ -71,9 +72,10 @@ function WinRateRing({ winRate }: { winRate: number }) {
 
 function RankingsPage() {
   useDocumentTitle('Classificações — RiftForge')
-  const [tier, setTier] = useState('')
-  const [region, setRegion] = useState(RANKINGS_REGIONS[0].value)
-  const [search, setSearch] = useState('')
+  // Item 18 (revisão técnica, Sprint 4): mesmo tratamento de ChampionsPage.tsx.
+  const [tier, setTier] = useFilterParam('tier', '')
+  const [region, setRegion] = useFilterParam('region', RANKINGS_REGIONS[0].value)
+  const [search, setSearch] = useFilterParam('search', '')
   const [rows, setRows] = useState<RankingRow[] | null>(null)
   const [ddragonPatch, setDdragonPatch] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -175,6 +177,7 @@ function RankingsPage() {
                     alt=""
                     width={place === 1 ? 48 : 40}
                     height={place === 1 ? 48 : 40}
+                    loading="lazy"
                   />
                 )}
                 <span className="podium-name">
@@ -215,6 +218,7 @@ function RankingsPage() {
                             alt=""
                             width={28}
                             height={28}
+                            loading="lazy"
                           />
                         )}
                         <span>{row.game_name && row.tag_line ? `${row.game_name}#${row.tag_line}` : '—'}</span>

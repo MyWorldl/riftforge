@@ -4,6 +4,7 @@ import ChampionDetailPage from './pages/ChampionDetailPage'
 import ChampionsPage from './pages/ChampionsPage'
 import DesktopPage from './pages/DesktopPage'
 import HomePage from './pages/HomePage'
+import MatchupsPage from './pages/MatchupsPage'
 import PatchNotesPage from './pages/PatchNotesPage'
 import PlayerAnalysisPage from './pages/PlayerAnalysisPage'
 import RankingsPage from './pages/RankingsPage'
@@ -19,6 +20,7 @@ function App() {
         <Route path="/campeoes/:championId" element={<ChampionDetailPage />} />
         <Route path="/recomendacao" element={<RecommendPage />} />
         <Route path="/classificacoes" element={<RankingsPage />} />
+        <Route path="/matchups/:championId?" element={<MatchupsPage />} />
         <Route path="/jogador" element={<PlayerAnalysisPage />} />
         <Route path="/patch-notes" element={<PatchNotesPage />} />
         <Route path="/desktop" element={<DesktopPage />} />

@@ -3,6 +3,15 @@
   --text-h: #08060d;
   --bg: #fff;
   --border: #e5e4e7;
+  /* Sprint 4 item 20 (revisão técnica §7.1, pesquisa de design §5): --border
+     (1,27:1 contra --bg) é decorativo — serve pra separador visual leve
+     (linha entre linhas de tabela, moldura sutil), nunca pra indicar que
+     algo é interativo. --border-control é pra isso: contorno de
+     <input>/<select>/botão/cartão clicável, ≥3:1 (WCAG 1.4.11, contraste
+     de componente de UI) nos dois temas — sem essa distinção, a borda de
+     um campo de formulário tinha o mesmo contraste (quase invisível) que
+     uma borda puramente decorativa. */
+  --border-control: #949199;
   --code-bg: #f4f3ec;
   --accent: #ea580c;
   --accent-bg: rgba(234, 88, 12, 0.1);
@@ -98,12 +107,23 @@
   --text-sm: 13px;
   --text-base: 14px;
   --text-lg: 16px;
+  /* Item novo (Sprint 4 item 19): faltava um degrau entre --text-lg (corpo,
+     16px) e os tamanhos de heading fixos (h2 24px) — usado em blocos de
+     destaque que não são heading nem parágrafo comum. */
+  --text-xl: 20px;
 
   --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
   --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
   --mono: ui-monospace, Consolas, monospace;
 
-  font: 18px/145% var(--sans);
+  /* Sprint 4 item 19 (revisão técnica, pesquisa de design §5): raiz
+     18px→16px — 18px é grande pra corpo de texto (padrão de mercado gira
+     em 14-16px; a pesquisa cita 16px como base seguindo o próprio token
+     --text-lg já existente). Antes só caía pra 16px abaixo de 1024px (a
+     média query que ficava aqui); agora 16px é o padrão em qualquer
+     largura, então essa média query fica redundante e sai — nenhum
+     tamanho de fonte muda mais ao cruzar 1024px. */
+  font: 16px/145% var(--sans);
   letter-spacing: 0.18px;
   color-scheme: light dark;
   color: var(--text);
@@ -112,10 +132,6 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-
-  @media (max-width: 1024px) {
-    font-size: 16px;
-  }
 }
 
 @media (prefers-color-scheme: dark) {
@@ -124,6 +140,7 @@
     --text-h: #f3f4f6;
     --bg: #16171d;
     --border: #2e303a;
+    --border-control: #63667a;
     --code-bg: #1f2028;
     --accent: #fb923c;
     --accent-bg: rgba(251, 146, 60, 0.15);
@@ -153,6 +170,7 @@
   --text-h: #f3f4f6;
   --bg: #16171d;
   --border: #2e303a;
+  --border-control: #63667a;
   --code-bg: #1f2028;
   --accent: #fb923c;
   --accent-bg: rgba(251, 146, 60, 0.15);
@@ -172,6 +190,7 @@
   --text-h: #08060d;
   --bg: #fff;
   --border: #e5e4e7;
+  --border-control: #949199;
   --code-bg: #f4f3ec;
   --accent: #ea580c;
   --accent-bg: rgba(234, 88, 12, 0.1);
@@ -201,6 +220,19 @@
 
 body {
   margin: 0;
+}
+
+/* Sprint 4 item 20/21 (revisão técnica §7.6/§7.4): nenhum indicador de
+   foco de teclado era definido em lugar nenhum antes disso — quem navega
+   sem mouse dependia só do outline default do navegador (inconsistente
+   entre Chrome/Firefox/Safari, e alguns elementos custom como
+   `.role-filter-btn`/`.icon-toggle` nem tinham contorno nenhum pra
+   receber outline). `:focus-visible` (não `:focus`) de propósito: só
+   aparece em navegação por teclado, não ao clicar com mouse — não é
+   ruído visual em cliques normais. */
+:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
 }
 
 h1,
