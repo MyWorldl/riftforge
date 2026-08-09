@@ -7,6 +7,7 @@ import HomePage from './pages/HomePage'
 import PatchNotesPage from './pages/PatchNotesPage'
 import PlayerAnalysisPage from './pages/PlayerAnalysisPage'
 import RankingsPage from './pages/RankingsPage'
+import RecommendPage from './pages/RecommendPage'
 import './App.css'
 
 function App() {
@@ -16,6 +17,7 @@ function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/campeoes" element={<ChampionsPage />} />
         <Route path="/campeoes/:championId" element={<ChampionDetailPage />} />
+        <Route path="/recomendacao" element={<RecommendPage />} />
         <Route path="/classificacoes" element={<RankingsPage />} />
         <Route path="/jogador" element={<PlayerAnalysisPage />} />
         <Route path="/patch-notes" element={<PatchNotesPage />} />
