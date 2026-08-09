@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db
+from app.api.query_types import ApexTier, Queue
 from app.schemas.rankings import RankingRow
 from app.services import ranking_service
 
@@ -10,8 +11,8 @@ router = APIRouter(tags=["rankings"])
 
 @router.get("/rankings", response_model=list[RankingRow])
 def get_rankings(
-    queue: str = "RANKED_SOLO_5x5",
-    tier: str | None = None,
+    queue: Queue = "RANKED_SOLO_5x5",
+    tier: ApexTier | None = None,
     region: str | None = None,
     db: Session = Depends(get_db),
 ) -> list[dict]:

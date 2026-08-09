@@ -5,6 +5,7 @@ requires updates in this one file.
 """
 
 import asyncio
+from urllib.parse import quote
 
 import httpx
 
@@ -16,6 +17,11 @@ from app.core.config import get_settings
 # lote inteiro via asyncio.gather. Timeout mais generoso que o default do
 # httpx (5s) e três tentativas com backoff curto — falha real (404, schema
 # mudou) ainda propaga depois da última tentativa, não é escondida.
+#
+# Revisão técnica §1.9 (Sprint 2 item 12): 5xx do CDN do Data Dragon (visto
+# em produção, transitório) agora também entra no retry — só
+# `status_code >= 500`, um 404 real (campeão que não existe) continua
+# propagando na primeira tentativa, não fica tentando de novo à toa.
 _TIMEOUT = httpx.Timeout(15.0, connect=10.0)
 _RETRIES = 3
 _RETRY_BACKOFF_S = 1.5
@@ -35,8 +41,12 @@ class DataDragonAdapter:
                     return response.json()
                 except httpx.TransportError as exc:
                     last_error = exc
-                    if attempt < _RETRIES - 1:
-                        await asyncio.sleep(_RETRY_BACKOFF_S * (attempt + 1))
+                except httpx.HTTPStatusError as exc:
+                    if exc.response.status_code < 500:
+                        raise
+                    last_error = exc
+                if attempt < _RETRIES - 1:
+                    await asyncio.sleep(_RETRY_BACKOFF_S * (attempt + 1))
         raise last_error
 
     async def get_versions(self) -> list[str]:
@@ -59,8 +69,15 @@ class DataDragonAdapter:
     async def get_champion_detail(self, version: str, champion_id: str, locale: str = "en_US") -> dict:
         """Per-champion endpoint — the only one with full `spells[].range` and
         `info` (Riot's own 0-10 attack/defense/magic rating). The summary
-        endpoint (`get_champions`) omits some of this detail."""
-        data = await self._get_json(f"/cdn/{version}/data/{locale}/champion/{champion_id}.json")
+        endpoint (`get_champions`) omits some of this detail.
+
+        Revisão técnica §1.6 (Sprint 2 item 10): `champion_id` já é validado
+        contra o catálogo real antes de chegar aqui (`catalog_service`), mas
+        `quote()` no segmento de path é reforço barato — nunca deixa um "/"
+        ou similar escapar do segmento `champion_id` da URL mesmo se essa
+        validação mudar no futuro."""
+        safe_champion_id = quote(champion_id, safe="")
+        data = await self._get_json(f"/cdn/{version}/data/{locale}/champion/{safe_champion_id}.json")
         return data["data"][champion_id]
 
     async def get_champion_name_by_riot_id(self, version: str, locale: str = "en_US") -> dict[int, str]:

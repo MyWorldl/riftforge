@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db
+from app.api.query_types import EloTier
 from app.schemas.meta import MetaCoverageResponse
 from app.services import meta_service
 
@@ -10,7 +11,7 @@ router = APIRouter(tags=["meta"])
 
 @router.get("/meta/coverage", response_model=MetaCoverageResponse)
 def get_meta_coverage(
-    elo_tier: str = "GOLD",
+    elo_tier: EloTier = "GOLD",
     patch: str | None = None,
     region: str = "br1",
     db: Session = Depends(get_db),

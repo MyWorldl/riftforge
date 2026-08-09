@@ -1,0 +1,10 @@
+# Sprint 2 item 13 (revisão técnica): separado de requirements.txt pra CI de
+# teste/lint instalar dev+prod, e `collect-matches.yml` (que só roda jobs,
+# nunca pytest/ruff) instalar só prod — imagem menor, sem `pytest`/`ruff` num
+# job com segredos reais (RIOT_API_KEY, DATABASE_URL).
+-r requirements.txt
+
+pytest==8.3.3
+pytest-asyncio==0.24.0
+ruff==0.8.4
+pip-audit==2.7.3

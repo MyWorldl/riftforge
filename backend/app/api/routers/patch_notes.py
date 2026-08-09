@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db
+from app.api.query_types import EloTier
 from app.schemas.patch_notes import PatchChangesResponse, PatchNotesResponse
 from app.services import patch_notes_service
 
@@ -10,7 +11,7 @@ router = APIRouter(tags=["patch-notes"])
 
 @router.get("/patch-notes", response_model=PatchNotesResponse)
 def get_patch_notes(
-    elo_tier: str = "GOLD",
+    elo_tier: EloTier = "GOLD",
     top_n: int = 10,
     region: str = "br1",
     db: Session = Depends(get_db),

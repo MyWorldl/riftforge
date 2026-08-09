@@ -1,0 +1,18 @@
+# Sprint 2 item 13 (revisão técnica §2.3): a cadeia de CVEs que motivou o
+# Sprint 1 (FastAPI/Starlette desatualizados) só foi achada por revisão
+# manual — Dependabot fecha isso indo pra frente, abrindo PR sozinho quando
+# uma dependência ganha versão nova (patch de segurança ou não).
+version: 2
+updates:
+  - package-ecosystem: pip
+    directory: /backend
+    schedule:
+      interval: weekly
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: weekly
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

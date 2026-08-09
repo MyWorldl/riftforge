@@ -40,5 +40,8 @@ jobs:
       - name: Lint (oxlint)
         run: npm run lint
 
+      - name: Testes (vitest)
+        run: npm run test
+
       - name: Type-check + build (tsc -b + vite build)
         run: npm run build
