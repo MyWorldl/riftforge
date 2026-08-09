@@ -264,6 +264,24 @@ export interface PlayerChampionSummary {
   comparativo_baseline: BaselineComparison | null
 }
 
+export interface PlayerRoadmapStep {
+  champion_id: string
+  lane: string
+  status: string
+  delta_pct_inicial: number
+  delta_pct_atual: number
+  partidas_base: number
+  partidas_atual: number
+  created_at: string
+  updated_at: string
+  completed_at: string | null
+}
+
+export interface PlayerRoadmapSummary {
+  ativos: PlayerRoadmapStep[]
+  concluidos: PlayerRoadmapStep[]
+}
+
 export interface PlayerLookupResult {
   game_name: string
   tag_line: string
@@ -271,6 +289,7 @@ export interface PlayerLookupResult {
   elo_tier_detectado: boolean
   partidas_analisadas: number
   campeoes: PlayerChampionSummary[]
+  roadmap: PlayerRoadmapSummary
 }
 
 export interface PlayerLookupFilters {
@@ -542,6 +561,20 @@ export async function fetchPlayerLookup(filters: PlayerLookupFilters): Promise<P
   if (!response.ok) {
     const body = await response.json().catch(() => null)
     throw new HttpError(response.status, body?.detail ?? `Falha ao buscar jogador: ${response.status}`)
+  }
+  return response.json()
+}
+
+export async function deletePlayerRoadmap(filters: PlayerLookupFilters): Promise<{ deleted: number }> {
+  const params = new URLSearchParams({
+    region: filters.region,
+    game_name: filters.gameName,
+    tag_line: filters.tagLine,
+  })
+  const response = await fetch(`${API_URL}/player/roadmap?${params}`, { method: 'DELETE' })
+  if (!response.ok) {
+    const body = await response.json().catch(() => null)
+    throw new HttpError(response.status, body?.detail ?? `Falha ao apagar roadmap: ${response.status}`)
   }
   return response.json()
 }
