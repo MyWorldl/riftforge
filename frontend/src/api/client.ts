@@ -545,3 +545,25 @@ export async function fetchPlayerLookup(filters: PlayerLookupFilters): Promise<P
   }
   return response.json()
 }
+
+export interface KitProfileRow {
+  champion_id: string
+  dano_score: number | null
+  alcance_score: number | null
+  resiliencia_score: number | null
+}
+
+export interface KitProfileResult {
+  patch: string | null
+  perfis: KitProfileRow[]
+}
+
+export async function fetchKitProfile(patch?: string, signal?: AbortSignal): Promise<KitProfileResult> {
+  const params = new URLSearchParams()
+  if (patch) params.set('patch', patch)
+  const response = await fetch(`${API_URL}/scores/kit-profile?${params}`, { signal })
+  if (!response.ok) {
+    throw new Error(`Falha ao buscar perfil de kit: ${response.status}`)
+  }
+  return response.json()
+}
