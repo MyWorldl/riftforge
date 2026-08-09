@@ -22,11 +22,15 @@ def _detect_elo_tier(puuid: str, platform_region: str | None) -> tuple[str, bool
     default documentado em vez de propagar a falha — "Análise do Jogador"
     não deve quebrar só porque a detecção de elo não deu certo."""
     try:
-        entries = riot_api.get_league_entries_by_puuid(puuid, platform_region=platform_region)
+        entries = riot_api.get_league_entries_by_puuid(
+            puuid, platform_region=platform_region
+        )
     except ApiError:
         return _DEFAULT_ELO_TIER, False
 
-    solo_entry = next((e for e in entries if e.get("queueType") == _RANKED_SOLO_QUEUE), None)
+    solo_entry = next(
+        (e for e in entries if e.get("queueType") == _RANKED_SOLO_QUEUE), None
+    )
     if solo_entry is None:
         return _DEFAULT_ELO_TIER, False
     return solo_entry["tier"], True
@@ -35,7 +39,7 @@ def _detect_elo_tier(puuid: str, platform_region: str | None) -> tuple[str, bool
 async def lookup_player(
     db: Session, game_name: str, tag_line: str, region: str | None, elo_tier: str | None
 ) -> dict:
-    """"Análise do Jogador" — busca sob demanda de um jogador por Riot ID
+    """ "Análise do Jogador" — busca sob demanda de um jogador por Riot ID
     (`Nome#Tag`). Diferente do resto do backend, chama a Riot API por
     requisição (Account-V1 → Match-V5) — o gate `ensure_riot_proxy_enabled()`
     já foi checado pelo router antes de chamar isto.
@@ -51,9 +55,17 @@ async def lookup_player(
     `(champion_id, lane)` numa query só (`list_latest_by_champion_lane_keys`,
     era uma query por campeão dentro do loop) e usa a versão do Data Dragon
     cacheada em vez de `asyncio.run()` duplicado sem cache a cada request."""
-    continent = PLATFORM_TO_CONTINENT.get(region.lower()) if region else None
+    # Item novo (filtro de região, piloto br1+euw1): mesma região escolhida
+    # pro lookup real na Riot também escopa a comparação contra
+    # `ChampionScore`/`Baseline` abaixo — comparar as partidas de um
+    # jogador de `euw1` contra uma baseline de `br1` seria uma comparação
+    # sem sentido, mesmo que os dois já existam algum dia.
+    score_region = (region or "br1").lower()
+    continent = PLATFORM_TO_CONTINENT.get(score_region) if region else None
 
-    account = riot_api.get_account_by_riot_id(game_name, tag_line, continent_region=continent)
+    account = riot_api.get_account_by_riot_id(
+        game_name, tag_line, continent_region=continent
+    )
     puuid = account["puuid"]
 
     elo_tier_detectado = False
@@ -61,9 +73,14 @@ async def lookup_player(
         elo_tier, elo_tier_detectado = _detect_elo_tier(puuid, platform_region=region)
 
     match_ids = riot_api.get_match_ids_by_puuid(
-        puuid, count=get_settings().player_lookup_recent_matches, continent_region=continent
+        puuid,
+        count=get_settings().player_lookup_recent_matches,
+        continent_region=continent,
     )
-    matches = [riot_api.get_match(match_id, continent_region=continent) for match_id in match_ids]
+    matches = [
+        riot_api.get_match(match_id, continent_region=continent)
+        for match_id in match_ids
+    ]
 
     version = await cached("ddragon:version", data_dragon.get_latest_version)
     name_by_riot_id = await cached(
@@ -73,7 +90,9 @@ async def lookup_player(
 
     tally: dict[tuple[str, str], dict] = {}
     for match in matches:
-        participant = next((p for p in match["info"]["participants"] if p["puuid"] == puuid), None)
+        participant = next(
+            (p for p in match["info"]["participants"] if p["puuid"] == puuid), None
+        )
         if participant is None:
             continue
         champion_id = resolve_champion_id(
@@ -81,7 +100,8 @@ async def lookup_player(
         )
         lane = participant.get("teamPosition") or "UNKNOWN"
         entry = tally.setdefault(
-            (champion_id, lane), {"partidas": 0, "vitorias": 0, "kills": 0, "deaths": 0, "assists": 0}
+            (champion_id, lane),
+            {"partidas": 0, "vitorias": 0, "kills": 0, "deaths": 0, "assists": 0},
         )
         entry["partidas"] += 1
         entry["vitorias"] += 1 if participant.get("win") else 0
@@ -89,11 +109,15 @@ async def lookup_player(
         entry["deaths"] += participant.get("deaths", 0)
         entry["assists"] += participant.get("assists", 0)
 
-    score_by_key = ChampionScoreRepository(db).list_latest_by_champion_lane_keys(set(tally.keys()), elo_tier)
+    score_by_key = ChampionScoreRepository(db).list_latest_by_champion_lane_keys(
+        set(tally.keys()), elo_tier, score_region
+    )
     baseline_repo = BaselineRepository(db)
 
     campeoes = []
-    for (champion_id, lane), stats in sorted(tally.items(), key=lambda kv: -kv[1]["partidas"]):
+    for (champion_id, lane), stats in sorted(
+        tally.items(), key=lambda kv: -kv[1]["partidas"]
+    ):
         score_row = score_by_key.get((champion_id, lane))
         win_rate = stats["vitorias"] / stats["partidas"]
 
@@ -106,12 +130,14 @@ async def lookup_player(
         # comparar, e quando a baseline daquele grupo tem desvio > 0.
         comparativo_baseline = None
         if score_row is not None:
-            baseline = baseline_repo.get(score_row.patch, elo_tier, lane)
+            baseline = baseline_repo.get(score_row.patch, elo_tier, lane, score_region)
             if baseline is not None and baseline.media_wr > 0:
                 comparativo_baseline = {
                     "win_rate_jogador": round(win_rate, 4),
                     "win_rate_medio_elo": round(baseline.media_wr, 4),
-                    "delta_pct": round((win_rate - baseline.media_wr) / baseline.media_wr * 100, 1),
+                    "delta_pct": round(
+                        (win_rate - baseline.media_wr) / baseline.media_wr * 100, 1
+                    ),
                 }
 
         campeoes.append(
@@ -120,7 +146,9 @@ async def lookup_player(
                 "lane": lane,
                 "partidas": stats["partidas"],
                 "vitorias": stats["vitorias"],
-                "kda_medio": round((stats["kills"] + stats["assists"]) / max(stats["deaths"], 1), 2),
+                "kda_medio": round(
+                    (stats["kills"] + stats["assists"]) / max(stats["deaths"], 1), 2
+                ),
                 "score_atual": (
                     {
                         "patch": score_row.patch,

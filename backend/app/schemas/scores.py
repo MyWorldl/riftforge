@@ -16,6 +16,7 @@ class ChampionScoreRow(BaseModel):
     lane: str
     patch: str
     elo_tier: str
+    region: str
     n_matches: int
     win_rate: float | None
     pick_rate: float | None

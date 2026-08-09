@@ -9,10 +9,15 @@ router = APIRouter(tags=["patch-notes"])
 
 
 @router.get("/patch-notes", response_model=PatchNotesResponse)
-def get_patch_notes(elo_tier: str = "GOLD", top_n: int = 10, db: Session = Depends(get_db)) -> dict:
-    """"Patch Notes" — não reproduz as notas oficiais da Riot (direitos
+def get_patch_notes(
+    elo_tier: str = "GOLD",
+    top_n: int = 10,
+    region: str = "br1",
+    db: Session = Depends(get_db),
+) -> dict:
+    """ "Patch Notes" — não reproduz as notas oficiais da Riot (direitos
     autorais); deriva do próprio modelo de score. Nenhuma chamada Riot."""
-    return patch_notes_service.get_patch_notes(db, elo_tier, top_n)
+    return patch_notes_service.get_patch_notes(db, elo_tier, top_n, region)
 
 
 @router.get("/patch-notes/changes", response_model=PatchChangesResponse)
