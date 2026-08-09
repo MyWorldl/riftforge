@@ -434,3 +434,45 @@ no navegador contra dado real: filtro de tier mínimo nos dois extremos
 perfil de jogo reordenando de verdade (maximizar Dano sobe assassinos/
 lutadores conhecidos), link de cada resultado abrindo a página de
 detalhe com os parâmetros certos.
+
+## Roadmap de Progressão do Jogador (2026-08-09)
+
+Segunda metade do item Tier 2 do documento de revisão — a primeira
+(Recomendação de Campeão) foi a seção anterior. A sequência original é
+"comparar contra baseline → identificar o maior gap → sugerir foco →
+medir evolução ao longo dos patches"; as duas primeiras etapas já
+existiam em `/player/lookup`. Este plano entregou o resto, em 6 lotes
+(Y-AD), detalhe completo em
+`Core/Estrutura_roadmap/17_ESTADO_IMPLEMENTADO.md` §rodada 28:
+
+- **Decisão de produto explícita:** um roadmap com progresso salvo
+  entre visitas, não um diagnóstico recomputado do zero a cada consulta
+  — isso é a primeira tabela do projeto guardando dado individualizado
+  de jogador entre requisições, exceção deliberada à minimização de
+  dados já documentada em `06_SEGURANCA_PRIVACIDADE.md` (emenda nos
+  §2/§4/§7, Lote AC).
+- **Sem login:** identidade por Riot ID digitado (mesmo modelo do
+  `/player/lookup` já existente), sem RSO/OAuth — decisão consciente,
+  não descuido, documentada como tal.
+- **Sem prazo de expiração** — diferente de toda outra retenção do
+  projeto (`puuid_retention_days=42`). Em troca, `DELETE
+  /player/roadmap` (sem gate de Riot, funciona mesmo em produção hoje)
+  + botão "Apagar meu roadmap" com confirmação em duas etapas na tela
+  de Análise do Jogador são o mecanismo de retenção de fato — não um
+  extra opcional.
+- **Algoritmo:** passo nasce com gap ≤ -10% e amostra ≥ 5 partidas
+  (mesmo piso de `matchup_min_games`), completa ao cruzar 0% (nunca
+  reabre), teto de 3 passos ativos substitui o menos ruim quando um gap
+  pior aparece (vira "substituído", não é apagado — pode reativar).
+- Nenhuma chamada Riot extra: o ciclo de vida roda como efeito
+  colateral de `/player/lookup`, reaproveitando os dados que a busca já
+  traz.
+
++15 testes novos (12 do ciclo de vida na camada de serviço, sem mock de
+Riot; 3 de rota HTTP); `pytest`/`ruff check .`/`tsc -b`/`npm run build`/
+`npm run lint` limpos a cada lote. Verificado contra o Supabase de
+produção real em cada lote de backend — incluindo um script avulso
+exercitando criação → conclusão → exclusão direto no Postgres (não só o
+SQLite dos testes) e uma chamada HTTP real ao `/player/lookup`. Fluxo
+completo de exclusão testado também no navegador, ponta a ponta,
+confirmando remoção real no banco depois.
