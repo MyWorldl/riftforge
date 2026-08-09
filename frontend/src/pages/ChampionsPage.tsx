@@ -13,7 +13,7 @@ import {
 } from '../api/client'
 import FlagSelect from '../components/FlagSelect'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
-import { CHAMPIONS_COUNTRY_OPTIONS } from '../constants/regions'
+import { CHAMPIONS_COUNTRY_OPTIONS, CHAMPIONS_ENABLED_REGIONS } from '../constants/regions'
 import HistoryChart from '../HistoryChart'
 import {
   ComparatorPanel,
@@ -33,12 +33,12 @@ import roleIconMiddle from '../assets/roles/middle.png'
 import roleIconBottom from '../assets/roles/bottom.png'
 import roleIconUtility from '../assets/roles/utility.png'
 
-/** Só `br1` é funcional hoje (ver comentário em `CHAMPIONS_COUNTRY_OPTIONS`
- *  em `constants/regions.ts`) — os demais ficam visíveis no dropdown mas
+/** `br1` + `euw1` são funcionais hoje (ver `CHAMPIONS_ENABLED_REGIONS` em
+ *  `constants/regions.ts`) — os demais ficam visíveis no dropdown mas
  *  desabilitados. */
 const COUNTRY_SELECT_OPTIONS = CHAMPIONS_COUNTRY_OPTIONS.map((c) => ({
   ...c,
-  disabled: c.value !== 'br1',
+  disabled: !CHAMPIONS_ENABLED_REGIONS.includes(c.value),
 }))
 
 /** Item novo (revisão técnica §7.6): esses 10 PNGs (~95KB) só aparecem se
@@ -122,7 +122,12 @@ const LANE_ICONS: Partial<Record<string, string>> = {
  *  rota/patch), não o filtro da página, porque com "Todas as rotas"
  *  selecionado cada linha pode ter uma rota diferente. */
 function detailHref(row: ChampionScoreRow): string {
-  const params = new URLSearchParams({ eloTier: row.elo_tier, lane: row.lane, patch: row.patch })
+  const params = new URLSearchParams({
+    eloTier: row.elo_tier,
+    lane: row.lane,
+    patch: row.patch,
+    region: row.region,
+  })
   return `/campeoes/${row.champion_id}?${params}`
 }
 
@@ -265,23 +270,23 @@ function ChampionsPage() {
   // some com a seleção atual se ela não existir mais nesse elo, em vez
   // de deixar o filtro preso num valor que não bate com nada.
   useEffect(() => {
-    fetchAvailablePatches(eloTier)
+    fetchAvailablePatches(eloTier, country)
       .then((patches) => {
         setAvailablePatches(patches)
         setPatch((current) => (current && patches.includes(current) ? current : ''))
       })
       .catch(() => setAvailablePatches([]))
-  }, [eloTier])
+  }, [eloTier, country])
 
   // Item novo: "Variação" — mesmo diff que já alimenta Patch Notes,
   // buscado à parte porque `/patch-notes` compara sempre os 2 patches
   // mais recentes do elo, independente do filtro de patch específico
   // desta página (ver `buildDeltaIndex`/`VariationBadge`).
   useEffect(() => {
-    fetchPatchNotes(eloTier)
+    fetchPatchNotes(eloTier, undefined, country)
       .then(setPatchNotes)
       .catch(() => setPatchNotes(null))
-  }, [eloTier])
+  }, [eloTier, country])
 
   // Filtros aplicam na hora, sem botão "Aplicar" — um seletor não
   // precisa de confirmação extra, e remove qualquer risco de o botão
@@ -296,7 +301,10 @@ function ChampionsPage() {
     setExpandedPanel(null)
     setLoading(true)
     setScoresError(null)
-    fetchChampionScores({ eloTier, lane: lane || undefined, patch: patch || undefined }, controller.signal)
+    fetchChampionScores(
+      { eloTier, lane: lane || undefined, patch: patch || undefined, region: country },
+      controller.signal,
+    )
       .then((data) => setScores(data))
       .catch((err: Error) => {
         if (err.name !== 'AbortError') setScoresError(err.message)
@@ -305,7 +313,7 @@ function ChampionsPage() {
         if (!controller.signal.aborted) setLoading(false)
       })
     return () => controller.abort()
-  }, [eloTier, lane, patch])
+  }, [eloTier, lane, patch, country])
 
   const filteredScores = scores
     ? scores

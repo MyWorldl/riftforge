@@ -38,9 +38,13 @@ export const RANKINGS_REGIONS: RegionOption[] = REGIONS.filter((r) =>
   ['br1', 'na1', 'euw1', 'kr'].includes(r.value),
 )
 
-/** Países mostrados no filtro de Campeões (rodada 22) — só `br1` é
- * funcional hoje, porque TODO o pipeline de score (não só um snapshot
- * como o Rankings) coleta partidas de uma única região. Os demais ficam
- * visíveis mas desabilitados, prontos pra quando a coleta expandir —
- * decisão explícita do usuário pra não fingir suporte que não existe. */
+/** Países mostrados no filtro de Campeões (rodada 22) — precisa ficar em
+ * sincronia com `pipeline_platform_regions` do backend
+ * (`backend/app/core/config.py`), mesmo padrão de `RANKINGS_REGIONS`
+ * acima. `br1` sempre funcional; `euw1` piloto (rodada 25, filtro de
+ * região) — os demais ficam visíveis mas desabilitados, prontos pra
+ * quando a coleta expandir, decisão explícita do usuário pra não fingir
+ * suporte que não existe. */
+export const CHAMPIONS_ENABLED_REGIONS = ['br1', 'euw1']
+
 export const CHAMPIONS_COUNTRY_OPTIONS: RegionOption[] = REGIONS

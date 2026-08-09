@@ -104,11 +104,13 @@ function AbilityRow({ ddragonPatch, detail }: { ddragonPatch: string; detail: Ch
 function CompareTab({
   row,
   eloTier,
+  region,
   championsMeta,
   ddragonPatch,
 }: {
   row: ChampionScoreRow
   eloTier: string
+  region: string
   championsMeta: Record<string, ChampionMeta> | null
   ddragonPatch: string
 }) {
@@ -117,10 +119,10 @@ function CompareTab({
   const [selectedKeys, setSelectedKeys] = useState<string[]>([rowKey(row)])
 
   useEffect(() => {
-    fetchChampionScores({ eloTier })
+    fetchChampionScores({ eloTier, region })
       .then(setAllRows)
       .catch(() => setAllRows(null))
-  }, [eloTier])
+  }, [eloTier, region])
 
   const rowsByKey = new Map((allRows ?? []).map((r) => [rowKey(r), r]))
   const selectedRows = selectedKeys.map((key) => rowsByKey.get(key)).filter((r): r is ChampionScoreRow => !!r)
@@ -196,6 +198,7 @@ function ChampionDetailPage() {
   const eloTier = searchParams.get('eloTier') || 'GOLD'
   const lane = searchParams.get('lane') || ''
   const patch = searchParams.get('patch') || ''
+  const region = searchParams.get('region') || 'br1'
   const tabParam = searchParams.get('tab') as TabKey | null
 
   const [activeTab, setActiveTab] = useState<TabKey>(
@@ -242,18 +245,19 @@ function ChampionDetailPage() {
     // linha certa no cliente, em vez de criar uma rota nova só pra isso.
     setRow(undefined)
     setError(null)
-    fetchChampionScores({ eloTier, lane: lane || undefined, patch: patch || undefined })
+    fetchChampionScores({ eloTier, lane: lane || undefined, patch: patch || undefined, region })
       .then((rows) => {
         const found = rows.find((r) => r.champion_id === championId && (!lane || r.lane === lane))
         setRow(found ?? null)
       })
       .catch((err: Error) => setError(err.message))
-  }, [championId, eloTier, lane, patch])
+  }, [championId, eloTier, lane, patch, region])
 
   const backParams = new URLSearchParams()
   backParams.set('eloTier', eloTier)
   if (lane) backParams.set('lane', lane)
   if (patch) backParams.set('patch', patch)
+  backParams.set('region', region)
   const backHref = `/campeoes?${backParams}`
 
   const meta = championsMeta?.[championId]
@@ -336,6 +340,7 @@ function ChampionDetailPage() {
                 lane={row.lane}
                 eloTier={row.elo_tier}
                 patch={row.patch}
+                region={region}
                 championsMeta={championsMeta}
                 ddragonPatch={ddragonPatch}
               />
@@ -346,13 +351,21 @@ function ChampionDetailPage() {
                 lane={row.lane}
                 eloTier={row.elo_tier}
                 patch={row.patch}
+                region={region}
                 itemsMeta={itemsMeta}
                 ddragonPatch={ddragonPatch}
                 runeTrees={runeTrees}
               />
             )}
             {activeTab === 'compare' && (
-              <CompareTab key={championId} row={row} eloTier={eloTier} championsMeta={championsMeta} ddragonPatch={ddragonPatch} />
+              <CompareTab
+                key={championId}
+                row={row}
+                eloTier={eloTier}
+                region={region}
+                championsMeta={championsMeta}
+                ddragonPatch={ddragonPatch}
+              />
             )}
           </div>
         </>

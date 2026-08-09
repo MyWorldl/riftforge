@@ -102,11 +102,13 @@ export interface ChampionHistoryFilters {
   championId: string
   eloTier: string
   lane?: string
+  region?: string
 }
 
 export async function fetchChampionHistory(filters: ChampionHistoryFilters): Promise<ChampionHistoryPoint[]> {
   const params = new URLSearchParams({ champion_id: filters.championId, elo_tier: filters.eloTier })
   if (filters.lane) params.set('lane', filters.lane)
+  if (filters.region) params.set('region', filters.region)
 
   const response = await fetch(`${API_URL}/scores/history?${params}`)
   if (!response.ok) {
@@ -157,6 +159,7 @@ export interface ChampionScoreRow {
   lane: string
   patch: string
   elo_tier: string
+  region: string
   n_matches: number
   win_rate: number | null
   pick_rate: number | null
@@ -183,6 +186,7 @@ export interface ChampionExplanationFilters {
   lane: string
   eloTier: string
   patch?: string
+  region?: string
 }
 
 /** Item 4.3 (revisão técnica): `explicacao`/`perfil_poder` saíram de
@@ -195,6 +199,7 @@ export async function fetchChampionExplanation(
 ): Promise<ChampionExplanation> {
   const params = new URLSearchParams({ lane: filters.lane, elo_tier: filters.eloTier })
   if (filters.patch) params.set('patch', filters.patch)
+  if (filters.region) params.set('region', filters.region)
 
   const response = await fetch(`${API_URL}/scores/champions/${filters.championId}/explain?${params}`)
   if (!response.ok) {
@@ -203,8 +208,9 @@ export async function fetchChampionExplanation(
   return response.json()
 }
 
-export async function fetchAvailablePatches(eloTier: string): Promise<string[]> {
+export async function fetchAvailablePatches(eloTier: string, region?: string): Promise<string[]> {
   const params = new URLSearchParams({ elo_tier: eloTier })
+  if (region) params.set('region', region)
   const response = await fetch(`${API_URL}/scores/patches?${params}`)
   if (!response.ok) {
     throw new Error(`Falha ao buscar patches: ${response.status}`)
@@ -216,6 +222,7 @@ export interface ChampionScoreFilters {
   eloTier: string
   lane?: string
   patch?: string
+  region?: string
 }
 
 export async function fetchChampionScores(
@@ -225,6 +232,7 @@ export async function fetchChampionScores(
   const params = new URLSearchParams({ elo_tier: filters.eloTier })
   if (filters.lane) params.set('lane', filters.lane)
   if (filters.patch) params.set('patch', filters.patch)
+  if (filters.region) params.set('region', filters.region)
 
   const response = await fetch(`${API_URL}/scores/champions?${params}`, { signal })
   if (!response.ok) {
@@ -328,8 +336,13 @@ export interface PatchNotesResult {
   comparados: number
 }
 
-export async function fetchPatchNotes(eloTier: string, signal?: AbortSignal): Promise<PatchNotesResult> {
+export async function fetchPatchNotes(
+  eloTier: string,
+  signal?: AbortSignal,
+  region?: string,
+): Promise<PatchNotesResult> {
   const params = new URLSearchParams({ elo_tier: eloTier })
+  if (region) params.set('region', region)
   const response = await fetch(`${API_URL}/patch-notes?${params}`, { signal })
   if (!response.ok) {
     throw new Error(`Falha ao buscar patch notes: ${response.status}`)
@@ -351,8 +364,13 @@ export interface MetaCoverageResult {
 /** Item novo (revisão técnica §6, "contexto por rota"): saúde do metagame
  *  por rota — reaproveita `cobertura`/`nota_cobertura` já calculados por
  *  `compute_meta.py`, nunca expostos antes. */
-export async function fetchMetaCoverage(eloTier: string, signal?: AbortSignal): Promise<MetaCoverageResult> {
+export async function fetchMetaCoverage(
+  eloTier: string,
+  signal?: AbortSignal,
+  region?: string,
+): Promise<MetaCoverageResult> {
   const params = new URLSearchParams({ elo_tier: eloTier })
+  if (region) params.set('region', region)
   const response = await fetch(`${API_URL}/meta/coverage?${params}`, { signal })
   if (!response.ok) {
     throw new Error(`Falha ao buscar contexto de meta: ${response.status}`)
@@ -402,6 +420,7 @@ export interface MatchupFilters {
   lane: string
   eloTier: string
   patch?: string
+  region?: string
 }
 
 export async function fetchMatchups(filters: MatchupFilters): Promise<MatchupsResult> {
@@ -411,6 +430,7 @@ export async function fetchMatchups(filters: MatchupFilters): Promise<MatchupsRe
     elo_tier: filters.eloTier,
   })
   if (filters.patch) params.set('patch', filters.patch)
+  if (filters.region) params.set('region', filters.region)
 
   const response = await fetch(`${API_URL}/matchups?${params}`)
   if (!response.ok) {
@@ -489,6 +509,7 @@ export interface BuildRecommendationFilters {
   lane: string
   eloTier: string
   patch?: string
+  region?: string
 }
 
 export async function fetchBuildRecommendation(
@@ -500,6 +521,7 @@ export async function fetchBuildRecommendation(
     elo_tier: filters.eloTier,
   })
   if (filters.patch) params.set('patch', filters.patch)
+  if (filters.region) params.set('region', filters.region)
 
   const response = await fetch(`${API_URL}/builds/recommended?${params}`)
   if (!response.ok) {
