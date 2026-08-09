@@ -8,6 +8,11 @@ from app.core.champions import resolve_champion_id
 from app.core.config import get_settings
 from app.repositories.baseline_repository import BaselineRepository
 from app.repositories.champion_score_repository import ChampionScoreRepository
+from app.services.player_roadmap_service import (
+    normalize_region,
+    resolve_identity,
+    sync_roadmap_steps,
+)
 
 _DEFAULT_ELO_TIER = "GOLD"
 _RANKED_SOLO_QUEUE = "RANKED_SOLO_5x5"
@@ -54,13 +59,18 @@ async def lookup_player(
     Item 1.1/1.2 (revisão técnica): resolve o score de cada
     `(champion_id, lane)` numa query só (`list_latest_by_champion_lane_keys`,
     era uma query por campeão dentro do loop) e usa a versão do Data Dragon
-    cacheada em vez de `asyncio.run()` duplicado sem cache a cada request."""
+    cacheada em vez de `asyncio.run()` duplicado sem cache a cada request.
+
+    Rodada 28 ("Roadmap de Progressão do Jogador"): esta função ganhou um
+    efeito colateral de escrita — o fim dela sincroniza
+    `player_roadmap_steps` via `sync_roadmap_steps` (sem chamada Riot
+    extra, reaproveita `campeoes` já montado). Deixou de ser só leitura."""
     # Item novo (filtro de região, piloto br1+euw1): mesma região escolhida
     # pro lookup real na Riot também escopa a comparação contra
     # `ChampionScore`/`Baseline` abaixo — comparar as partidas de um
     # jogador de `euw1` contra uma baseline de `br1` seria uma comparação
     # sem sentido, mesmo que os dois já existam algum dia.
-    score_region = (region or "br1").lower()
+    score_region = normalize_region(region)
     continent = PLATFORM_TO_CONTINENT.get(score_region) if region else None
 
     account = riot_api.get_account_by_riot_id(
@@ -163,6 +173,11 @@ async def lookup_player(
             }
         )
 
+    identity = resolve_identity(
+        account.get("gameName", game_name), account.get("tagLine", tag_line), score_region
+    )
+    roadmap = sync_roadmap_steps(db, identity, campeoes)
+
     return {
         "game_name": account.get("gameName", game_name),
         "tag_line": account.get("tagLine", tag_line),
@@ -170,4 +185,5 @@ async def lookup_player(
         "elo_tier_detectado": elo_tier_detectado,
         "partidas_analisadas": len(matches),
         "campeoes": campeoes,
+        "roadmap": roadmap,
     }
