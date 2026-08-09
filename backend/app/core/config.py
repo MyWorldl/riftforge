@@ -117,24 +117,26 @@ class Settings(BaseSettings):
     # um patch conhecido (02_MODELO_SCORE_TIERS.md §4.1) — controla o quão
     # "esticada" fica a curva logística que converte z-score em Nota_WR 0-100.
     performance_fator_logistico: float = 1.1
-    # Recalibrado (rodada 18) a partir de margem de erro estatística real,
-    # não de um número redondo: n = z² × p(1-p) / e² (tamanho de amostra
-    # padrão pra estimar uma proporção). Com z=1,96 (95% de confiança) e
-    # p=0,5 (pior caso de variância), e=1% de margem de erro no win rate
-    # exige n≈9.604 — arredondado pra 10.000, o dobro do valor anterior
-    # (5000, que correspondia a ±1,4% de margem — já rigoroso, mas o
-    # usuário pediu "praticamente certeza": ±1% é o padrão de pesquisa
-    # eleitoral rigorosa).
+    # Recalibrado de novo (Sprint 5 item 25, rodada 29) a partir do volume
+    # real de produção, não mais de um alvo de margem de erro abstrato: com
+    # 7.373 partidas br1 + 2.418 euw1 acumuladas, o grupo (patch, elo, rota,
+    # campeão) mais jogado de todos chega a **540** partidas (br1) — bem
+    # abaixo do 10.000 fixado na rodada 18. Nesse valor, 0 das 7.167 linhas
+    # de `champion_scores` em produção já saíram de "provisório" (confiança
+    # média 0,13-0,18%), tornando o indicador de confiança inútil na prática
+    # (sempre baixo, nunca discrimina "amostra boa" de "amostra ruim").
     #
-    # Consequência conhecida e aceita: com o volume de coleta atual (a
-    # melhor combinação campeão/rota chegava a ~507 partidas na rodada 12,
-    # ~5% de confiança nessa escala), nenhum campeão deve sair de tier
-    # provisório tão cedo. É a troca deliberada — o app fica mais honesto
-    # sobre incerteza em vez de mais otimista sobre tier. Ainda EM ABERTO
-    # por elo: elos de baixa população (Grão-Mestre, Desafiante) podem
-    # nunca atingir esse volume mesmo com o campeão genuinamente forte
+    # 1.000 escolhido como ~2x o teto real observado — dá margem de
+    # crescimento (não fica obsoleto no primeiro patch bom) sem ser
+    # inatingível como o valor anterior. Mesma fórmula n = z² × p(1-p) / e²
+    # da rodada 18: com z=1,96 e p=0,5, n=1.000 corresponde a ±3,1% de
+    # margem de erro (vs. ±1% do valor anterior) — trade-off deliberado
+    # entre "atingível com o volume de coleta real" e "preciso o bastante
+    # pra o indicador de confiança significar algo". Ainda EM ABERTO por
+    # elo: elos de baixa população (Grão-Mestre, Desafiante) podem nunca
+    # atingir esse volume mesmo com o campeão genuinamente forte
     # (02_MODELO_SCORE_TIERS.md §11).
-    n_referencia_confianca: int = 10000
+    n_referencia_confianca: int = 1000
     # Trava de segurança (02_MODELO_SCORE_TIERS.md §11): abaixo deste
     # percentual de confiança, o tier fica provisório e limitado ao teto A.
     confianca_minima_pct: float = 30.0
