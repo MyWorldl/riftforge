@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db
+from app.api.query_types import EloTier, Lane
 from app.schemas.builds import BuildRecommendationResponse
 from app.services import build_service
 
@@ -11,8 +12,8 @@ router = APIRouter(tags=["builds"])
 @router.get("/builds/recommended", response_model=BuildRecommendationResponse | None)
 def get_recommended_build(
     champion_id: str,
-    lane: str,
-    elo_tier: str = "GOLD",
+    lane: Lane,
+    elo_tier: EloTier = "GOLD",
     patch: str | None = None,
     region: str = "br1",
     db: Session = Depends(get_db),

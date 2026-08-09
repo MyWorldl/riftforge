@@ -11,6 +11,67 @@ export class HttpError extends Error {
   }
 }
 
+const REQUEST_TIMEOUT_MS = 10_000
+
+/** Sprint 2 item 16 (revisão técnica §4.4): wrapper único por trás das 18
+ *  funções `fetch*`/`deletePlayerRoadmap` abaixo — sem dependência nova,
+ *  mesmo padrão já usado no projeto (zero libs de estado/fetch até aqui).
+ *  Resolve duas inconsistências que cresceram função a função:
+ *
+ *  1. Timeout ausente — uma resposta lenta do backend travava a página
+ *     sem feedback nenhum, sem limite. `AbortSignal.timeout` cobre isso
+ *     pra toda chamada, não só as que já passavam `signal` manual.
+ *  2. Cancelamento inconsistente — só 5 das 18 funções aceitavam um
+ *     `signal` externo antes desta mudança (as que já usavam
+ *     `AbortController` pra descartar resposta obsoleta ao trocar filtro
+ *     rápido). `AbortSignal.any` combina esse `signal` externo (quando
+ *     existe) com o timeout interno — funciona pros dois motivos de
+ *     cancelamento ao mesmo tempo, sem a página precisar saber disso.
+ *
+ *  `cacheKey`: opcional, só pros 3 catálogos do Data Dragon sem parâmetro
+ *  variável por chamada (`/champions`, `/items`, `/runes`) — resolve
+ *  `/champions` sendo rebaixado de novo a cada navegação
+ *  Campeões→Detalhe→Campeões. `Map` simples (sem TTL/LRU): mesmo catálogo
+ *  vale a sessão de página inteira, e são só 3 chaves possíveis — não
+ *  compensa a complexidade de expiração aqui (o backend já tem TTL de 1h
+ *  do lado dele, `app/core/cache.py`). Falha não fica cacheada (a promise
+ *  rejeitada é removida do cache), pra uma falha transitória não grudar. */
+const _getCache = new Map<string, Promise<unknown>>()
+
+interface RequestOptions {
+  signal?: AbortSignal
+  cacheKey?: string
+  method?: string
+}
+
+async function request<T>(path: string, errorLabel: string, options: RequestOptions = {}): Promise<T> {
+  const { signal, cacheKey, method = 'GET' } = options
+
+  if (cacheKey) {
+    const cached = _getCache.get(cacheKey)
+    if (cached) return cached as Promise<T>
+  }
+
+  const timeoutSignal = AbortSignal.timeout(REQUEST_TIMEOUT_MS)
+  const combinedSignal = signal ? AbortSignal.any([signal, timeoutSignal]) : timeoutSignal
+
+  const promise = (async (): Promise<T> => {
+    const response = await fetch(`${API_URL}${path}`, { method, signal: combinedSignal })
+    if (!response.ok) {
+      const body = await response.json().catch(() => null)
+      throw new HttpError(response.status, body?.detail ?? `${errorLabel}: ${response.status}`)
+    }
+    return response.json() as Promise<T>
+  })()
+
+  if (cacheKey) {
+    _getCache.set(cacheKey, promise)
+    promise.catch(() => _getCache.delete(cacheKey))
+  }
+
+  return promise
+}
+
 export interface ChampionMeta {
   id: string
   name: string
@@ -25,11 +86,7 @@ export interface ChampionsResponse {
 }
 
 export async function fetchChampions(): Promise<ChampionsResponse> {
-  const response = await fetch(`${API_URL}/champions`)
-  if (!response.ok) {
-    throw new Error(`Falha ao buscar campeões: ${response.status}`)
-  }
-  return response.json()
+  return request('/champions', 'Falha ao buscar campeões', { cacheKey: '/champions' })
 }
 
 export interface ChampionAbility {
@@ -51,11 +108,7 @@ export interface ChampionDetailResponse {
  *  (passiva + Q/W/E/R abaixo do nome) — `fetchChampions()` (resumo) não
  *  traz habilidades, só o endpoint por campeão. */
 export async function fetchChampionAbilities(championId: string): Promise<ChampionDetailResponse> {
-  const response = await fetch(`${API_URL}/champions/${championId}`)
-  if (!response.ok) {
-    throw new Error(`Falha ao buscar habilidades do campeão: ${response.status}`)
-  }
-  return response.json()
+  return request(`/champions/${encodeURIComponent(championId)}`, 'Falha ao buscar habilidades do campeão')
 }
 
 export interface ChampionStat {
@@ -81,11 +134,7 @@ export async function fetchChampionStats(filters: ChampionStatsFilters): Promise
   if (filters.lane) params.set('lane', filters.lane)
   if (filters.patch) params.set('patch', filters.patch)
 
-  const response = await fetch(`${API_URL}/stats/champions?${params}`)
-  if (!response.ok) {
-    throw new Error(`Falha ao buscar estatísticas: ${response.status}`)
-  }
-  return response.json()
+  return request(`/stats/champions?${params}`, 'Falha ao buscar estatísticas')
 }
 
 export interface ChampionHistoryPoint {
@@ -110,11 +159,7 @@ export async function fetchChampionHistory(filters: ChampionHistoryFilters): Pro
   if (filters.lane) params.set('lane', filters.lane)
   if (filters.region) params.set('region', filters.region)
 
-  const response = await fetch(`${API_URL}/scores/history?${params}`)
-  if (!response.ok) {
-    throw new Error(`Falha ao buscar histórico: ${response.status}`)
-  }
-  return response.json()
+  return request(`/scores/history?${params}`, 'Falha ao buscar histórico')
 }
 
 export function championImageUrl(ddragonPatch: string, imageFile: string): string {
@@ -201,21 +246,16 @@ export async function fetchChampionExplanation(
   if (filters.patch) params.set('patch', filters.patch)
   if (filters.region) params.set('region', filters.region)
 
-  const response = await fetch(`${API_URL}/scores/champions/${filters.championId}/explain?${params}`)
-  if (!response.ok) {
-    throw new Error(`Falha ao buscar explicação do score: ${response.status}`)
-  }
-  return response.json()
+  return request(
+    `/scores/champions/${encodeURIComponent(filters.championId)}/explain?${params}`,
+    'Falha ao buscar explicação do score',
+  )
 }
 
 export async function fetchAvailablePatches(eloTier: string, region?: string): Promise<string[]> {
   const params = new URLSearchParams({ elo_tier: eloTier })
   if (region) params.set('region', region)
-  const response = await fetch(`${API_URL}/scores/patches?${params}`)
-  if (!response.ok) {
-    throw new Error(`Falha ao buscar patches: ${response.status}`)
-  }
-  return response.json()
+  return request(`/scores/patches?${params}`, 'Falha ao buscar patches')
 }
 
 export interface ChampionScoreFilters {
@@ -234,11 +274,7 @@ export async function fetchChampionScores(
   if (filters.patch) params.set('patch', filters.patch)
   if (filters.region) params.set('region', filters.region)
 
-  const response = await fetch(`${API_URL}/scores/champions?${params}`, { signal })
-  if (!response.ok) {
-    throw new Error(`Falha ao buscar scores: ${response.status}`)
-  }
-  return response.json()
+  return request(`/scores/champions?${params}`, 'Falha ao buscar scores', { signal })
 }
 
 export interface PlayerScoreSummary {
@@ -328,11 +364,7 @@ export async function fetchRankings(filters: RankingFilters, signal?: AbortSigna
   if (filters.tier) params.set('tier', filters.tier)
   if (filters.region) params.set('region', filters.region)
 
-  const response = await fetch(`${API_URL}/rankings?${params}`, { signal })
-  if (!response.ok) {
-    throw new Error(`Falha ao buscar ranking: ${response.status}`)
-  }
-  return response.json()
+  return request(`/rankings?${params}`, 'Falha ao buscar ranking', { signal })
 }
 
 export function profileIconUrl(ddragonPatch: string, profileIconId: number): string {
@@ -365,11 +397,7 @@ export async function fetchPatchNotes(
 ): Promise<PatchNotesResult> {
   const params = new URLSearchParams({ elo_tier: eloTier })
   if (region) params.set('region', region)
-  const response = await fetch(`${API_URL}/patch-notes?${params}`, { signal })
-  if (!response.ok) {
-    throw new Error(`Falha ao buscar patch notes: ${response.status}`)
-  }
-  return response.json()
+  return request(`/patch-notes?${params}`, 'Falha ao buscar patch notes', { signal })
 }
 
 export interface LaneCoverage {
@@ -393,11 +421,7 @@ export async function fetchMetaCoverage(
 ): Promise<MetaCoverageResult> {
   const params = new URLSearchParams({ elo_tier: eloTier })
   if (region) params.set('region', region)
-  const response = await fetch(`${API_URL}/meta/coverage?${params}`, { signal })
-  if (!response.ok) {
-    throw new Error(`Falha ao buscar contexto de meta: ${response.status}`)
-  }
-  return response.json()
+  return request(`/meta/coverage?${params}`, 'Falha ao buscar contexto de meta', { signal })
 }
 
 export interface PatchChangeRow {
@@ -417,11 +441,7 @@ export interface PatchChangesResult {
 }
 
 export async function fetchPatchChanges(): Promise<PatchChangesResult> {
-  const response = await fetch(`${API_URL}/patch-notes/changes`)
-  if (!response.ok) {
-    throw new Error(`Falha ao buscar mudanças do patch: ${response.status}`)
-  }
-  return response.json()
+  return request('/patch-notes/changes', 'Falha ao buscar mudanças do patch')
 }
 
 export interface MatchupRow {
@@ -454,11 +474,7 @@ export async function fetchMatchups(filters: MatchupFilters): Promise<MatchupsRe
   if (filters.patch) params.set('patch', filters.patch)
   if (filters.region) params.set('region', filters.region)
 
-  const response = await fetch(`${API_URL}/matchups?${params}`)
-  if (!response.ok) {
-    throw new Error(`Falha ao buscar matchups: ${response.status}`)
-  }
-  return response.json()
+  return request(`/matchups?${params}`, 'Falha ao buscar matchups')
 }
 
 export interface ItemMeta {
@@ -472,11 +488,7 @@ export interface ItemsResponse {
 }
 
 export async function fetchItems(): Promise<ItemsResponse> {
-  const response = await fetch(`${API_URL}/items`)
-  if (!response.ok) {
-    throw new Error(`Falha ao buscar itens: ${response.status}`)
-  }
-  return response.json()
+  return request('/items', 'Falha ao buscar itens', { cacheKey: '/items' })
 }
 
 export interface RuneMeta {
@@ -498,11 +510,7 @@ export interface RunesResponse {
 }
 
 export async function fetchRunes(): Promise<RunesResponse> {
-  const response = await fetch(`${API_URL}/runes`)
-  if (!response.ok) {
-    throw new Error(`Falha ao buscar runas: ${response.status}`)
-  }
-  return response.json()
+  return request('/runes', 'Falha ao buscar runas', { cacheKey: '/runes' })
 }
 
 export function itemImageUrl(ddragonPatch: string, imageFile: string): string {
@@ -545,11 +553,7 @@ export async function fetchBuildRecommendation(
   if (filters.patch) params.set('patch', filters.patch)
   if (filters.region) params.set('region', filters.region)
 
-  const response = await fetch(`${API_URL}/builds/recommended?${params}`)
-  if (!response.ok) {
-    throw new Error(`Falha ao buscar build recomendado: ${response.status}`)
-  }
-  return response.json()
+  return request(`/builds/recommended?${params}`, 'Falha ao buscar build recomendado')
 }
 
 export async function fetchPlayerLookup(filters: PlayerLookupFilters): Promise<PlayerLookupResult> {
@@ -560,12 +564,7 @@ export async function fetchPlayerLookup(filters: PlayerLookupFilters): Promise<P
   })
   if (filters.eloTier) params.set('elo_tier', filters.eloTier)
 
-  const response = await fetch(`${API_URL}/player/lookup?${params}`)
-  if (!response.ok) {
-    const body = await response.json().catch(() => null)
-    throw new HttpError(response.status, body?.detail ?? `Falha ao buscar jogador: ${response.status}`)
-  }
-  return response.json()
+  return request(`/player/lookup?${params}`, 'Falha ao buscar jogador')
 }
 
 export async function deletePlayerRoadmap(
@@ -578,12 +577,7 @@ export async function deletePlayerRoadmap(
     tag_line: filters.tagLine,
   })
   if (roadmapToken) params.set('roadmap_token', roadmapToken)
-  const response = await fetch(`${API_URL}/player/roadmap?${params}`, { method: 'DELETE' })
-  if (!response.ok) {
-    const body = await response.json().catch(() => null)
-    throw new HttpError(response.status, body?.detail ?? `Falha ao apagar roadmap: ${response.status}`)
-  }
-  return response.json()
+  return request(`/player/roadmap?${params}`, 'Falha ao apagar roadmap', { method: 'DELETE' })
 }
 
 export interface KitProfileRow {
@@ -601,9 +595,5 @@ export interface KitProfileResult {
 export async function fetchKitProfile(patch?: string, signal?: AbortSignal): Promise<KitProfileResult> {
   const params = new URLSearchParams()
   if (patch) params.set('patch', patch)
-  const response = await fetch(`${API_URL}/scores/kit-profile?${params}`, { signal })
-  if (!response.ok) {
-    throw new Error(`Falha ao buscar perfil de kit: ${response.status}`)
-  }
-  return response.json()
+  return request(`/scores/kit-profile?${params}`, 'Falha ao buscar perfil de kit', { signal })
 }

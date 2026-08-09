@@ -162,12 +162,14 @@ function VariationBadge({ delta }: { delta: PatchDeltaRow | undefined }) {
   )
 }
 
-type SortKey = 'score' | 'win_rate' | 'pick_rate' | 'ban_rate'
+export type SortKey = 'score' | 'win_rate' | 'pick_rate' | 'ban_rate'
 
 /** Item 5.1 (revisão técnica): ordenação por coluna client-side — a lista
  *  inteira já vem carregada de uma vez (nunca paginada, ver Lote B da
- *  revisão), então não há motivo pra ida ao backend só pra reordenar. */
-function sortScores(rows: ChampionScoreRow[], sortKey: SortKey, sortDir: 'asc' | 'desc'): ChampionScoreRow[] {
+ *  revisão), então não há motivo pra ida ao backend só pra reordenar.
+ *  Exportada (Sprint 2 item 17) só pra ser testável por `sortScores.test.ts`
+ *  — continua sendo usada internamente do mesmo jeito. */
+export function sortScores(rows: ChampionScoreRow[], sortKey: SortKey, sortDir: 'asc' | 'desc'): ChampionScoreRow[] {
   const dir = sortDir === 'asc' ? 1 : -1
   const valueOf = (row: ChampionScoreRow): number => {
     switch (sortKey) {

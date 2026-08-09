@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 
 from app.services import catalog_service
 
@@ -14,7 +14,10 @@ async def list_champions() -> dict:
 async def get_champion_detail(champion_id: str) -> dict:
     """Item novo: cabeçalho estilo OP.GG da página de detalhe (passiva +
     Q/W/E/R do campeão) — `list_champions` (resumo) não traz habilidades."""
-    return await catalog_service.get_champion_detail(champion_id)
+    detail = await catalog_service.get_champion_detail(champion_id)
+    if detail is None:
+        raise HTTPException(status_code=404, detail="Campeão desconhecido.")
+    return detail
 
 
 @router.get("/items")

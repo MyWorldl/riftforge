@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db
+from app.api.query_types import EloTier, Lane
 from app.schemas.scores import ChampionHistoryPoint, ChampionScoreRow, ExplainResponse
 from app.services import score_service
 
@@ -10,8 +11,8 @@ router = APIRouter(prefix="/scores", tags=["scores"])
 
 @router.get("/champions", response_model=list[ChampionScoreRow])
 def get_champion_scores(
-    elo_tier: str = "GOLD",
-    lane: str | None = None,
+    elo_tier: EloTier = "GOLD",
+    lane: Lane | None = None,
     patch: str | None = None,
     region: str = "br1",
     db: Session = Depends(get_db),
@@ -28,8 +29,8 @@ def get_champion_scores(
 @router.get("/champions/{champion_id}/explain", response_model=ExplainResponse)
 def get_champion_explanation(
     champion_id: str,
-    lane: str,
-    elo_tier: str = "GOLD",
+    lane: Lane,
+    elo_tier: EloTier = "GOLD",
     patch: str | None = None,
     region: str = "br1",
     db: Session = Depends(get_db),
@@ -51,7 +52,7 @@ def get_champion_explanation(
 
 @router.get("/patches", response_model=list[str])
 def get_available_patches(
-    elo_tier: str = "GOLD", region: str = "br1", db: Session = Depends(get_db)
+    elo_tier: EloTier = "GOLD", region: str = "br1", db: Session = Depends(get_db)
 ) -> list[str]:
     """Patches com score calculado pro elo, do mais recente pro mais
     antigo — alimenta o filtro de patch da interface."""
@@ -61,8 +62,8 @@ def get_available_patches(
 @router.get("/history", response_model=list[ChampionHistoryPoint])
 def get_champion_history(
     champion_id: str,
-    elo_tier: str = "GOLD",
-    lane: str | None = None,
+    elo_tier: EloTier = "GOLD",
+    lane: Lane | None = None,
     region: str = "br1",
     db: Session = Depends(get_db),
 ) -> list[dict]:

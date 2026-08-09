@@ -1,16 +1,21 @@
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 
-// Servidos como asset estático do próprio site (frontend/public/downloads)
-// em vez de GitHub Release — o repositório é privado, então um link de
-// release não seria baixável por um visitante comum sem acesso ao repo.
-const DOWNLOAD_BASE = '/downloads'
+// Sprint 2 item 15 (revisão técnica §2.6): servido via GitHub Release em
+// vez de asset estático do site — o repositório é público desde rodada 29,
+// então o link de release funciona pra qualquer visitante sem precisar de
+// acesso ao repo. `/releases/latest/download/<nome-do-arquivo>` sempre
+// resolve pro asset da release mais recente com esse nome exato (redirect
+// do próprio GitHub, sem precisar de chamada à API) — trocar de versão no
+// futuro é só publicar uma release nova com os mesmos nomes de arquivo (ou
+// atualizar esses dois nomes junto com a versão). Tira 34 MB do bundle do
+// site e do histórico de deploy; o binário antigo commitado continua no
+// histórico do git (limpar exigiria `git filter-repo`, fora de escopo).
+const DOWNLOAD_BASE = 'https://github.com/MyWorldl/riftforge/releases/latest/download'
 
-// Revisão técnica §2.6: sem GitHub Releases (repo privado), não existe uma
-// verificação de integridade automática como a que a própria plataforma
-// ofereceria — o checksum publicado ao lado do link é a alternativa manual,
-// pra quem quiser conferir que o arquivo baixado é exatamente o que foi
-// gerado, sem depender de mudar a hospedagem pra isso.
-// Gerado com sha256sum sobre os artefatos de frontend/public/downloads.
+// A própria página de release do GitHub já mostra o digest de cada asset
+// (aba "Assets" → ícone de informação) — o checksum aqui continua existindo
+// pra quem quiser conferir sem sair desta página. Gerado com sha256sum
+// sobre os artefatos antes de subir pra release (ver Sprint 2 item 15).
 const CHECKSUMS_SHA256 = {
   exe: '4358d6cc59bb13325ecde859ea7703cb3d45270fe221b148462d33dc3ea13696',
   msi: 'ec654f938ccfd95c59fb91ad8406bcf353ddc89c6efb3f195db2bb7835b15dc7',

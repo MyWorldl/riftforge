@@ -54,12 +54,16 @@ log = get_logger(__name__)
 
 QUEUE_IDS = {"RANKED_SOLO_5x5": 420, "RANKED_FLEX_SR": 440}
 CORE_ITEM_SLOTS = ["item0", "item1", "item2", "item3", "item4", "item5"]
-# Item novo (rodada 23, revisão técnica §2.2): campos removidos de cada
-# participante antes de gravar `Match.raw_payload` — identificam a conta
-# Riot da pessoa (PUUID e Riot ID visível Nome#Tag), não usados por nenhum
-# estágio do pipeline a partir do payload bruto (tudo casa por
-# `riot_champion_id`/`match_id`, ver `backfill_participant_runes.py`).
-_SENSITIVE_PARTICIPANT_FIELDS = {"puuid", "riotIdGameName", "riotIdTagline"}
+# Revisão técnica §2.2/§4.3 (Sprint 2 item 14): `Match.raw_payload` guardava
+# o payload Match-V5 inteiro — bloqueava só PUUID/Riot ID (rodada 23), mas
+# ainda carregava dezenas de campos nunca lidos por nenhum estágio do
+# pipeline (timeline detalhada, itens comprados/vendidos, spells, runas
+# completas fora do primary/sub style etc). Lista branca em vez de lista
+# negra: só o que `backfill_participant_runes.py` (único consumidor real de
+# `raw_payload`, já rodou) precisa — `championId`+`perks` — mais o essencial
+# pra qualquer backfill futuro plausível (posição resolvida, resultado,
+# build final, bans). Corta ~90% do volume por partida.
+_PARTICIPANT_FIELDS_TO_KEEP = {"championId", "teamPosition", "win", "perks", *CORE_ITEM_SLOTS}
 
 
 def _extract_runes(participant: dict) -> tuple[int | None, int | None, int | None]:
@@ -172,20 +176,25 @@ def _process_summoner(
                     match_id=match_id,
                 )
 
-            # Sanitiza uma cópia pra gravar em `raw_payload` — o payload
-            # bruto original (`info["participants"]`, usado no loop abaixo)
+            # Payload trimado pra gravar em `raw_payload` — o payload bruto
+            # original (`info["participants"]`, usado no loop abaixo)
             # continua intacto, com PUUID, porque `MatchParticipant.puuid`
-            # ainda precisa dele. Sem isso, a política de retenção de PUUID
-            # (rodada 18, `purge_puuid.py`) fica funcionalmente anulada: ela
-            # zera a coluna `puuid`, mas o mesmo dado (mais nome/tag da conta
-            # Riot) sobrevivia indefinidamente dentro do JSON bruto ao lado.
-            sanitized_participants = [
-                {k: v for k, v in p.items() if k not in _SENSITIVE_PARTICIPANT_FIELDS}
+            # ainda precisa dele. Lista branca (`_PARTICIPANT_FIELDS_TO_KEEP`)
+            # já exclui PUUID/Riot ID de propósito — sem isso, a política de
+            # retenção de PUUID (rodada 18, `purge_puuid.py`) ficaria
+            # funcionalmente anulada: ela zera a coluna `puuid`, mas o mesmo
+            # dado (mais nome/tag da conta Riot) sobreviveria indefinidamente
+            # dentro do JSON bruto ao lado.
+            trimmed_participants = [
+                {k: v for k, v in p.items() if k in _PARTICIPANT_FIELDS_TO_KEEP}
                 for p in info["participants"]
             ]
+            trimmed_teams = [
+                {"teamId": t.get("teamId"), "bans": t.get("bans", [])}
+                for t in info.get("teams", [])
+            ]
             sanitized_payload = {
-                **match_payload,
-                "info": {**info, "participants": sanitized_participants},
+                "info": {"participants": trimmed_participants, "teams": trimmed_teams}
             }
 
             session.add(

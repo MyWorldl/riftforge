@@ -421,6 +421,50 @@ def test_catalog_champions_proxies_data_dragon(client, monkeypatch):
     assert "Ahri" in body["champions"]
 
 
+def test_catalog_champion_detail_404_for_unknown_id_without_calling_ddragon(client, monkeypatch):
+    """Sprint 2 item 9/10 (revisão técnica §2.1/§1.6): `champion_id`
+    desconhecido nunca deve virar chamada ao Data Dragon nem entrada de
+    cache — `get_champion_detail` do adapter nem é chamado."""
+    async def fake_version():
+        return "16.15.1"
+
+    async def fake_champions(version):
+        return {"Ahri": {"id": "Ahri", "name": "Ahri"}}
+
+    async def unexpected_detail(version, champion_id):
+        raise AssertionError("não deveria chamar o Data Dragon pra ID desconhecido")
+
+    from app.core.adapters import data_dragon
+
+    monkeypatch.setattr(data_dragon, "get_latest_version", fake_version)
+    monkeypatch.setattr(data_dragon, "get_champions", fake_champions)
+    monkeypatch.setattr(data_dragon, "get_champion_detail", unexpected_detail)
+
+    response = client.get("/champions/NaoExiste")
+    assert response.status_code == 404
+
+
+def test_catalog_champion_detail_200_for_known_id(client, monkeypatch):
+    async def fake_version():
+        return "16.15.1"
+
+    async def fake_champions(version):
+        return {"Ahri": {"id": "Ahri", "name": "Ahri"}}
+
+    async def fake_detail(version, champion_id):
+        return {"id": champion_id, "spells": []}
+
+    from app.core.adapters import data_dragon
+
+    monkeypatch.setattr(data_dragon, "get_latest_version", fake_version)
+    monkeypatch.setattr(data_dragon, "get_champions", fake_champions)
+    monkeypatch.setattr(data_dragon, "get_champion_detail", fake_detail)
+
+    response = client.get("/champions/Ahri")
+    assert response.status_code == 200
+    assert response.json()["champion"]["id"] == "Ahri"
+
+
 def test_kit_profile_empty_db(client):
     response = client.get("/scores/kit-profile")
     assert response.status_code == 200

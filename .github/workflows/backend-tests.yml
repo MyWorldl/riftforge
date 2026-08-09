@@ -41,10 +41,17 @@ jobs:
           python-version: "3.13"
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: pip install -r requirements-dev.txt
 
       - name: Run ruff
         run: ruff check .
+
+      # Sprint 2 item 13 (revisão técnica): CVE futura numa dependência de
+      # produção passa a quebrar o CI em vez de só ser descoberta na próxima
+      # revisão manual — mesmo espírito do `dependabot.yml` (abre PR), mas
+      # com feedback imediato a cada push.
+      - name: Audit de dependências (pip-audit)
+        run: pip-audit -r requirements.txt
 
   # Revisão técnica §1.5/§2.7: os testes de rede real (Riot API/Data
   # Dragon, marcados `integration`) saíram do job de todo push — deixavam o
@@ -65,7 +72,7 @@ jobs:
           python-version: "3.13"
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: pip install -r requirements-dev.txt
 
       - name: Run unit tests
         run: pytest -q -m "not integration"
@@ -86,7 +93,7 @@ jobs:
           python-version: "3.13"
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: pip install -r requirements-dev.txt
 
       - name: Run integration tests
         run: pytest -q -m integration
