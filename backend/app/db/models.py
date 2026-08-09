@@ -685,3 +685,73 @@ class ChampionSkillExpression(Base):
             name="uq_champion_skill_expression",
         ),
     )
+
+
+class PlayerRoadmapStep(Base):
+    """Roadmap de Progressão do Jogador (rodada 28) — único dado do
+    projeto ligado a um jogador específico que sobrevive entre
+    requisições (exceção deliberada à minimização de dados de
+    `06_SEGURANCA_PRIVACIDADE.md` §2, documentada lá). Chaveado por Riot
+    ID digitado (`game_name`/`tag_line`/`region`), não por `puuid` — sem
+    verificação de posse de conta (sem RSO/OAuth, decisão consciente do
+    §4 daquele doc), mesmo modelo de confiança que `/player/lookup` já
+    tem hoje.
+
+    De propósito, sem `elo_tier` aqui: cada reavaliação usa o elo
+    resolvido na hora da consulta (igual `comparativo_baseline` já faz em
+    `player_service.lookup_player`), então o alvo de comparação pode
+    mudar se o elo do jogador mudar — comportamento herdado, não uma
+    inconsistência nova deste modelo.
+
+    `status`: "active" (ainda sendo trabalhado) | "completed" (terminal,
+    nunca reaberto) | "replaced" (removido do foco por um gap pior
+    encontrado depois, mas não apagado — pode reativar se voltar a ser o
+    pior gap). Uma linha por `(identidade, campeão, rota)` para sempre;
+    transições de status são UPDATE na mesma linha, nunca um INSERT novo
+    pra uma combinação que já existe (ver `PlayerRoadmapRepository`).
+
+    Sem prazo de expiração — diferente de toda outra retenção do projeto
+    (`puuid_retention_days`). A retenção de fato é `DELETE
+    /player/roadmap`, mecanismo de exclusão manual obrigatório (ver §7 da
+    emenda ao doc de privacidade)."""
+
+    __tablename__ = "player_roadmap_steps"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    game_name_key: Mapped[str]
+    tag_line_key: Mapped[str]
+    region: Mapped[str]
+    champion_id: Mapped[str]
+    lane: Mapped[str]
+
+    status: Mapped[str]
+    delta_pct_inicial: Mapped[float]
+    delta_pct_atual: Mapped[float]
+    partidas_base: Mapped[int]
+    partidas_atual: Mapped[int]
+
+    created_at: Mapped[datetime] = mapped_column(
+        default=lambda: datetime.now(timezone.utc)
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+    completed_at: Mapped[datetime | None] = mapped_column(default=None)
+
+    __table_args__ = (
+        UniqueConstraint(
+            "game_name_key",
+            "tag_line_key",
+            "region",
+            "champion_id",
+            "lane",
+            name="uq_player_roadmap_steps",
+        ),
+        Index(
+            "ix_player_roadmap_steps_identity",
+            "game_name_key",
+            "tag_line_key",
+            "region",
+        ),
+    )

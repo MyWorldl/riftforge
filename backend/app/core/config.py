@@ -168,6 +168,20 @@ class Settings(BaseSettings):
     # conectar depois sem fingir que já está conectado agora.
     datadog_api_key: str | None = None
 
+    # Roadmap de Progressão do Jogador (rodada 28). Mesmo espírito de
+    # `matchup_min_games`/`build_recommendation_min_games`: piso de
+    # confiança pra estatística por campeão+rota, sem dado real de uso
+    # ainda — EM ABERTO, recalibrável quando houver volume real.
+    roadmap_min_matches: int = 5
+    # "Roadmap" é foco, não backlog — 3 cabe como bloco fixo na UI sem
+    # virar lista infinita. EM ABERTO.
+    roadmap_max_active_steps: int = 3
+    # Gap real, não ruído de amostra pequena, pra virar passo. EM ABERTO.
+    roadmap_gap_threshold_pct: float = -10.0
+    # Cruzar zero = alcançou a média do elo — mesma semântica que
+    # `delta_pct` já tem, sem margem extra inventada sem dado real.
+    roadmap_completion_threshold_pct: float = 0.0
+
 
 @lru_cache
 def get_settings() -> Settings:
