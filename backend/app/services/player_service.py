@@ -1,3 +1,5 @@
+import asyncio
+
 from riotwatcher import ApiError
 from sqlalchemy.orm import Session
 
@@ -64,7 +66,15 @@ async def lookup_player(
     Rodada 28 ("Roadmap de Progressão do Jogador"): esta função ganhou um
     efeito colateral de escrita — o fim dela sincroniza
     `player_roadmap_steps` via `sync_roadmap_steps` (sem chamada Riot
-    extra, reaproveita `campeoes` já montado). Deixou de ser só leitura."""
+    extra, reaproveita `campeoes` já montado). Deixou de ser só leitura.
+
+    Revisão técnica 09/08 §1.1: `async def` com chamadas Riot síncronas
+    por baixo (`riotwatcher` usa `requests`) travava o event loop inteiro
+    por vários segundos a cada lookup — nenhum outro request (nem
+    `/health`) era atendido enquanto isso. As chamadas bloqueantes agora
+    rodam em `asyncio.to_thread`, e as `player_lookup_recent_matches`
+    partidas são buscadas em paralelo via `asyncio.gather` em vez de um
+    loop serial."""
     # Item novo (filtro de região, piloto br1+euw1): mesma região escolhida
     # pro lookup real na Riot também escopa a comparação contra
     # `ChampionScore`/`Baseline` abaixo — comparar as partidas de um
@@ -73,24 +83,34 @@ async def lookup_player(
     score_region = normalize_region(region)
     continent = PLATFORM_TO_CONTINENT.get(score_region) if region else None
 
-    account = riot_api.get_account_by_riot_id(
-        game_name, tag_line, continent_region=continent
+    account = await asyncio.to_thread(
+        riot_api.get_account_by_riot_id, game_name, tag_line, continent_region=continent
     )
     puuid = account["puuid"]
 
     elo_tier_detectado = False
     if elo_tier is None:
-        elo_tier, elo_tier_detectado = _detect_elo_tier(puuid, platform_region=region)
+        # Revisão técnica §1.8: usava `region` cru aqui enquanto a
+        # comparação de score (linha acima) já usava `score_region`
+        # normalizado — mesma classe de bug que `normalize_region()` foi
+        # criada pra eliminar. Hoje inofensivo (frontend só emite
+        # minúsculas), mas os dois precisam concordar sempre.
+        elo_tier, elo_tier_detectado = await asyncio.to_thread(
+            _detect_elo_tier, puuid, platform_region=score_region
+        )
 
-    match_ids = riot_api.get_match_ids_by_puuid(
+    match_ids = await asyncio.to_thread(
+        riot_api.get_match_ids_by_puuid,
         puuid,
         count=get_settings().player_lookup_recent_matches,
         continent_region=continent,
     )
-    matches = [
-        riot_api.get_match(match_id, continent_region=continent)
-        for match_id in match_ids
-    ]
+    matches = await asyncio.gather(
+        *[
+            asyncio.to_thread(riot_api.get_match, match_id, continent_region=continent)
+            for match_id in match_ids
+        ]
+    )
 
     version = await cached("ddragon:version", data_dragon.get_latest_version)
     name_by_riot_id = await cached(

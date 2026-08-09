@@ -67,11 +67,23 @@ _CACHEABLE_PREFIXES = (
 )
 
 
+def _is_cacheable_path(path: str) -> bool:
+    # Revisão técnica 09/08 §1.4: `startswith` casava prefixo de string,
+    # não segmento de rota (`/champions` também casava `/champions-x`).
+    # Sem rota assim hoje, mas é regra de segurança escrita de um jeito
+    # que uma rota nova pode ativar sem querer.
+    return any(path == prefix or path.startswith(prefix + "/") for prefix in _CACHEABLE_PREFIXES)
+
+
 @app.middleware("http")
 async def add_cache_control(request: Request, call_next):
     response = await call_next(request)
-    if request.method == "GET" and request.url.path.startswith(_CACHEABLE_PREFIXES):
-        response.headers["Cache-Control"] = "public, max-age=300"
+    # Revisão técnica 09/08 §1.3: sem checar o status, um 500 transitório
+    # (banco caindo, cold start estourando) virava `public, max-age=300`
+    # e o CDN da Vercel servia esse erro pra todo mundo pelos 5 minutos
+    # seguintes, mesmo depois do banco voltar.
+    if request.method == "GET" and response.status_code == 200 and _is_cacheable_path(request.url.path):
+        response.headers["Cache-Control"] = "public, max-age=300, stale-while-revalidate=600"
     return response
 
 

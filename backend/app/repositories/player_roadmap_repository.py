@@ -48,6 +48,7 @@ class PlayerRoadmapRepository:
         lane: str,
         delta_pct: float,
         partidas: int,
+        roadmap_token: str,
     ) -> PlayerRoadmapStep:
         if existing is not None:
             existing.status = "active"
@@ -56,6 +57,7 @@ class PlayerRoadmapRepository:
             existing.partidas_base = partidas
             existing.partidas_atual = partidas
             existing.completed_at = None
+            existing.roadmap_token = roadmap_token
             self.db.add(existing)
             return existing
 
@@ -70,6 +72,7 @@ class PlayerRoadmapRepository:
             delta_pct_atual=delta_pct,
             partidas_base=partidas,
             partidas_atual=partidas,
+            roadmap_token=roadmap_token,
         )
         self.db.add(step)
         return step
@@ -91,12 +94,20 @@ class PlayerRoadmapRepository:
         self.db.add(step)
 
     def delete_all_for_player(
-        self, game_name_key: str, tag_line_key: str, region: str
+        self,
+        game_name_key: str,
+        tag_line_key: str,
+        region: str,
+        roadmap_token: str | None = None,
     ) -> int:
-        return (
-            self.db.query(PlayerRoadmapStep)
-            .filter_by(
-                game_name_key=game_name_key, tag_line_key=tag_line_key, region=region
-            )
-            .delete()
+        """`roadmap_token` omitido apaga sem checar (compatível com quem
+        já tinha um roadmap salvo antes deste campo existir); enviado,
+        só apaga linhas cujo token bate — token errado apaga 0 linhas em
+        vez de levantar erro, mesmo espírito de "não é autenticação de
+        verdade" já documentado no modelo."""
+        query = self.db.query(PlayerRoadmapStep).filter_by(
+            game_name_key=game_name_key, tag_line_key=tag_line_key, region=region
         )
+        if roadmap_token is not None:
+            query = query.filter_by(roadmap_token=roadmap_token)
+        return query.delete()

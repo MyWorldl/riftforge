@@ -50,6 +50,9 @@ class PlayerRoadmapStepOut(BaseModel):
 class PlayerRoadmapSummary(BaseModel):
     ativos: list[PlayerRoadmapStepOut]
     concluidos: list[PlayerRoadmapStepOut]
+    # Revisão técnica 09/08 §2.3: token opaco pro DELETE, não autenticação
+    # — `None` quando o jogador nunca teve um passo (nada a proteger).
+    roadmap_token: str | None
 
 
 class PlayerRoadmapDeleteResponse(BaseModel):
