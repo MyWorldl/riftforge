@@ -1896,3 +1896,101 @@
   font-size: 13px;
   opacity: 0.85;
 }
+
+/* Roadmap de Progressão do Jogador (rodada 28). Sóbrio de propósito —
+   sem confete/estilo chamativo em "Concluídos", mesmo tom do resto do
+   site. */
+.roadmap-section {
+  width: 100%;
+  max-width: 900px;
+  margin-bottom: var(--space-5);
+}
+
+.roadmap-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.roadmap-section-header h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.roadmap-delete-toggle {
+  font-size: 13px;
+  color: var(--text);
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+
+.roadmap-delete-confirm {
+  margin-top: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--neg-border);
+  background: var(--neg-bg);
+  border-radius: 8px;
+}
+
+.roadmap-delete-confirm p {
+  margin: 0 0 var(--space-2);
+}
+
+.roadmap-delete-actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.roadmap-delete-confirm-btn {
+  color: #fff;
+  background: var(--neg);
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+.roadmap-concluidos-title {
+  margin: var(--space-3) 0 var(--space-1);
+  font-size: 14px;
+  color: var(--text);
+}
+
+.roadmap-list {
+  list-style: none;
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.roadmap-step {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.roadmap-list-done .roadmap-step {
+  opacity: 0.75;
+}
+
+.roadmap-step-champion {
+  color: var(--text-h);
+  font-weight: 600;
+  flex: 1;
+  min-width: 160px;
+}
+
+.roadmap-step-done {
+  color: var(--pos);
+}

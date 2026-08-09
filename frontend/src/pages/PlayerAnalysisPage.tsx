@@ -1,6 +1,12 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { fetchPlayerLookup, HttpError, type PlayerLookupResult } from '../api/client'
+import {
+  deletePlayerRoadmap,
+  fetchPlayerLookup,
+  HttpError,
+  type PlayerLookupResult,
+  type PlayerRoadmapStep,
+} from '../api/client'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 
 const LANE_LABELS: Record<string, string> = {
@@ -9,6 +15,26 @@ const LANE_LABELS: Record<string, string> = {
   MIDDLE: 'Meio',
   BOTTOM: 'Atirador',
   UTILITY: 'Suporte',
+}
+
+/** Roadmap de Progressão do Jogador (rodada 28) — passo ativo mostra o
+ *  gap atual (sempre negativo, é isso que o qualifica pra virar passo)
+ *  e a amostra que embasa ele. Reaproveita `.value-neg`/`.value-pos` já
+ *  usados na tabela abaixo, mesma linguagem visual. */
+function RoadmapStepRow({ step, done }: { step: PlayerRoadmapStep; done: boolean }) {
+  return (
+    <li className="roadmap-step">
+      <span className="roadmap-step-champion">
+        {step.champion_id} · {LANE_LABELS[step.lane] ?? step.lane}
+      </span>
+      <span className={done ? 'value-pos' : 'value-neg'}>
+        {step.delta_pct_atual >= 0 ? '+' : ''}
+        {step.delta_pct_atual.toFixed(1)}% WR vs. média do elo
+      </span>
+      <span className="explain-sub">{step.partidas_atual} partidas</span>
+      {done && <span className="roadmap-step-done" title="Concluído">✓</span>}
+    </li>
+  )
 }
 
 function PlayerAnalysisPage() {
@@ -23,6 +49,10 @@ function PlayerAnalysisPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [unavailable, setUnavailable] = useState(false)
+
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!region || !gameName || !tagLine) return
@@ -41,6 +71,22 @@ function PlayerAnalysisPage() {
       })
       .finally(() => setLoading(false))
   }, [region, gameName, tagLine])
+
+  function handleDeleteRoadmap() {
+    if (!region || !gameName || !tagLine) return
+    setDeleting(true)
+    setDeleteError(null)
+    deletePlayerRoadmap({ region, gameName, tagLine })
+      .then(() => {
+        // Limpa na hora, sem exigir nova busca — reflete o estado vazio
+        // imediatamente (retenção sem prazo fixo, isto é o mecanismo
+        // real de retenção, ver 06_SEGURANCA_PRIVACIDADE.md §7).
+        setResult((current) => (current ? { ...current, roadmap: { ativos: [], concluidos: [] } } : current))
+        setConfirmingDelete(false)
+      })
+      .catch((err: Error) => setDeleteError(err.message))
+      .finally(() => setDeleting(false))
+  }
 
   if (!gameName || !tagLine) {
     return (
@@ -81,6 +127,69 @@ function PlayerAnalysisPage() {
               <span className="explain-sub"> (padrão — sem entrada ranqueada em solo/duo detectada)</span>
             )}
           </p>
+
+          <section className="roadmap-section">
+            <div className="roadmap-section-header">
+              <h2>Seu roadmap</h2>
+              {(result.roadmap.ativos.length > 0 || result.roadmap.concluidos.length > 0) && (
+                <button
+                  type="button"
+                  className="roadmap-delete-toggle"
+                  onClick={() => setConfirmingDelete((v) => !v)}
+                >
+                  Apagar meu roadmap
+                </button>
+              )}
+            </div>
+
+            {confirmingDelete && (
+              <div className="roadmap-delete-confirm" role="alertdialog">
+                <p>Isso apaga permanentemente todos os passos do seu roadmap. Não pode ser desfeito.</p>
+                {deleteError && <p className="error" role="alert">{deleteError}</p>}
+                <div className="roadmap-delete-actions">
+                  <button type="button" onClick={() => setConfirmingDelete(false)} disabled={deleting}>
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    className="roadmap-delete-confirm-btn"
+                    onClick={handleDeleteRoadmap}
+                    disabled={deleting}
+                  >
+                    {deleting ? 'Apagando...' : 'Sim, apagar meu roadmap'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {result.roadmap.ativos.length === 0 && result.roadmap.concluidos.length === 0 ? (
+              <p className="empty-state">
+                Nenhum passo no roadmap ainda — jogue mais partidas com campeões abaixo da média do seu
+                elo pra receber sugestões de foco aqui.
+              </p>
+            ) : (
+              <>
+                {result.roadmap.ativos.length > 0 && (
+                  <ul className="roadmap-list">
+                    {result.roadmap.ativos.map((step) => (
+                      <RoadmapStepRow key={`${step.champion_id}-${step.lane}`} step={step} done={false} />
+                    ))}
+                  </ul>
+                )}
+                {result.roadmap.concluidos.length > 0 && (
+                  <>
+                    <h3 className="roadmap-concluidos-title">Concluídos</h3>
+                    <ul className="roadmap-list roadmap-list-done">
+                      {result.roadmap.concluidos.map((step) => (
+                        <RoadmapStepRow key={`${step.champion_id}-${step.lane}`} step={step} done={true} />
+                      ))}
+                    </ul>
+                  </>
+                )}
+              </>
+            )}
+          </section>
+
           <div className="table-scroll">
             <table className="stats-table">
               <thead>
