@@ -10,6 +10,7 @@ from app.db.models import (
     ChampionMetaContext,
     ChampionScore,
     Patch,
+    PlayerRoadmapStep,
 )
 
 
@@ -465,3 +466,62 @@ def test_kit_profile_never_exposes_cc_or_mobilidade(client, db_session):
     row = response.json()["perfis"][0]
     assert "cc_score" not in row
     assert "mobilidade_score" not in row
+
+
+def _seed_roadmap_step(db_session, **overrides) -> PlayerRoadmapStep:
+    defaults = dict(
+        game_name_key="fulano",
+        tag_line_key="br1",
+        region="br1",
+        champion_id="Ahri",
+        lane="MIDDLE",
+        status="active",
+        delta_pct_inicial=-18.0,
+        delta_pct_atual=-18.0,
+        partidas_base=6,
+        partidas_atual=6,
+    )
+    defaults.update(overrides)
+    row = PlayerRoadmapStep(**defaults)
+    db_session.add(row)
+    db_session.commit()
+    return row
+
+
+def test_delete_roadmap_removes_rows_for_identity(client, db_session):
+    _seed_roadmap_step(db_session)
+    _seed_roadmap_step(db_session, champion_id="Zed", lane="TOP")
+    _seed_roadmap_step(db_session, game_name_key="outrojogador", tag_line_key="br1")
+
+    response = client.delete("/player/roadmap?game_name=Fulano&tag_line=BR1&region=br1")
+    assert response.status_code == 200
+    assert response.json() == {"deleted": 2}
+
+    remaining = (
+        db_session.query(PlayerRoadmapStep)
+        .filter_by(game_name_key="fulano", tag_line_key="br1", region="br1")
+        .count()
+    )
+    assert remaining == 0
+    other_remaining = (
+        db_session.query(PlayerRoadmapStep).filter_by(game_name_key="outrojogador").count()
+    )
+    assert other_remaining == 1
+
+
+def test_delete_roadmap_empty_returns_zero(client):
+    response = client.delete("/player/roadmap?game_name=Ninguem&tag_line=BR1")
+    assert response.status_code == 200
+    assert response.json() == {"deleted": 0}
+
+
+def test_delete_roadmap_works_without_real_riot_key(client, db_session, monkeypatch):
+    # Diferente do GET /player/lookup, o DELETE não tem
+    # ensure_riot_proxy_enabled() de propósito — é operação de banco
+    # pura, precisa funcionar mesmo com o gate fechado (produção hoje).
+    monkeypatch.setattr(get_settings(), "riot_api_key", "changeme")
+    _seed_roadmap_step(db_session)
+
+    response = client.delete("/player/roadmap?game_name=Fulano&tag_line=BR1&region=br1")
+    assert response.status_code == 200
+    assert response.json() == {"deleted": 1}

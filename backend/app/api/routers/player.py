@@ -6,8 +6,9 @@ from app.api.deps import get_db
 from app.core.config import get_settings
 from app.core.limiter import limiter
 from app.core.riot_gate import ensure_riot_proxy_enabled
-from app.schemas.player import PlayerLookupResponse
+from app.schemas.player import PlayerLookupResponse, PlayerRoadmapDeleteResponse
 from app.services import player_service
+from app.services import player_roadmap_service
 
 router = APIRouter(prefix="/player", tags=["player"])
 settings = get_settings()
@@ -38,3 +39,27 @@ async def get_player_lookup(
         return await player_service.lookup_player(db, game_name, tag_line, region, elo_tier)
     except ApiError as exc:
         raise HTTPException(status_code=exc.response.status_code, detail=str(exc)) from exc
+
+
+@router.delete("/roadmap", response_model=PlayerRoadmapDeleteResponse)
+@limiter.limit(settings.rate_limit_player_lookup)
+def delete_player_roadmap(
+    request: Request,
+    game_name: str,
+    tag_line: str,
+    region: str | None = None,
+    db: Session = Depends(get_db),
+) -> dict:
+    """Mecanismo de exclusão manual obrigatório do Roadmap de Progressão
+    do Jogador (rodada 28) — retenção sem prazo fixo, ver emenda ao doc
+    de privacidade §7. Deliberadamente SEM `ensure_riot_proxy_enabled()`:
+    é operação de banco pura, sem chamada Riot, e precisa funcionar mesmo
+    com o gate fechado (produção hoje) — não "corrigir" isso pra bater
+    com o gate do GET acima.
+
+    Sem OAuth, não prova posse da conta — mesmo Riot ID digitado que já
+    identifica o jogador no `/lookup`, decisão consciente. Rate limit no
+    mesmo nível do `/lookup` (não o default), por ser uma operação
+    irreversível, não uma leitura casual."""
+    deleted = player_roadmap_service.delete_roadmap(db, game_name, tag_line, region)
+    return {"deleted": deleted}
