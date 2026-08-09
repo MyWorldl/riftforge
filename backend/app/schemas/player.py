@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from pydantic import BaseModel
 
 
@@ -28,6 +30,32 @@ class PlayerChampionSummary(BaseModel):
     comparativo_baseline: BaselineComparison | None
 
 
+class PlayerRoadmapStepOut(BaseModel):
+    """Rodada 28. `status` só chega aqui como "active"/"completed" —
+    "replaced" existe no banco (auditoria/reativação) mas nunca serializa
+    pra API."""
+
+    champion_id: str
+    lane: str
+    status: str
+    delta_pct_inicial: float
+    delta_pct_atual: float
+    partidas_base: int
+    partidas_atual: int
+    created_at: datetime
+    updated_at: datetime
+    completed_at: datetime | None
+
+
+class PlayerRoadmapSummary(BaseModel):
+    ativos: list[PlayerRoadmapStepOut]
+    concluidos: list[PlayerRoadmapStepOut]
+
+
+class PlayerRoadmapDeleteResponse(BaseModel):
+    deleted: int
+
+
 class PlayerLookupResponse(BaseModel):
     """`puuid` removido de propósito (revisão técnica §2.1)."""
 
@@ -39,3 +67,4 @@ class PlayerLookupResponse(BaseModel):
     elo_tier_detectado: bool
     partidas_analisadas: int
     campeoes: list[PlayerChampionSummary]
+    roadmap: PlayerRoadmapSummary
