@@ -363,3 +363,39 @@ separado — detalhe completo em `17_ESTADO_IMPLEMENTADO.md` §rodada 25:
 lote; suite de testes do backend +2 (92 no total). Cada lote testado
 contra o backend local rodando com o Supabase de produção antes do
 commit, com confirmação explícita do usuário antes de cada push.
+
+## Filtro de região completo — piloto BR1 + EUW1 (2026-08-09)
+
+O item deixado de fora da seção anterior (migração de arquitetura, não
+ajuste de UI) virou plano próprio, aprovado e executado em 8 lotes
+(M-T) — detalhe completo em `Core/Estrutura_roadmap/17_ESTADO_IMPLEMENTADO.md`
+§rodada 26. Resumo do resultado:
+
+- **Alembic** entra como primeira ferramenta de migração de schema do
+  projeto (antes só `create_all()`, que nunca altera tabela existente) —
+  vira o mecanismo padrão para toda mudança de schema futura, não só
+  esta.
+- **12 tabelas do pipeline de score** ganharam coluna `region` (as 2
+  tabelas só-Data-Dragon, `ChampionKitScore`/`ChampionPatchChange`,
+  ficaram de fora por não terem dado de partida).
+- **euw1** ligado como região piloto ao lado de `br1` — escolhida por
+  ficar num bucket de cota Match-V5 totalmente separado
+  (`br1`→`americas`, `euw1`→`europe`), provando paralelismo real de
+  cota. Verificado em produção: 229 partidas ingeridas, prefixo
+  `EUW1_...` confirmando o roteamento de região, 706 `ChampionScore`
+  calculados com distribuição de tier saudável, zero erro/429 no
+  primeiro disparo supervisionado.
+- **Frontend:** dropdown de região agora habilita `br1` + `euw1` (as
+  outras 6 seguem "em breve"); corrigido de passagem um bug real
+  pré-existente — o filtro de região da tela de Campeões nunca havia
+  chegado a ser enviado ao backend.
+- **Região #3 em diante é só configuração** (4 passos, nenhum toca
+  `app/jobs/`, `app/api/` ou `app/repositories/`) — checklist completo
+  em `17_ESTADO_IMPLEMENTADO.md` §rodada 26.
+
++6 testes novos (região em ingestão + isolamento de região na API);
+`pytest`/`ruff check .`/`tsc -b`/`npm run build`/`npm run lint` limpos a
+cada lote. Cada lote de backend verificado contra o Supabase de
+produção real antes do commit; o lote de CI (euw1 real) verificado por
+disparo manual com cota reduzida antes de liberar o cron diário —
+confirmação explícita do usuário antes de cada push.
