@@ -9,7 +9,7 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
-from app.api.routers import builds, catalog, health, matchups, meta, patch_notes, player, rankings, riot_proxy, scores, stats
+from app.api.routers import builds, catalog, health, kit, matchups, meta, patch_notes, player, rankings, riot_proxy, scores, stats
 from app.core.config import get_settings
 from app.core.limiter import limiter
 from app.core.logging import get_logger, new_correlation_id
@@ -86,3 +86,4 @@ app.include_router(scores.router)
 app.include_router(matchups.router)
 app.include_router(builds.router)
 app.include_router(meta.router)
+app.include_router(kit.router)

@@ -5,6 +5,7 @@ cobertura de rota HTTP, só as funções puras por trás delas."""
 from app.core.config import get_settings
 from app.db.models import (
     ChampionBuildRecommendation,
+    ChampionKitScore,
     ChampionMatchup,
     ChampionMetaContext,
     ChampionScore,
@@ -40,6 +41,26 @@ def _seed_champion_score(db_session, **overrides) -> ChampionScore:
     )
     defaults.update(overrides)
     row = ChampionScore(**defaults)
+    db_session.add(row)
+    db_session.commit()
+    return row
+
+
+def _seed_kit_score(db_session, **overrides) -> ChampionKitScore:
+    defaults = dict(
+        patch="16.14",
+        champion_id="Caitlyn",
+        cc_score=None,
+        dano_score=6.0,
+        mobilidade_score=None,
+        alcance_score=4.0,
+        resiliencia_score=5.0,
+        kit_score=50.0,
+        versao_calculo="v1",
+        eixos_disponiveis=["dano", "alcance", "resiliencia"],
+    )
+    defaults.update(overrides)
+    row = ChampionKitScore(**defaults)
     db_session.add(row)
     db_session.commit()
     return row
@@ -397,3 +418,50 @@ def test_catalog_champions_proxies_data_dragon(client, monkeypatch):
     body = response.json()
     assert body["patch"] == "16.15.1"
     assert "Ahri" in body["champions"]
+
+
+def test_kit_profile_empty_db(client):
+    response = client.get("/scores/kit-profile")
+    assert response.status_code == 200
+    assert response.json() == {"patch": None, "perfis": []}
+
+
+def test_kit_profile_with_explicit_patch(client, db_session):
+    _seed_patch(db_session, "16.14", 16014)
+    _seed_kit_score(db_session)
+
+    response = client.get("/scores/kit-profile?patch=16.14")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["patch"] == "16.14"
+    assert body["perfis"] == [
+        {
+            "champion_id": "Caitlyn",
+            "dano_score": 6.0,
+            "alcance_score": 4.0,
+            "resiliencia_score": 5.0,
+        }
+    ]
+
+
+def test_kit_profile_omitted_patch_resolves_to_latest(client, db_session):
+    _seed_patch(db_session, "16.13", 16013)
+    _seed_patch(db_session, "16.14", 16014)
+    _seed_kit_score(db_session, patch="16.13", champion_id="Ahri")
+    _seed_kit_score(db_session, patch="16.14", champion_id="Caitlyn")
+
+    response = client.get("/scores/kit-profile")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["patch"] == "16.14"
+    assert [row["champion_id"] for row in body["perfis"]] == ["Caitlyn"]
+
+
+def test_kit_profile_never_exposes_cc_or_mobilidade(client, db_session):
+    _seed_patch(db_session, "16.14", 16014)
+    _seed_kit_score(db_session)
+
+    response = client.get("/scores/kit-profile?patch=16.14")
+    row = response.json()["perfis"][0]
+    assert "cc_score" not in row
+    assert "mobilidade_score" not in row
