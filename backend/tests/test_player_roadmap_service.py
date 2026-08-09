@@ -168,7 +168,7 @@ def test_delete_roadmap_removes_all_rows_for_identity(db_session):
     deleted = delete_roadmap(db_session, "Fulano", "BR1", "br1")
     assert deleted == 2
     roadmap = sync_roadmap_steps(db_session, IDENTITY, [])
-    assert roadmap == {"ativos": [], "concluidos": []}
+    assert roadmap == {"ativos": [], "concluidos": [], "roadmap_token": None}
 
 
 def test_delete_roadmap_scoped_to_identity(db_session):
@@ -181,3 +181,35 @@ def test_delete_roadmap_scoped_to_identity(db_session):
 
     roadmap_outro = sync_roadmap_steps(db_session, other_identity, [])
     assert len(roadmap_outro["ativos"]) == 1
+
+
+def test_roadmap_token_stable_across_syncs(db_session):
+    r1 = sync_roadmap_steps(db_session, IDENTITY, [_champ("Ahri", "MIDDLE", 5, -12.0)])
+    token1 = r1["roadmap_token"]
+    assert token1 is not None
+
+    r2 = sync_roadmap_steps(db_session, IDENTITY, [_champ("Zed", "MIDDLE", 5, -15.0)])
+    assert r2["roadmap_token"] == token1  # mesma identidade, mesmo token
+
+
+def test_delete_roadmap_wrong_token_deletes_nothing(db_session):
+    r1 = sync_roadmap_steps(db_session, IDENTITY, [_champ("Ahri", "MIDDLE", 5, -12.0)])
+    token = r1["roadmap_token"]
+
+    deleted = delete_roadmap(db_session, "Fulano", "BR1", "br1", roadmap_token="token-errado")
+    assert deleted == 0
+
+    roadmap = sync_roadmap_steps(db_session, IDENTITY, [])
+    assert len(roadmap["ativos"]) == 1
+    assert roadmap["roadmap_token"] == token
+
+
+def test_delete_roadmap_correct_token_deletes(db_session):
+    r1 = sync_roadmap_steps(db_session, IDENTITY, [_champ("Ahri", "MIDDLE", 5, -12.0)])
+    token = r1["roadmap_token"]
+
+    deleted = delete_roadmap(db_session, "Fulano", "BR1", "br1", roadmap_token=token)
+    assert deleted == 1
+
+    roadmap = sync_roadmap_steps(db_session, IDENTITY, [])
+    assert roadmap == {"ativos": [], "concluidos": [], "roadmap_token": None}

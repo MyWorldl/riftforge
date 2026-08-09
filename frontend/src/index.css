@@ -7,6 +7,14 @@
   --accent: #ea580c;
   --accent-bg: rgba(234, 88, 12, 0.1);
   --accent-border: rgba(234, 88, 12, 0.5);
+  /* Rodada 29 (revisão técnica 09/08 §7.6) — cor de marca (favicon já é
+     essa bigorna roxa, nunca tinha chegado ao CSS). Verificado nesta
+     rodada, não estimado: 5,14:1 contra branco (bate com o que a
+     revisão mediu). O claro usa o roxo puro; o escuro usa uma variante
+     mais clara (#a78bfa, 6,57:1 contra --bg escuro) porque o roxo puro
+     só dá 3,48:1 no fundo escuro — abaixo de 4,5:1, a revisão só tinha
+     verificado contra branco. Mesmo padrão de --accent claro/escuro. */
+  --brand: #863bff;
   --social-bg: rgba(244, 243, 236, 0.5);
   /* Verde/vermelho da explicação por camada. Tons diferentes por tema
      porque os mesmos valores não alcançam contraste AA (4.5:1) nos dois
@@ -120,6 +128,7 @@
     --accent: #fb923c;
     --accent-bg: rgba(251, 146, 60, 0.15);
     --accent-border: rgba(251, 146, 60, 0.5);
+    --brand: #a78bfa;
     --social-bg: rgba(47, 48, 58, 0.5);
     --pos: #3fb950;
     --neg: #f85149;
@@ -148,6 +157,7 @@
   --accent: #fb923c;
   --accent-bg: rgba(251, 146, 60, 0.15);
   --accent-border: rgba(251, 146, 60, 0.5);
+  --brand: #a78bfa;
   --social-bg: rgba(47, 48, 58, 0.5);
   --pos: #3fb950;
   --neg: #f85149;
@@ -166,6 +176,7 @@
   --accent: #ea580c;
   --accent-bg: rgba(234, 88, 12, 0.1);
   --accent-border: rgba(234, 88, 12, 0.5);
+  --brand: #863bff;
   --social-bg: rgba(244, 243, 236, 0.5);
   --pos: #1a7f37;
   --neg: #b3261e;

@@ -17,6 +17,14 @@ const LANE_LABELS: Record<string, string> = {
   UTILITY: 'Suporte',
 }
 
+/** Revisão técnica 09/08 §2.3: token opaco do roadmap fica só no
+ *  localStorage do próprio navegador — nunca é enviado a lugar nenhum
+ *  além do `DELETE`, e nunca precisa de consentimento de cookie porque
+ *  não é rastreamento. */
+function roadmapTokenStorageKey(region: string, gameName: string, tagLine: string): string {
+  return `riftforge:roadmap_token:${region}:${gameName}:${tagLine}`.toLowerCase()
+}
+
 /** Roadmap de Progressão do Jogador (rodada 28) — passo ativo mostra o
  *  gap atual (sempre negativo, é isso que o qualifica pra virar passo)
  *  e a amostra que embasa ele. Reaproveita `.value-neg`/`.value-pos` já
@@ -61,7 +69,12 @@ function PlayerAnalysisPage() {
     setUnavailable(false)
     setResult(null)
     fetchPlayerLookup({ region, gameName, tagLine })
-      .then(setResult)
+      .then((data) => {
+        setResult(data)
+        if (data.roadmap.roadmap_token) {
+          localStorage.setItem(roadmapTokenStorageKey(region, gameName, tagLine), data.roadmap.roadmap_token)
+        }
+      })
       .catch((err: unknown) => {
         if (err instanceof HttpError && err.status === 501) {
           setUnavailable(true)
@@ -76,12 +89,16 @@ function PlayerAnalysisPage() {
     if (!region || !gameName || !tagLine) return
     setDeleting(true)
     setDeleteError(null)
-    deletePlayerRoadmap({ region, gameName, tagLine })
+    const token = localStorage.getItem(roadmapTokenStorageKey(region, gameName, tagLine))
+    deletePlayerRoadmap({ region, gameName, tagLine }, token)
       .then(() => {
         // Limpa na hora, sem exigir nova busca — reflete o estado vazio
         // imediatamente (retenção sem prazo fixo, isto é o mecanismo
         // real de retenção, ver 06_SEGURANCA_PRIVACIDADE.md §7).
-        setResult((current) => (current ? { ...current, roadmap: { ativos: [], concluidos: [] } } : current))
+        setResult((current) =>
+          current ? { ...current, roadmap: { ativos: [], concluidos: [], roadmap_token: null } } : current,
+        )
+        localStorage.removeItem(roadmapTokenStorageKey(region, gameName, tagLine))
         setConfirmingDelete(false)
       })
       .catch((err: Error) => setDeleteError(err.message))

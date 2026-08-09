@@ -713,7 +713,14 @@ class PlayerRoadmapStep(Base):
     Sem prazo de expiração — diferente de toda outra retenção do projeto
     (`puuid_retention_days`). A retenção de fato é `DELETE
     /player/roadmap`, mecanismo de exclusão manual obrigatório (ver §7 da
-    emenda ao doc de privacidade)."""
+    emenda ao doc de privacidade).
+
+    `roadmap_token` (revisão técnica 09/08 §2.3): UUID opaco gerado na
+    primeira sincronização de uma identidade, igual em toda linha dessa
+    identidade — não é autenticação, é "link de gerenciamento" tipo
+    newsletter. `DELETE /player/roadmap` aceita sem token (compatível
+    com quem já tinha um roadmap salvo antes deste campo existir) mas
+    exige que bata se um token for enviado."""
 
     __tablename__ = "player_roadmap_steps"
 
@@ -723,6 +730,7 @@ class PlayerRoadmapStep(Base):
     region: Mapped[str]
     champion_id: Mapped[str]
     lane: Mapped[str]
+    roadmap_token: Mapped[str]
 
     status: Mapped[str]
     delta_pct_inicial: Mapped[float]

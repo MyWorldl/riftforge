@@ -280,6 +280,9 @@ export interface PlayerRoadmapStep {
 export interface PlayerRoadmapSummary {
   ativos: PlayerRoadmapStep[]
   concluidos: PlayerRoadmapStep[]
+  // Revisão técnica 09/08 §2.3: token opaco pro DELETE, não autenticação
+  // — null quando o jogador nunca teve um passo.
+  roadmap_token: string | null
 }
 
 export interface PlayerLookupResult {
@@ -565,12 +568,16 @@ export async function fetchPlayerLookup(filters: PlayerLookupFilters): Promise<P
   return response.json()
 }
 
-export async function deletePlayerRoadmap(filters: PlayerLookupFilters): Promise<{ deleted: number }> {
+export async function deletePlayerRoadmap(
+  filters: PlayerLookupFilters,
+  roadmapToken?: string | null,
+): Promise<{ deleted: number }> {
   const params = new URLSearchParams({
     region: filters.region,
     game_name: filters.gameName,
     tag_line: filters.tagLine,
   })
+  if (roadmapToken) params.set('roadmap_token', roadmapToken)
   const response = await fetch(`${API_URL}/player/roadmap?${params}`, { method: 'DELETE' })
   if (!response.ok) {
     const body = await response.json().catch(() => null)

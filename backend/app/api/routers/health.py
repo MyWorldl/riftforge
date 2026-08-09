@@ -15,7 +15,7 @@ log = get_logger(__name__)
 
 
 @router.get("/health", response_model=HealthResponse)
-async def health(response: Response, db: Session = Depends(get_db)) -> HealthResponse:
+def health(response: Response, db: Session = Depends(get_db)) -> HealthResponse:
     settings = get_settings()
     checks: dict[str, str] = {}
 

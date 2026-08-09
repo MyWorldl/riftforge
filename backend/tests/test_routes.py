@@ -480,6 +480,7 @@ def _seed_roadmap_step(db_session, **overrides) -> PlayerRoadmapStep:
         delta_pct_atual=-18.0,
         partidas_base=6,
         partidas_atual=6,
+        roadmap_token="test-token-fulano",
     )
     defaults.update(overrides)
     row = PlayerRoadmapStep(**defaults)
@@ -523,5 +524,25 @@ def test_delete_roadmap_works_without_real_riot_key(client, db_session, monkeypa
     _seed_roadmap_step(db_session)
 
     response = client.delete("/player/roadmap?game_name=Fulano&tag_line=BR1&region=br1")
+    assert response.status_code == 200
+    assert response.json() == {"deleted": 1}
+
+
+def test_delete_roadmap_wrong_token_deletes_zero(client, db_session):
+    _seed_roadmap_step(db_session, roadmap_token="token-certo")
+
+    response = client.delete(
+        "/player/roadmap?game_name=Fulano&tag_line=BR1&region=br1&roadmap_token=token-errado"
+    )
+    assert response.status_code == 200
+    assert response.json() == {"deleted": 0}
+
+
+def test_delete_roadmap_correct_token_deletes(client, db_session):
+    _seed_roadmap_step(db_session, roadmap_token="token-certo")
+
+    response = client.delete(
+        "/player/roadmap?game_name=Fulano&tag_line=BR1&region=br1&roadmap_token=token-certo"
+    )
     assert response.status_code == 200
     assert response.json() == {"deleted": 1}

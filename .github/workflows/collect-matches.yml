@@ -24,6 +24,13 @@ concurrency:
   group: coleta
   cancel-in-progress: false
 
+# Revisão técnica 09/08 §2.4: default do `GITHUB_TOKEN` da org pode ser
+# `write` sem isso — ver mesma nota em backend-tests.yml. Este workflow
+# em particular já tem acesso a segredos reais (chave Riot, banco), então
+# limitar o escopo do token importa ainda mais aqui.
+permissions:
+  contents: read
+
 jobs:
   coletar:
     runs-on: ubuntu-latest

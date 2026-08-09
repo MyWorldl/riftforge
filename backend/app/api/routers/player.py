@@ -48,6 +48,7 @@ def delete_player_roadmap(
     game_name: str,
     tag_line: str,
     region: str | None = None,
+    roadmap_token: str | None = None,
     db: Session = Depends(get_db),
 ) -> dict:
     """Mecanismo de exclusão manual obrigatório do Roadmap de Progressão
@@ -60,6 +61,12 @@ def delete_player_roadmap(
     Sem OAuth, não prova posse da conta — mesmo Riot ID digitado que já
     identifica o jogador no `/lookup`, decisão consciente. Rate limit no
     mesmo nível do `/lookup` (não o default), por ser uma operação
-    irreversível, não uma leitura casual."""
-    deleted = player_roadmap_service.delete_roadmap(db, game_name, tag_line, region)
+    irreversível, não uma leitura casual.
+
+    Revisão técnica 09/08 §2.3: `roadmap_token` opaco (devolvido em
+    `PlayerRoadmapSummary.roadmap_token`, guardado no `localStorage` do
+    frontend) reduz o risco de graça — quem não souber o token de alguém
+    não apaga o roadmap dela. Omitido, apaga sem checar (compatível com
+    quem já tinha um roadmap salvo antes deste campo existir)."""
+    deleted = player_roadmap_service.delete_roadmap(db, game_name, tag_line, region, roadmap_token)
     return {"deleted": deleted}

@@ -1,3 +1,4 @@
+import uuid
 from dataclasses import dataclass
 
 from sqlalchemy.orm import Session
@@ -78,6 +79,10 @@ def sync_roadmap_steps(
     )
     existing = {(s.champion_id, s.lane): s for s in existing_rows}
     active_count = sum(1 for s in existing_rows if s.status == "active")
+    # Revisão técnica 09/08 §2.3: token opaco, igual em toda linha da
+    # identidade — reaproveita o de uma linha já existente, ou gera um
+    # novo na primeira vez que esta identidade ganha um passo.
+    roadmap_token = existing_rows[0].roadmap_token if existing_rows else uuid.uuid4().hex
 
     for c in campeoes:
         partidas = c["partidas"]
@@ -112,6 +117,7 @@ def sync_roadmap_steps(
                 c["lane"],
                 delta,
                 partidas,
+                roadmap_token,
             )
             existing[key] = new_step
             active_count += 1
@@ -130,6 +136,7 @@ def sync_roadmap_steps(
                     c["lane"],
                     delta,
                     partidas,
+                    roadmap_token,
                 )
                 existing[key] = new_step
                 # active_count não muda: um saiu (replaced), um entrou (active)
@@ -152,16 +159,23 @@ def sync_roadmap_steps(
     return {
         "ativos": [_serialize(s) for s in ativos],
         "concluidos": [_serialize(s) for s in concluidos],
+        "roadmap_token": (ativos[0].roadmap_token if ativos else concluidos[0].roadmap_token)
+        if (ativos or concluidos)
+        else None,
     }
 
 
-def delete_roadmap(db: Session, game_name: str, tag_line: str, region: str | None) -> int:
+def delete_roadmap(
+    db: Session, game_name: str, tag_line: str, region: str | None, roadmap_token: str | None = None
+) -> int:
     """`DELETE /player/roadmap` — mecanismo de exclusão manual obrigatório
-    (retenção sem prazo fixo, ver emenda ao doc de privacidade §7)."""
+    (retenção sem prazo fixo, ver emenda ao doc de privacidade §7).
+    `roadmap_token` omitido apaga sem checar (compatibilidade com quem já
+    tinha um roadmap salvo antes deste campo existir)."""
     identity = resolve_identity(game_name, tag_line, region)
     repo = PlayerRoadmapRepository(db)
     deleted = repo.delete_all_for_player(
-        identity.game_name_key, identity.tag_line_key, identity.region
+        identity.game_name_key, identity.tag_line_key, identity.region, roadmap_token
     )
     db.commit()
     return deleted
