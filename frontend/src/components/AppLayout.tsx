@@ -143,10 +143,16 @@ function AppLayout() {
             key={item.to}
             to={item.to}
             end={item.end}
+            title={item.label}
             className={({ isActive }) => `nav-link ${isActive ? 'nav-link-active' : ''}`}
           >
             {item.icon}
-            {item.label}
+            {/* Sprint C follow-up: rótulo só some visualmente (largura+opacidade
+                via CSS) quando a sidebar está recolhida em ≥1024px — sempre no
+                DOM, então leitor de tela lê o nome completo mesmo com a
+                sidebar fechada. `title` acima cobre o instante antes do hover
+                expandir (tooltip nativo do navegador). */}
+            <span className="nav-link-label">{item.label}</span>
           </NavLink>
         ))}
       </nav>

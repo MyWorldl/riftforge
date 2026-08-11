@@ -203,21 +203,45 @@
 }
 
 /* Sprint C item C2 (pesquisa de design §2: sidebar > menu superior em
-   telas largas): mesmo breakpoint ≥1024px já usado no resto do projeto.
-   `.app-shell` vira grid só aqui — abaixo disso ele continua o
-   flex-column original, e `.sidebar` continua a linha horizontal de
-   pílulas de sempre (`.nav-row` antigo, só renomeado). */
+   telas largas) + ajuste pós-entrega pedido pelo usuário (mockup
+   Excalidraw): top bar ocupa a largura inteira da página (linha própria
+   no grid, span nas duas colunas) e a sidebar vira um rail de ícones que
+   expande ao passar o mouse — não uma coluna fixa de 240px o tempo todo.
+   Mesmo breakpoint ≥1024px já usado no resto do projeto; abaixo disso
+   `.app-shell` continua o flex-column original e `.sidebar` continua a
+   linha horizontal de pílulas de sempre (`.nav-row` antigo). */
 @media (min-width: 1024px) {
   .app-shell {
     display: grid;
-    grid-template-columns: 240px 1fr;
+    grid-template-columns: var(--sidebar-width) 1fr;
     grid-template-areas:
-      'sidebar topbar'
+      'topbar topbar'
       'sidebar content'
       'sidebar footer';
     align-items: start;
+    --sidebar-width: 64px;
+    --sidebar-width-expanded: 240px;
+    --topbar-height: 70px;
   }
 
+  .top-bar {
+    grid-area: topbar;
+    box-sizing: border-box;
+    min-height: var(--topbar-height);
+    position: sticky;
+    top: 0;
+    z-index: 15;
+    background: var(--bg);
+  }
+
+  /* Rail recolhido por padrão (só ícone, `width` da coluna do grid não
+     muda — a coluna continua `--sidebar-width` fixo). No hover/foco, a
+     sidebar cresce pra `--sidebar-width-expanded` só na própria caixa,
+     sem alterar a track do grid: como um item de grid pode ultrapassar
+     visualmente a própria célula (grid não recorta por padrão, diferente
+     de célula de tabela), ela flutua por cima do conteúdo à direita sem
+     empurrar nada — por isso o `background`/`box-shadow` explícitos
+     abaixo, pra parecer um painel sólido flutuando, não um vazamento. */
   .sidebar {
     grid-area: sidebar;
     flex-direction: column;
@@ -225,23 +249,48 @@
     justify-content: flex-start;
     flex-wrap: nowrap;
     gap: var(--space-1);
-    padding: var(--space-5) var(--space-3);
+    padding: var(--space-5) var(--space-2);
     border-bottom: none;
     border-right: 1px solid var(--border);
     position: sticky;
-    top: 0;
-    height: 100vh;
-    overflow-y: auto;
+    top: var(--topbar-height);
+    height: calc(100vh - var(--topbar-height));
+    overflow: hidden;
     box-sizing: border-box;
+    width: var(--sidebar-width);
+    background: var(--bg);
+    z-index: 10;
+    transition: width 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .sidebar:hover,
+  .sidebar:focus-within {
+    width: var(--sidebar-width-expanded);
+    overflow-y: auto;
+    box-shadow: var(--shadow);
   }
 
   .sidebar .nav-link {
     justify-content: flex-start;
     border-radius: var(--radius-md);
+    white-space: nowrap;
   }
 
-  .top-bar {
-    grid-area: topbar;
+  /* Rótulo de texto — largura+opacidade animadas em vez de `display:none`,
+     que cortaria a transição sem suavidade nenhuma. Continua no DOM
+     sempre (ver comentário em `AppLayout.tsx`), só o visual esconde. */
+  .sidebar .nav-link-label {
+    display: inline-block;
+    max-width: 0;
+    opacity: 0;
+    overflow: hidden;
+    transition: max-width 0.15s ease, opacity 0.1s ease;
+  }
+
+  .sidebar:hover .nav-link-label,
+  .sidebar:focus-within .nav-link-label {
+    max-width: 160px;
+    opacity: 1;
   }
 
   .app-content {
@@ -252,6 +301,13 @@
 
   .riot-disclaimer {
     grid-area: footer;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .sidebar,
+    .sidebar .nav-link-label {
+      transition: none;
+    }
   }
 }
 
