@@ -1346,18 +1346,27 @@
 
 /* Pedido do usuário: o `flex-wrap` antigo deixava os chips com
    espaçamento irregular (última linha "solta", larguras desiguais) —
-   vira grid de verdade, colunas parelhas do mesmo tamanho mínimo. */
+   vira grid de verdade, colunas parelhas do mesmo tamanho mínimo.
+   Coluna subiu de 200px pra 240px (revisão seguinte) — 200px deixava
+   nomes longos ("Twisted Fate", "Master Yi") quebrar linha, o que
+   inflava a altura só daquele chip e desalinhava a linha do grid
+   inteira (cards "maiores e menores" entre si). */
 .tier-change-chips {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: var(--space-2);
 }
 
+/* Pedido do usuário: ícone maior (20px → 32px) e altura fixa — com
+   nome de largura variável mas sem quebrar linha (`.tier-change-chip-
+   name` abaixo), a altura para de depender do conteúdo, garantindo
+   que todo chip da grade tenha exatamente o mesmo tamanho. */
 .tier-change-chip {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   width: 100%;
+  height: 48px;
   box-sizing: border-box;
   padding: 4px 10px 4px 4px;
   border: 1px solid var(--border);
@@ -1367,7 +1376,26 @@
 }
 
 .tier-change-chip img {
+  flex-shrink: 0;
   border-radius: 999px;
+}
+
+/* min-width:0 é o que permite o `text-overflow` funcionar dentro de
+   um flex item — sem isso o item nunca encolhe abaixo do tamanho do
+   texto, e a reticência nunca aparece. */
+.tier-change-chip-name {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tier-change-chip-badges {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
 }
 
 .stats-table th,

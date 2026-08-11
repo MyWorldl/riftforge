@@ -234,15 +234,18 @@ function TierChip({
   ddragonPatch: string
 }) {
   const meta = championsMeta?.[row.champion_id]
+  const name = meta?.name ?? row.champion_id
   return (
-    <span className="tier-change-chip">
+    <span className="tier-change-chip" title={name}>
       {meta && ddragonPatch && (
-        <img src={championImageUrl(ddragonPatch, meta.image.full)} alt="" width={20} height={20} loading="lazy" />
+        <img src={championImageUrl(ddragonPatch, meta.image.full)} alt="" width={32} height={32} loading="lazy" />
       )}
-      {meta?.name ?? row.champion_id}
-      <span className={`tier-badge tier-${row.tier_anterior}`}>{row.tier_anterior}</span>
-      <span aria-hidden="true">→</span>
-      <span className={`tier-badge tier-${row.tier_atual}`}>{row.tier_atual}</span>
+      <span className="tier-change-chip-name">{name}</span>
+      <span className="tier-change-chip-badges">
+        <span className={`tier-badge tier-${row.tier_anterior}`}>{row.tier_anterior}</span>
+        <span aria-hidden="true">→</span>
+        <span className={`tier-badge tier-${row.tier_atual}`}>{row.tier_atual}</span>
+      </span>
     </span>
   )
 }
