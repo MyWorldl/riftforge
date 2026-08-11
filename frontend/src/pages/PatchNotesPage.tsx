@@ -251,7 +251,14 @@ function TierChip({
  *  centenas de linhas num patch normal) virou uma lista longa demais
  *  pra usar de verdade. Agrupado por rota e, dentro dela, por direção
  *  (subiu/desceu) — a mesma informação (campeão, tier antes/depois, foto),
- *  em chips compactos que quebram linha, escaneável sem rolagem infinita. */
+ *  em chips compactos.
+ *
+ *  Pedido do usuário (revisão): as 5 rotas apareciam todas expandidas
+ *  ao mesmo tempo (paredes de até 33 chips cada) — vira um seletor de
+ *  rota (mesmo padrão `<select>` de "Elo" já usado na página), só uma
+ *  rota visível por vez. `selectedLane` guarda a escolha manual; se a
+ *  rota escolhida sumir da lista (troca de elo sem dados pra ela), cai
+ *  de volta pra primeira disponível sem precisar de efeito adicional. */
 function TierChangeGroups({
   rows,
   championsMeta,
@@ -261,42 +268,52 @@ function TierChangeGroups({
   championsMeta: Record<string, ChampionMeta> | null
   ddragonPatch: string
 }) {
+  const [selectedLane, setSelectedLane] = useState<string | null>(null)
   if (rows.length === 0) return null
   const groups = groupByLane(rows)
+  const activeLane = groups.find(([lane]) => lane === selectedLane)?.[0] ?? groups[0][0]
+  const activeGroup = groups.find(([lane]) => lane === activeLane)
+  if (!activeGroup) return null
+  const [, laneRows] = activeGroup
+  const { subiram, desceram } = splitByDirection(laneRows)
   return (
     <div className="tier-change-groups">
-      {groups.map(([lane, laneRows]) => {
-        const { subiram, desceram } = splitByDirection(laneRows)
-        return (
-          <div className="tier-change-lane-group" key={lane}>
-            <h3 className="tier-change-lane-title">{LANE_LABELS[lane] ?? lane}</h3>
-            {subiram.length > 0 && (
-              <>
-                <p className="tier-change-direction-label tier-change-direction-up">
-                  Subiram de tier ({subiram.length})
-                </p>
-                <div className="tier-change-chips">
-                  {subiram.map((row) => (
-                    <TierChip key={`${row.champion_id}-${row.lane}`} row={row} championsMeta={championsMeta} ddragonPatch={ddragonPatch} />
-                  ))}
-                </div>
-              </>
-            )}
-            {desceram.length > 0 && (
-              <>
-                <p className="tier-change-direction-label tier-change-direction-down">
-                  Desceram de tier ({desceram.length})
-                </p>
-                <div className="tier-change-chips">
-                  {desceram.map((row) => (
-                    <TierChip key={`${row.champion_id}-${row.lane}`} row={row} championsMeta={championsMeta} ddragonPatch={ddragonPatch} />
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-        )
-      })}
+      <div className="filters">
+        <label>
+          Rota
+          <select value={activeLane} onChange={(e) => setSelectedLane(e.target.value)}>
+            {groups.map(([lane]) => (
+              <option key={lane} value={lane}>{LANE_LABELS[lane] ?? lane}</option>
+            ))}
+          </select>
+        </label>
+      </div>
+      <div className="tier-change-lane-group">
+        {subiram.length > 0 && (
+          <>
+            <p className="tier-change-direction-label tier-change-direction-up">
+              Subiram de tier ({subiram.length})
+            </p>
+            <div className="tier-change-chips">
+              {subiram.map((row) => (
+                <TierChip key={`${row.champion_id}-${row.lane}`} row={row} championsMeta={championsMeta} ddragonPatch={ddragonPatch} />
+              ))}
+            </div>
+          </>
+        )}
+        {desceram.length > 0 && (
+          <>
+            <p className="tier-change-direction-label tier-change-direction-down">
+              Desceram de tier ({desceram.length})
+            </p>
+            <div className="tier-change-chips">
+              {desceram.map((row) => (
+                <TierChip key={`${row.champion_id}-${row.lane}`} row={row} championsMeta={championsMeta} ddragonPatch={ddragonPatch} />
+              ))}
+            </div>
+          </>
+        )}
+      </div>
     </div>
   )
 }

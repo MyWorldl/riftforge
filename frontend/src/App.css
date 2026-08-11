@@ -1320,11 +1320,6 @@
   width: 100%;
 }
 
-.tier-change-lane-title {
-  margin: 0 0 var(--space-2);
-  font-size: var(--text-lg);
-}
-
 /* Pedido do usuário: dentro de cada rota, separa quem subiu de quem
    desceu — sem isso uma rota grande virava uma parede só de chips
    (~65 num patch cheio), mais densa que a tabela antiga mas ainda sem
@@ -1349,16 +1344,21 @@
   color: var(--neg);
 }
 
+/* Pedido do usuário: o `flex-wrap` antigo deixava os chips com
+   espaçamento irregular (última linha "solta", larguras desiguais) —
+   vira grid de verdade, colunas parelhas do mesmo tamanho mínimo. */
 .tier-change-chips {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: var(--space-2);
 }
 
 .tier-change-chip {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   gap: 6px;
+  width: 100%;
+  box-sizing: border-box;
   padding: 4px 10px 4px 4px;
   border: 1px solid var(--border);
   border-radius: 999px;
