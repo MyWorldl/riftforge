@@ -39,6 +39,14 @@
      ficado preso no claro e nunca acompanhava --neg no escuro. */
   --neg-bg: rgba(179, 38, 30, 0.12);
   --neg-border: rgba(179, 38, 30, 0.4);
+  /* Pedido do usuário: segmentação de Patch Notes em Buff (--pos)/
+     Nerf (--neg)/Ajuste (--warn, amarelo/âmbar) — terceira cor
+     semântica pro caso "nem claramente bom nem ruim". 5,02:1 contra
+     branco, verificado por luminância relativa como os outros tokens
+     de tema. */
+  --warn: #b45309;
+  --warn-bg: rgba(180, 83, 9, 0.1);
+  --warn-border: rgba(180, 83, 9, 0.4);
   /* Perfil de poder (item 3.2): estrutural (Kit+Build) vs. meta
      (Performance+Meta). Cores distintas do verde/vermelho acima de
      propósito — não é "bom/ruim", é "de onde vem o poder". O badge é
@@ -161,6 +169,9 @@
     --neg: #f85149;
     --neg-bg: rgba(248, 81, 73, 0.15);
     --neg-border: rgba(248, 81, 73, 0.4);
+    --warn: #facc15;
+    --warn-bg: rgba(250, 204, 21, 0.15);
+    --warn-border: rgba(250, 204, 21, 0.4);
     --shadow:
       rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
     /* Sprint C item C4 — só no escuro (pesquisa de design §3): overlay
@@ -199,6 +210,9 @@
   --neg: #f85149;
   --neg-bg: rgba(248, 81, 73, 0.15);
   --neg-border: rgba(248, 81, 73, 0.4);
+  --warn: #facc15;
+  --warn-bg: rgba(250, 204, 21, 0.15);
+  --warn-border: rgba(250, 204, 21, 0.4);
   --shadow:
     rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
   --glass-bg: rgba(255, 255, 255, 0.06);
@@ -221,6 +235,9 @@
   --neg: #b3261e;
   --neg-bg: rgba(179, 38, 30, 0.12);
   --neg-border: rgba(179, 38, 30, 0.4);
+  --warn: #b45309;
+  --warn-bg: rgba(180, 83, 9, 0.1);
+  --warn-border: rgba(180, 83, 9, 0.4);
   --shadow:
     rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
 }

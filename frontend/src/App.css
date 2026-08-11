@@ -929,19 +929,53 @@
   margin: 12px 0;
 }
 
+/* Pedido do usuário: o grid de várias colunas com cards de altura bem
+   diferente entre si (mesmo já sem esticar, ver item anterior) ficava
+   visualmente desorganizado — colunas curtas ao lado de colunas
+   enormes. Vira lista de coluna única, um card embaixo do outro. */
 .patch-change-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  display: flex;
+  flex-direction: column;
   gap: 12px;
   width: 100%;
-  max-width: 960px;
+  max-width: 720px;
   align-self: flex-start;
-  /* Pedido do usuário (caso Alistar): sem isto, todo card na mesma linha
-     do grid estica pra bater com o mais alto da fileira — um card com 1
-     mudança ao lado de um com 10 ficava com um vazio enorme embaixo,
-     mesmo sem ter conteúdo pra preencher. `start` deixa cada card na
-     altura natural do próprio conteúdo. */
-  align-items: start;
+}
+
+/* Pedido do usuário: segmenta a lista em Buff/Nerf/Ajuste — cada bloco
+   com cor e ícone próprios, pra não misturar tudo numa lista só. */
+.patch-category-section {
+  width: 100%;
+  margin-bottom: var(--space-5);
+}
+
+.patch-category-section:last-child {
+  margin-bottom: 0;
+}
+
+.patch-category-heading {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-lg);
+}
+
+.patch-category-buff {
+  color: var(--pos);
+}
+
+.patch-category-nerf {
+  color: var(--neg);
+}
+
+.patch-category-ajuste {
+  color: var(--warn);
+}
+
+.patch-category-count {
+  font-weight: 400;
+  color: var(--text);
 }
 
 .patch-change-card {
@@ -969,9 +1003,6 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  /* Pedido do usuário: este bloco (destaque de mudança de tier) saiu do
-     topo do card pro final — margem vira "acima", não "abaixo". */
-  margin-top: 10px;
   padding: 6px 8px;
   border-radius: 6px;
   background: var(--bg);

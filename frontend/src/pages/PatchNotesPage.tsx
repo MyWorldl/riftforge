@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import {
   championImageUrl,
@@ -81,6 +81,59 @@ function classifyChangeDirection(change: PatchChangeRow): ChangeDirection {
   const increased = after > before
   const better = higherIsBetter ? increased : !increased
   return better ? 'pos' : 'neg'
+}
+
+/** Pedido do usuário: segmenta a visão do patch em Buff/Nerf/Ajuste —
+ *  conta quantas mudanças do campeão são boas (`pos`) vs. ruins (`neg`)
+ *  pra ele (reaproveita `classifyChangeDirection`, mesma lógica de
+ *  cor já usada por mudança individual); "Ajuste" cobre empate — inclui
+ *  o caso comum de um campeão só ter mudanças não-classificáveis
+ *  ("Valor de efeito N"), onde pos=neg=0. */
+type PatchCategory = 'buff' | 'nerf' | 'ajuste'
+
+function classifyChampionCategory(changes: PatchChangeRow[]): PatchCategory {
+  let pos = 0
+  let neg = 0
+  for (const change of changes) {
+    const direction = classifyChangeDirection(change)
+    if (direction === 'pos') pos++
+    else if (direction === 'neg') neg++
+  }
+  if (pos > neg) return 'buff'
+  if (neg > pos) return 'nerf'
+  return 'ajuste'
+}
+
+function IconBuff() {
+  return (
+    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+      <path d="M2 12 7 6l3 3 4-6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+      <path d="M10 3h4v4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+    </svg>
+  )
+}
+
+function IconNerf() {
+  return (
+    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+      <path d="M2 4 7 10l3-3 4 6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+      <path d="M10 13h4v-4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+    </svg>
+  )
+}
+
+function IconAjuste() {
+  return (
+    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+      <path
+        d="M11.4 2.3a3 3 0 0 0-3.86 3.86l-5.1 5.1a1.4 1.4 0 1 0 1.98 1.98l5.1-5.1a3 3 0 0 0 3.86-3.86l-1.8 1.8-1.98-1.98 1.8-1.8Z"
+        stroke="currentColor"
+        strokeWidth="1.2"
+        strokeLinejoin="round"
+        fill="none"
+      />
+    </svg>
+  )
 }
 
 const SPELL_KEYS = ['Q', 'W', 'E', 'R']
@@ -247,6 +300,69 @@ function groupByChampion(rows: PatchChangeRow[]): [string, PatchChangeRow[]][] {
     map.set(row.champion_id, list)
   }
   return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]))
+}
+
+const CATEGORY_SECTIONS: { key: PatchCategory; label: string; icon: ReactNode }[] = [
+  { key: 'buff', label: 'Buff', icon: <IconBuff /> },
+  { key: 'nerf', label: 'Nerf', icon: <IconNerf /> },
+  { key: 'ajuste', label: 'Ajuste', icon: <IconAjuste /> },
+]
+
+/** Pedido do usuário: em vez de um grid de colunas com cards de altura
+ *  bem diferente entre si (visual desorganizado — colunas curtas ao
+ *  lado de colunas enormes), vira lista de coluna única, do campeão com
+ *  mais mudanças pro com menos. E segmentado em 3 blocos (Buff/Nerf/
+ *  Ajuste, cada um com cor+ícone próprio) em vez de uma lista só —
+ *  reaproveita `classifyChampionCategory` (soma de direção por mudança
+ *  individual, já calculada pra colorir cada valor). */
+function ChangesByCategory({
+  grouped,
+  championsMeta,
+  ddragonPatch,
+  scoreDeltaIndex,
+  abilities,
+}: {
+  grouped: [string, PatchChangeRow[]][]
+  championsMeta: Record<string, ChampionMeta> | null
+  ddragonPatch: string
+  scoreDeltaIndex: Map<string, PatchDeltaRow[]>
+  abilities: Record<string, ChampionDetail>
+}) {
+  const buckets: Record<PatchCategory, [string, PatchChangeRow[]][]> = { buff: [], nerf: [], ajuste: [] }
+  for (const entry of grouped) {
+    buckets[classifyChampionCategory(entry[1])].push(entry)
+  }
+  for (const key of Object.keys(buckets) as PatchCategory[]) {
+    buckets[key].sort((a, b) => b[1].length - a[1].length)
+  }
+  return (
+    <>
+      {CATEGORY_SECTIONS.map(({ key, label, icon }) => {
+        const entries = buckets[key]
+        if (entries.length === 0) return null
+        return (
+          <div className="patch-category-section" key={key}>
+            <h3 className={`patch-category-heading patch-category-${key}`}>
+              {icon} {label} <span className="patch-category-count">({entries.length})</span>
+            </h3>
+            <div className="patch-change-grid">
+              {entries.map(([championId, rows]) => (
+                <ChampionChangeCard
+                  key={championId}
+                  championId={championId}
+                  changes={rows}
+                  championsMeta={championsMeta}
+                  ddragonPatch={ddragonPatch}
+                  scoreDeltas={scoreDeltaIndex.get(championId)}
+                  abilities={abilities}
+                />
+              ))}
+            </div>
+          </div>
+        )
+      })}
+    </>
+  )
 }
 
 /** Item 5.4 (revisão técnica): junta as mudanças brutas do Data Dragon
@@ -468,8 +584,15 @@ function ChampionChangeCard({
       )}
       {/* Pedido do usuário: o destaque de mudança de tier (score+tier
           badge) sai de logo abaixo do nome e vira o fechamento do card,
-          depois de atributos/habilidades. */}
-      <ScoreImpactBadges rows={scoreDeltas} />
+          depois de atributos/habilidades — com cabeçalho próprio, mesmo
+          padrão de "Atributos"/"Habilidades do campeão", pra segmentar
+          bem o que o usuário está vendo. */}
+      {scoreDeltas && scoreDeltas.length > 0 && (
+        <>
+          <p className="patch-change-subheading">Mudança de tier</p>
+          <ScoreImpactBadges rows={scoreDeltas} />
+        </>
+      )}
     </div>
   )
 }
@@ -586,19 +709,13 @@ function PatchNotesPage() {
             )}{' '}
             que mudaram neste patch.
           </p>
-          <div className="patch-change-grid">
-            {groupByChampion(myChanges.mudancas).map(([championId, rows]) => (
-              <ChampionChangeCard
-                key={championId}
-                championId={championId}
-                changes={rows}
-                championsMeta={championsMeta}
-                ddragonPatch={ddragonPatch}
-                scoreDeltas={scoreDeltaIndex.get(championId)}
-                abilities={abilities}
-              />
-            ))}
-          </div>
+          <ChangesByCategory
+            grouped={groupByChampion(myChanges.mudancas)}
+            championsMeta={championsMeta}
+            ddragonPatch={ddragonPatch}
+            scoreDeltaIndex={scoreDeltaIndex}
+            abilities={abilities}
+          />
           <div className="section-divider" />
         </>
       )}
@@ -607,19 +724,13 @@ function PatchNotesPage() {
 
       {changes && changes.patch_anterior && grouped && (
         <>
-          <div className="patch-change-grid">
-            {grouped.map(([championId, rows]) => (
-              <ChampionChangeCard
-                key={championId}
-                championId={championId}
-                changes={rows}
-                championsMeta={championsMeta}
-                ddragonPatch={ddragonPatch}
-                scoreDeltas={scoreDeltaIndex.get(championId)}
-                abilities={abilities}
-              />
-            ))}
-          </div>
+          <ChangesByCategory
+            grouped={grouped}
+            championsMeta={championsMeta}
+            ddragonPatch={ddragonPatch}
+            scoreDeltaIndex={scoreDeltaIndex}
+            abilities={abilities}
+          />
           {/* Pedido do usuário: o resumo ("N campeões alterados") sai do
               topo da seção (onde competia com a introdução da página por
               atenção) e vira o fechamento dela, depois dos cards. */}
