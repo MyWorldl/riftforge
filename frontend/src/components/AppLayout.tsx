@@ -132,6 +132,25 @@ function AppLayout() {
         Pular para o conteúdo
       </a>
 
+      {/* Sprint C (repaginação, item C2): sidebar em telas ≥1024px (mesma
+          `NAV_ITEMS`/`nav-link` de antes, só o layout muda via CSS —
+          `.app-shell` vira grid nesse breakpoint e `.sidebar` ocupa a
+          coluna esquerda). Abaixo de 1024px continua sendo a linha
+          horizontal de pílulas que já existia (`.nav-row` antigo). */}
+      <nav className="sidebar" aria-label="Principal">
+        {NAV_ITEMS.map((item) => (
+          <NavLink
+            key={item.to}
+            to={item.to}
+            end={item.end}
+            className={({ isActive }) => `nav-link ${isActive ? 'nav-link-active' : ''}`}
+          >
+            {item.icon}
+            {item.label}
+          </NavLink>
+        ))}
+      </nav>
+
       <header className="top-bar">
         <NavLink to="/" className="brand">RiftForge</NavLink>
         <nav className="top-bar-tabs" aria-label="Seções">
@@ -165,29 +184,19 @@ function AppLayout() {
         </div>
       </header>
 
-      <nav className="nav-row" aria-label="Principal">
-        {NAV_ITEMS.map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            end={item.end}
-            className={({ isActive }) => `nav-link ${isActive ? 'nav-link-active' : ''}`}
-          >
-            {item.icon}
-            {item.label}
-          </NavLink>
-        ))}
-      </nav>
-
-      {/* Alvo do skip-link acima — `tabIndex={-1}` pra receber foco
-          programático sem entrar na ordem normal de Tab (não é um link
-          nem controle real, só o ponto de pouso). Cada página continua
-          renderizando seu próprio `<main>`; este `span` fica antes dele
-          de propósito, sem envolvê-lo, pra não mexer no layout flex do
-          `.app-shell` (um wrapper por cima do `<main>` quebraria o
-          `flex: 1` que `.center` depende). */}
-      <span id="main-content" tabIndex={-1} className="skip-link-target" />
-      <Outlet />
+      {/* Agrupa o alvo do skip-link + o conteúdo da página numa única área
+          de grid (`content`) em telas ≥1024px — a sidebar (acima) e o
+          rodapé (abaixo) ficam fora desse agrupamento. Sem efeito visual
+          abaixo de 1024px (`.app-shell` continua flex-column, este `div`
+          não muda nada no fluxo normal). */}
+      <div className="app-content">
+        {/* Alvo do skip-link no topo — `tabIndex={-1}` pra receber foco
+            programático sem entrar na ordem normal de Tab (não é um link
+            nem controle real, só o ponto de pouso). Cada página continua
+            renderizando seu próprio `<main>`. */}
+        <span id="main-content" tabIndex={-1} className="skip-link-target" />
+        <Outlet />
+      </div>
 
       <footer className="riot-disclaimer">
         <p>

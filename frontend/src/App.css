@@ -61,6 +61,20 @@
   outline: none;
 }
 
+/* Sprint C item C2: agrupa o alvo do skip-link + `<Outlet />` numa única
+   caixa flex — `flex: 1` repassado pra dentro é o que faz `.center` (o
+   `<main>` de cada página) continuar esticando pra preencher a altura
+   disponível, igual fazia como filho direto de `.app-shell` antes deste
+   `div` existir. `order: 3` mantém isso entre `.top-bar`/`.sidebar` (1/2)
+   e `.riot-disclaimer` (4) abaixo de 1024px; a media query perto de
+   `.nav-link-active` troca só `grid-area` pro layout ≥1024px. */
+.app-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  order: 3;
+}
+
 .top-bar {
   display: flex;
   align-items: center;
@@ -69,6 +83,10 @@
   gap: 32px;
   padding: 16px 20px;
   border-bottom: 1px solid var(--border);
+  /* Ver comentário em `.sidebar` — junto com `order: 2` de lá, garante
+     que a marca continua vindo visualmente antes dos links abaixo de
+     1024px, mesmo com a sidebar precedendo no DOM. */
+  order: 1;
 }
 
 .top-bar .brand {
@@ -136,13 +154,20 @@
   }
 }
 
-.nav-row {
+.sidebar {
   display: flex;
   justify-content: center;
   gap: 8px;
   flex-wrap: wrap;
   padding: 12px 20px;
   border-bottom: 1px solid var(--border);
+  /* Sprint C item C2: no DOM, a sidebar vem antes do `.top-bar` (pra virar
+     a coluna esquerda do grid em telas ≥1024px, ver media query abaixo).
+     Abaixo de 1024px `.app-shell` continua flex-column normal — sem
+     `order`, isso mostraria os links ANTES da marca/logo, invertendo a
+     ordem visual de sempre. `order` muda só a ordem visual, não a ordem
+     real do DOM (Tab continua seguindo o DOM, não isto). */
+  order: 2;
 }
 
 /* Ícone + texto (opção A) com o item ativo virando uma pílula preenchida
@@ -177,6 +202,111 @@
   border-color: color-mix(in srgb, var(--brand) 45%, transparent);
 }
 
+/* Sprint C item C2 (pesquisa de design §2: sidebar > menu superior em
+   telas largas): mesmo breakpoint ≥1024px já usado no resto do projeto.
+   `.app-shell` vira grid só aqui — abaixo disso ele continua o
+   flex-column original, e `.sidebar` continua a linha horizontal de
+   pílulas de sempre (`.nav-row` antigo, só renomeado). */
+@media (min-width: 1024px) {
+  .app-shell {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    grid-template-areas:
+      'sidebar topbar'
+      'sidebar content'
+      'sidebar footer';
+    align-items: start;
+  }
+
+  .sidebar {
+    grid-area: sidebar;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    flex-wrap: nowrap;
+    gap: var(--space-1);
+    padding: var(--space-5) var(--space-3);
+    border-bottom: none;
+    border-right: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    box-sizing: border-box;
+  }
+
+  .sidebar .nav-link {
+    justify-content: flex-start;
+    border-radius: var(--radius-md);
+  }
+
+  .top-bar {
+    grid-area: topbar;
+  }
+
+  .app-content {
+    grid-area: content;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .riot-disclaimer {
+    grid-area: footer;
+  }
+}
+
+/* Sprint C item C4 (pesquisa de design §3): glassmorphism só nestes 4
+   painéis de destaque — nunca em tabela densa (Campeões/Rankings/
+   Matchups), a pesquisa avisa que isso prejudica legibilidade. Só
+   `:root[data-theme='dark']`, sem o par `@media (prefers-color-scheme:
+   dark)` que os tokens em `index.css` sempre têm: o script inline de
+   `index.html` sempre define `data-theme` antes da primeira pintura (ver
+   comentário lá), então esse par nunca seria alcançado de verdade aqui —
+   e, pior, um `@media` sem o atributo aplicaria com a mesma especificidade
+   da regra clara de cada painel, ganhando por ordem de arquivo mesmo com
+   o usuário tendo escolhido claro explicitamente. `--glass-bg`/
+   `--glass-border` só existem no tema escuro (ver `index.css`), então
+   esta seção inteira não tem equivalente claro por design. */
+:root[data-theme='dark'] .champion-detail-header,
+:root[data-theme='dark'] .home-shortcut-card {
+  background: var(--glass-bg);
+  border-color: var(--glass-border);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+/* `.podium-card` sem `border-color` aqui de propósito — cada posição
+   (`.podium-1`/`-2`/`-3`, mais abaixo) mantém a própria borda
+   dourada/prata/bronze como identidade visual do pódio; só o blur e o
+   fundo (via gradiente, também mais abaixo) ficam glass. */
+:root[data-theme='dark'] .podium-card {
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+:root[data-theme='dark'] .roadmap-section {
+  padding: var(--space-4);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  background: var(--glass-bg);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-sizing: border-box;
+}
+
+/* Pódio (`.podium-1`/`.podium-2`/`.podium-3`) tem gradiente próprio por
+   posição, mais específico que `.podium-card` sozinho — sem isto, o
+   glass acima nunca apareceria nos 3 cards que mais precisam dele. */
+:root[data-theme='dark'] .podium-card.podium-1 {
+  background: linear-gradient(160deg, rgba(201, 162, 39, 0.22), var(--glass-bg));
+}
+:root[data-theme='dark'] .podium-card.podium-2 {
+  background: linear-gradient(160deg, rgba(154, 160, 166, 0.14), var(--glass-bg));
+}
+:root[data-theme='dark'] .podium-card.podium-3 {
+  background: linear-gradient(160deg, rgba(181, 101, 29, 0.12), var(--glass-bg));
+}
+
 .hero {
   display: flex;
   justify-content: center;
@@ -196,6 +326,58 @@
   max-width: 620px;
   text-align: center;
   color: var(--text);
+}
+
+/* Sprint C item C3 (repaginação, pesquisa de design §2: "cards em grid" >
+   lista de links solta): grid de atalho pras seções principais — a busca
+   de jogador abaixo continua sendo a ação primária da Home (por isso vem
+   antes dela no fluxo de leitura), isto é navegação secundária. `auto-fit`
+   + `minmax` em vez de contagem fixa de colunas: se um atalho novo entrar
+   depois, ele só encaixa, sem editar breakpoint nenhum. */
+.home-shortcuts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--space-3);
+  width: 100%;
+  max-width: 900px;
+}
+
+.home-shortcut-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  color: var(--text);
+  text-decoration: none;
+  transition: border-color 0.15s, transform 0.15s;
+}
+
+.home-shortcut-card:hover {
+  border-color: var(--brand);
+  color: var(--text-h);
+  transform: translateY(-2px);
+}
+
+.home-shortcut-icon {
+  color: var(--brand);
+}
+
+.home-shortcut-label {
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.home-shortcut-description {
+  font-size: var(--text-sm);
+  color: var(--text);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-shortcut-card {
+    transition: none;
+  }
 }
 
 .player-search-form {
@@ -1917,6 +2099,9 @@
   line-height: 1.5;
   color: var(--text);
   box-sizing: border-box;
+  /* Ver comentário em `.sidebar` (Sprint C item C2) — mantém o rodapé
+     visualmente por último abaixo de 1024px. */
+  order: 4;
 }
 
 /* Reset da margem padrão de <p> — o footer agora tem duas linhas

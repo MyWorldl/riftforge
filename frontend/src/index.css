@@ -13,17 +13,21 @@
      uma borda puramente decorativa. */
   --border-control: #949199;
   --code-bg: #f4f3ec;
-  --accent: #ea580c;
-  --accent-bg: rgba(234, 88, 12, 0.1);
-  --accent-border: rgba(234, 88, 12, 0.5);
-  /* Rodada 29 (revisão técnica 09/08 §7.6) — cor de marca (favicon já é
-     essa bigorna roxa, nunca tinha chegado ao CSS). Verificado nesta
-     rodada, não estimado: 5,14:1 contra branco (bate com o que a
-     revisão mediu). O claro usa o roxo puro; o escuro usa uma variante
-     mais clara (#a78bfa, 6,57:1 contra --bg escuro) porque o roxo puro
-     só dá 3,48:1 no fundo escuro — abaixo de 4,5:1, a revisão só tinha
-     verificado contra branco. Mesmo padrão de --accent claro/escuro. */
-  --brand: #863bff;
+  /* Sprint C (repaginação "Hextech Violeta") — --accent deixa de ser
+     laranja e vira ciano-petróleo, pra não competir com o roxo de marca
+     abaixo (os dois eram complementares antes, o que fazia sentido só
+     enquanto --brand não aparecia em botão/estado nenhum). 5,36:1 contra
+     branco — o tom óbvio (#0891b2) dava só 3,68:1, escurecido até bater
+     AA. Mesmo padrão --accent claro/escuro de sempre. */
+  --accent: #0e7490;
+  --accent-bg: rgba(14, 116, 144, 0.1);
+  --accent-border: rgba(14, 116, 144, 0.5);
+  /* Rodada 29 (revisão técnica 09/08 §7.6), atualizado no Sprint C —
+     evolução do roxo original (#863bff), não ruptura: mesmo favicon,
+     tom levemente mais quente/escuro. 5,7:1 contra branco no claro; o
+     escuro mantém #a78bfa (6,57:1 contra --bg escuro) sem mudança —
+     já era a variante clara certa, só o tom base do claro mudou. */
+  --brand: #7c3aed;
   --social-bg: rgba(244, 243, 236, 0.5);
   /* Verde/vermelho da explicação por camada. Tons diferentes por tema
      porque os mesmos valores não alcançam contraste AA (4.5:1) nos dois
@@ -53,7 +57,13 @@
      8.86:1 contra branco. */
   --tier-god: #8a6608;
   --tier-s: #d0393e;
-  --tier-a: #7a1fd6;
+  /* Sprint C: o roxo original (#7a1fd6) ficou perto demais do novo
+     --brand (#7c3aed) — "isto é a marca" e "isto é o tier A de um
+     campeão" são conceitos diferentes e não podem parecer a mesma cor.
+     Movido pra um magenta/rosa (família diferente de matiz), mantendo
+     texto branco fixo por cima: 6,04:1 contra branco (acima do 7,01:1
+     antigo, folga maior). */
+  --tier-a: #be185d;
   --tier-b: #1a5bb8;
   --tier-c: #1f7a3d;
   /* D/E ficavam quase indistinguíveis (#5c5c5c vs #4a4a4a, diferença de
@@ -142,9 +152,9 @@
     --border: #2e303a;
     --border-control: #63667a;
     --code-bg: #1f2028;
-    --accent: #fb923c;
-    --accent-bg: rgba(251, 146, 60, 0.15);
-    --accent-border: rgba(251, 146, 60, 0.5);
+    --accent: #22d3ee;
+    --accent-bg: rgba(34, 211, 238, 0.15);
+    --accent-border: rgba(34, 211, 238, 0.5);
     --brand: #a78bfa;
     --social-bg: rgba(47, 48, 58, 0.5);
     --pos: #3fb950;
@@ -153,6 +163,14 @@
     --neg-border: rgba(248, 81, 73, 0.4);
     --shadow:
       rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
+    /* Sprint C item C4 — só no escuro (pesquisa de design §3): overlay
+       branco bem sutil + blur, não uma cor própria, pra funcionar sobre
+       qualquer fundo escuro que o painel já tenha (gradiente do pódio,
+       --code-bg do cabeçalho de campeão). Contraste checado depois de
+       aplicado: --text sobre o resultado dá 6,02:1, --text-h dá 13,88:1
+       (ambos bem acima do fundo sólido que substituem). */
+    --glass-bg: rgba(255, 255, 255, 0.06);
+    --glass-border: rgba(255, 255, 255, 0.12);
   }
 
   #social .button-icon {
@@ -172,9 +190,9 @@
   --border: #2e303a;
   --border-control: #63667a;
   --code-bg: #1f2028;
-  --accent: #fb923c;
-  --accent-bg: rgba(251, 146, 60, 0.15);
-  --accent-border: rgba(251, 146, 60, 0.5);
+  --accent: #22d3ee;
+  --accent-bg: rgba(34, 211, 238, 0.15);
+  --accent-border: rgba(34, 211, 238, 0.5);
   --brand: #a78bfa;
   --social-bg: rgba(47, 48, 58, 0.5);
   --pos: #3fb950;
@@ -183,6 +201,8 @@
   --neg-border: rgba(248, 81, 73, 0.4);
   --shadow:
     rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
+  --glass-bg: rgba(255, 255, 255, 0.06);
+  --glass-border: rgba(255, 255, 255, 0.12);
 }
 
 :root[data-theme='light'] {
@@ -192,10 +212,10 @@
   --border: #e5e4e7;
   --border-control: #949199;
   --code-bg: #f4f3ec;
-  --accent: #ea580c;
-  --accent-bg: rgba(234, 88, 12, 0.1);
-  --accent-border: rgba(234, 88, 12, 0.5);
-  --brand: #863bff;
+  --accent: #0e7490;
+  --accent-bg: rgba(14, 116, 144, 0.1);
+  --accent-border: rgba(14, 116, 144, 0.5);
+  --brand: #7c3aed;
   --social-bg: rgba(244, 243, 236, 0.5);
   --pos: #1a7f37;
   --neg: #b3261e;

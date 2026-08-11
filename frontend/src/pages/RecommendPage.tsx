@@ -246,7 +246,7 @@ function RecommendPage() {
                     className="champion-cell"
                   >
                     {meta && ddragonPatch && (
-                      <img src={championImageUrl(ddragonPatch, meta.image.full)} alt="" width={32} height={32} />
+                      <img src={championImageUrl(ddragonPatch, meta.image.full)} alt="" width={32} height={32} loading="lazy" />
                     )}
                     <span>{meta?.name ?? row.champion_id}</span>
                   </Link>

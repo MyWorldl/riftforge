@@ -120,7 +120,7 @@ function MatchupsPage() {
         <>
           <div className="champion-detail-header champion-detail-header-compact">
             {meta && ddragonPatch && (
-              <img src={championImageUrl(ddragonPatch, meta.image.full)} alt="" width={48} height={48} />
+              <img src={championImageUrl(ddragonPatch, meta.image.full)} alt="" width={48} height={48} loading="lazy" />
             )}
             <h2>{meta?.name ?? championId}</h2>
             <Link to="/matchups" className="matchups-change-champion">Trocar campeão</Link>
@@ -166,7 +166,7 @@ function MatchupsPage() {
                     onClick={() => navigate(`/matchups/${r.champion_id}?lane=${lane}&eloTier=${eloTier}&region=${region}`)}
                   >
                     {m && ddragonPatch && (
-                      <img src={championImageUrl(ddragonPatch, m.image.full)} alt="" width={22} height={22} />
+                      <img src={championImageUrl(ddragonPatch, m.image.full)} alt="" width={22} height={22} loading="lazy" />
                     )}
                     <span>{m?.name ?? r.champion_id}</span>
                   </button>

@@ -92,6 +92,7 @@ export default function BuildRecommendationPanel({
                 title={meta.name}
                 width={32}
                 height={32}
+                loading="lazy"
               />
             ) : (
               <span key={`${itemId}-${index}`} className="build-item-unknown" title={String(itemId)} />
@@ -107,7 +108,7 @@ export default function BuildRecommendationPanel({
         </span>
         {keystone ? (
           <div className="build-rune-row">
-            <img src={runeIconUrl(keystone.icon)} alt={keystone.name} title={keystone.name} width={28} height={28} />
+            <img src={runeIconUrl(keystone.icon)} alt={keystone.name} title={keystone.name} width={28} height={28} loading="lazy" />
             <span className="explain-sub">
               {keystone.name}
               {primaryStyle && ` (${primaryStyle.name})`}

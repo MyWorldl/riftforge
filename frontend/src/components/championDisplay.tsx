@@ -382,7 +382,7 @@ export function ComparatorPanel({
             <div className="comparator-card" key={rowKey(row)}>
               <div className="comparator-card-header">
                 {meta && ddragonPatch && (
-                  <img src={championImageUrl(ddragonPatch, meta.image.full)} alt="" width={28} height={28} />
+                  <img src={championImageUrl(ddragonPatch, meta.image.full)} alt="" width={28} height={28} loading="lazy" />
                 )}
                 <span>{meta?.name ?? row.champion_id}</span>
                 <button

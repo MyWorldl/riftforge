@@ -48,7 +48,7 @@ export default function MatchupPanel({
           return (
             <li className="matchup-item" key={row.opponent_champion_id}>
               {meta && ddragonPatch && (
-                <img src={championImageUrl(ddragonPatch, meta.image.full)} alt="" width={28} height={28} />
+                <img src={championImageUrl(ddragonPatch, meta.image.full)} alt="" width={28} height={28} loading="lazy" />
               )}
               <span className="matchup-name">{meta?.name ?? row.opponent_champion_id}</span>
               <span className="matchup-bar-cell">

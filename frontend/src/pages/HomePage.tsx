@@ -17,6 +17,65 @@ import { useDocumentTitle } from '../hooks/useDocumentTitle'
 
 const DEFAULT_ELO_TIER = 'GOLD'
 
+/** Sprint C item C3 (repaginação, pesquisa de design §2): mesmo estilo de
+ *  ícone (stroke 16x16) já usado em `AppLayout.tsx` — duplicado aqui em
+ *  vez de exportado de lá, mesmo padrão de duplicação local que
+ *  `RecommendPage.tsx`/`ChampionsPage.tsx` já seguem pra ícones/constantes
+ *  pequenas. `IconSwords` é novo: Matchups não tem ícone próprio ainda
+ *  porque não fica na sidebar principal (só acessível via campeão). */
+function IconShield() {
+  return (
+    <svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true">
+      <path d="M8 1.5 13 3.5v4c0 3.5-2.2 5.8-5 7-2.8-1.2-5-3.5-5-7v-4L8 1.5Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" fill="none" />
+    </svg>
+  )
+}
+
+function IconWand() {
+  return (
+    <svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true">
+      <path d="M2 14 10.5 5.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+      <path d="M12.5 1.5v2M15 3h-2M11.5 6.5v1.5M14 8h-1.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function IconTrophy() {
+  return (
+    <svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true">
+      <path d="M4.5 2.5h7v3.5a3.5 3.5 0 0 1-7 0v-3.5Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" fill="none" />
+      <path d="M4.5 3.5h-2v1.5a2 2 0 0 0 2 2M11.5 3.5h2v1.5a2 2 0 0 1-2 2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" fill="none" />
+      <path d="M8 9.5v2M6 14.5h4M6.5 12.5h3l.5 2h-4l.5-2Z" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+    </svg>
+  )
+}
+
+function IconSwords() {
+  return (
+    <svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true">
+      <path d="M2 2 9 9M9 9v3.5L11 14l1-1-1.5-2H9M6.5 6.5 5 8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+      <path d="M14 2 7 9M7 9v3.5L5 14l-1-1 1.5-2H7M9.5 6.5 11 8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+    </svg>
+  )
+}
+
+function IconUser() {
+  return (
+    <svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true">
+      <circle cx="8" cy="5.2" r="2.4" stroke="currentColor" strokeWidth="1.4" fill="none" />
+      <path d="M2.8 14c0-2.9 2.3-4.8 5.2-4.8s5.2 1.9 5.2 4.8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" fill="none" />
+    </svg>
+  )
+}
+
+const SHORTCUTS = [
+  { to: '/campeoes', label: 'Campeões', description: 'Placar de força por elo, rota e patch.', icon: <IconShield /> },
+  { to: '/recomendacao', label: 'Recomendação', description: 'Diz sua rota e elo, a gente ranqueia.', icon: <IconWand /> },
+  { to: '/classificacoes', label: 'Classificações', description: 'Top jogadores por região e tier apex.', icon: <IconTrophy /> },
+  { to: '/matchups', label: 'Matchups', description: 'Confrontos favoráveis e desfavoráveis por campeão.', icon: <IconSwords /> },
+  { to: '/jogador', label: 'Análise do Jogador', description: 'Seu histórico recente e roadmap de progressão.', icon: <IconUser /> },
+]
+
 /** Item novo (revisão técnica §6, Tier 1): "melhores subidas do patch" +
  *  "contexto por rota" — os dois já eram calculados (`/patch-notes` e
  *  `compute_meta.py`), só nunca tinham lugar na Home, que até aqui só
@@ -132,6 +191,16 @@ function HomePage() {
       <p className="hero-tagline">
         Poder dos campeões de League of Legends por elo, rota e patch — score em camadas com tier God-E.
       </p>
+
+      <nav className="home-shortcuts" aria-label="Atalhos">
+        {SHORTCUTS.map((s) => (
+          <Link key={s.to} to={s.to} className="home-shortcut-card">
+            <span className="home-shortcut-icon">{s.icon}</span>
+            <span className="home-shortcut-label">{s.label}</span>
+            <span className="home-shortcut-description">{s.description}</span>
+          </Link>
+        ))}
+      </nav>
 
       <form className="player-search-form" onSubmit={handleSubmit}>
         <label>
