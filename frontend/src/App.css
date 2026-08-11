@@ -967,11 +967,13 @@
 }
 
 /* Pedido do usuário (mockup próprio): cada categoria vira uma galeria
-   compacta só de ícones — não mais um card completo por campeão. */
+   compacta só de ícones — não mais um card completo por campeão. Só
+   resumo de hover (`title`), sem interação de clique. */
 .patch-category-gallery {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  margin-bottom: var(--space-3);
 }
 
 .patch-category-icon-btn {
@@ -984,7 +986,6 @@
   border: 2px solid var(--border);
   border-radius: 10px;
   background: var(--code-bg);
-  cursor: pointer;
   transition: border-color 0.15s ease;
 }
 
@@ -997,11 +998,6 @@
 .patch-category-icon-btn:hover,
 .patch-category-icon-btn:focus-visible {
   border-color: var(--brand);
-}
-
-.patch-category-icon-btn-selected {
-  border-color: var(--brand);
-  box-shadow: 0 0 0 2px var(--accent-bg);
 }
 
 .patch-category-icon-btn img {
@@ -1017,9 +1013,15 @@
   text-transform: uppercase;
 }
 
-/* Pedido do usuário: painel único de detalhe, compartilhado entre as
-   três galerias — resumo (foto+nome+contagem) primeiro, corpo completo
-   só depois de "mais detalhes". */
+/* Pedido do usuário: todos os campeões da categoria aparecem aqui de
+   uma vez, sem precisar clicar no ícone — um painel de resumo por
+   campeão, empilhados. */
+.patch-category-panels {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
 .patch-selected-panel {
   width: 100%;
   max-width: 720px;
@@ -1027,7 +1029,6 @@
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 12px 14px;
-  margin-bottom: var(--space-5);
 }
 
 .patch-selected-panel-header {

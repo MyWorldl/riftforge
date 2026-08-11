@@ -319,27 +319,20 @@ const CATEGORY_SECTIONS: { key: PatchCategory; label: string; icon: ReactNode }[
 ]
 
 /** Pedido do usuário (mockup próprio): cada categoria vira uma galeria
- *  compacta só de ícones — não mais um card completo por campeão. O
- *  ícone leva o resumo rápido no `title` (tooltip nativo do navegador,
- *  aparece no hover sem precisar clicar); clicar seleciona o campeão e
- *  abre o painel de detalhe (`SelectedChampionPanel`) logo abaixo das
- *  três galerias, compartilhado entre elas — só um campeão expandido
- *  por vez, seja qual for a categoria de onde veio o clique. Clicar de
- *  novo no mesmo ícone fecha o painel. */
-function CategoryIconButton({
+ *  compacta só de ícones. Sem `onClick` — não seleciona nada, é só o
+ *  resumo do hover (`title`, tooltip nativo do navegador, aparece sem
+ *  precisar clicar). `tabIndex` deixa o tooltip acessível por teclado
+ *  também (foco mostra `title` do mesmo jeito que hover). */
+function CategoryIcon({
   championId,
   changes,
   championsMeta,
   ddragonPatch,
-  selected,
-  onSelect,
 }: {
   championId: string
   changes: PatchChangeRow[]
   championsMeta: Record<string, ChampionMeta> | null
   ddragonPatch: string
-  selected: boolean
-  onSelect: (championId: string) => void
 }) {
   const meta = championsMeta?.[championId]
   const { pos, neg, neutral } = countChangeDirections(changes)
@@ -349,19 +342,17 @@ function CategoryIconButton({
   if (neutral > 0) summaryParts.push(`${neutral} ajuste`)
   const name = meta?.name ?? championId
   return (
-    <button
-      type="button"
-      className={`patch-category-icon-btn${selected ? ' patch-category-icon-btn-selected' : ''}`}
+    <span
+      className="patch-category-icon-btn"
       title={summaryParts.length > 0 ? `${name} — ${summaryParts.join(' · ')}` : name}
-      aria-pressed={selected}
-      onClick={() => onSelect(championId)}
+      tabIndex={0}
     >
       {meta && ddragonPatch ? (
         <img src={championImageUrl(ddragonPatch, meta.image.full)} alt={name} width={40} height={40} loading="lazy" />
       ) : (
         <span className="patch-category-icon-fallback" aria-hidden="true">{championId.slice(0, 2)}</span>
       )}
-    </button>
+    </span>
   )
 }
 
@@ -423,13 +414,13 @@ function ChampionChangeDetailBody({
   )
 }
 
-/** Pedido do usuário: revelação em dois estágios. Selecionar um ícone
- *  na galeria abre primeiro só o resumo (foto+nome+contagem Buff/Nerf/
- *  Ajuste desse campeão, badges sólidos com `--badge-buff`/`-nerf`/
- *  `-ajuste`); o corpo completo (`ChampionChangeDetailBody`) só aparece
- *  depois de clicar em "mais detalhes". Troca de campeão selecionado
- *  sempre volta a fechar o detalhe, pra não confundir com o campeão
- *  anterior. */
+/** Pedido do usuário: todo campeão da categoria aparece aqui direto,
+ *  sem precisar clicar no ícone pra revelar — uma linha de resumo por
+ *  campeão (foto+nome+contagem Buff/Nerf/Ajuste, badges sólidos com
+ *  `--badge-buff`/`-nerf`/`-ajuste`). O corpo completo
+ *  (`ChampionChangeDetailBody`) continua atrás de "mais detalhes" —
+ *  cada linha guarda seu próprio `expanded`, então abrir uma não afeta
+ *  as outras. */
 function SelectedChampionPanel({
   championId,
   changes,
@@ -446,9 +437,6 @@ function SelectedChampionPanel({
   abilities: Record<string, ChampionDetail>
 }) {
   const [expanded, setExpanded] = useState(false)
-  useEffect(() => {
-    setExpanded(false)
-  }, [championId])
   const meta = championsMeta?.[championId]
   const { pos, neg, neutral } = countChangeDirections(changes)
   return (
@@ -487,12 +475,11 @@ function SelectedChampionPanel({
   )
 }
 
-/** Pedido do usuário (mockup próprio): cada categoria (Buff/Nerf/
- *  Ajuste) vira uma galeria de ícones só — reaproveita
- *  `classifyChampionCategory` pra bucketizar, ordenado do campeão com
- *  mais mudanças pro com menos. Um único campeão fica selecionado por
- *  vez entre as três galerias (`selectedChampionId`), e o painel de
- *  detalhe aparece uma vez só, depois delas. */
+/** Pedido do usuário: a galeria de ícones (hover = resumo rápido)
+ *  continua, mas agora logo abaixo dela aparecem os resumos de TODOS os
+ *  campeões da categoria de uma vez — sem precisar clicar em nenhum
+ *  ícone pra revelar. Reaproveita `classifyChampionCategory` pra
+ *  bucketizar, ordenado do campeão com mais mudanças pro com menos. */
 function ChangesByCategory({
   grouped,
   championsMeta,
@@ -506,8 +493,6 @@ function ChangesByCategory({
   scoreDeltaIndex: Map<string, PatchDeltaRow[]>
   abilities: Record<string, ChampionDetail>
 }) {
-  const [selectedChampionId, setSelectedChampionId] = useState<string | null>(null)
-
   const buckets: Record<PatchCategory, [string, PatchChangeRow[]][]> = { buff: [], nerf: [], ajuste: [] }
   for (const entry of grouped) {
     buckets[classifyChampionCategory(entry[1])].push(entry)
@@ -515,10 +500,6 @@ function ChangesByCategory({
   for (const key of Object.keys(buckets) as PatchCategory[]) {
     buckets[key].sort((a, b) => b[1].length - a[1].length)
   }
-
-  const selectedEntry = selectedChampionId
-    ? grouped.find(([championId]) => championId === selectedChampionId)
-    : undefined
 
   return (
     <>
@@ -532,30 +513,31 @@ function ChangesByCategory({
             </h3>
             <div className="patch-category-gallery">
               {entries.map(([championId, rows]) => (
-                <CategoryIconButton
+                <CategoryIcon
                   key={championId}
                   championId={championId}
                   changes={rows}
                   championsMeta={championsMeta}
                   ddragonPatch={ddragonPatch}
-                  selected={championId === selectedChampionId}
-                  onSelect={(id) => setSelectedChampionId((prev) => (prev === id ? null : id))}
+                />
+              ))}
+            </div>
+            <div className="patch-category-panels">
+              {entries.map(([championId, rows]) => (
+                <SelectedChampionPanel
+                  key={championId}
+                  championId={championId}
+                  changes={rows}
+                  championsMeta={championsMeta}
+                  ddragonPatch={ddragonPatch}
+                  scoreDeltas={scoreDeltaIndex.get(championId)}
+                  abilities={abilities}
                 />
               ))}
             </div>
           </div>
         )
       })}
-      {selectedEntry && (
-        <SelectedChampionPanel
-          championId={selectedEntry[0]}
-          changes={selectedEntry[1]}
-          championsMeta={championsMeta}
-          ddragonPatch={ddragonPatch}
-          scoreDeltas={scoreDeltaIndex.get(selectedEntry[0])}
-          abilities={abilities}
-        />
-      )}
     </>
   )
 }
