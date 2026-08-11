@@ -979,6 +979,28 @@
   flex-wrap: wrap;
   gap: 8px;
   margin-bottom: var(--space-3);
+  padding: 10px;
+  border: 2px solid var(--border);
+  border-radius: 10px;
+}
+
+/* Pedido do usuário: a galeria de ícones ganha o mesmo destaque de cor
+   por categoria dos cards de resumo abaixo (`.patch-selected-panel-
+   buff/-nerf/-ajuste`) — wash + borda na cor da categoria, pros ícones
+   ficarem visualmente "dentro" da área verde/vermelha/âmbar. */
+.patch-category-gallery-buff {
+  border-color: var(--pos-border);
+  background: linear-gradient(160deg, var(--pos-bg), var(--code-bg));
+}
+
+.patch-category-gallery-nerf {
+  border-color: var(--neg-border);
+  background: linear-gradient(160deg, var(--neg-bg), var(--code-bg));
+}
+
+.patch-category-gallery-ajuste {
+  border-color: var(--warn-border);
+  background: linear-gradient(160deg, var(--warn-bg), var(--code-bg));
 }
 
 .patch-category-icon-btn {

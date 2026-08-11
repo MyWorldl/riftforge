@@ -526,7 +526,7 @@ function ChangesByCategory({
               <h3 className={`patch-category-heading patch-category-${key}`}>
                 {icon} {label} <span className="patch-category-count">({entries.length})</span>
               </h3>
-              <div className="patch-category-gallery">
+              <div className={`patch-category-gallery patch-category-gallery-${key}`}>
                 {entries.map(([championId, rows]) => (
                   <CategoryIcon
                     key={championId}
