@@ -211,16 +211,36 @@ function groupByLane(rows: PatchDeltaRow[]): [string, PatchDeltaRow[]][] {
  *  usuário depois de ver que uma rota só (ex: Topo) podia juntar ~65
  *  campeões numa parede só de chips, mais densa que a tabela antiga mas
  *  ainda não organizada de verdade. `TIER_ORDER[0]` é o melhor tier
- *  (GOD), por isso "subiu" = índice novo MENOR que o antigo. */
+ *  (GOD), por isso "subiu" = índice novo MENOR que o antigo.
+ *
+ *  Pedido do usuário (revisão): dentro de cada grupo, ordena pela
+ *  transição de tier em sequência — Subiram começa por quem partiu do
+ *  tier mais alto (S→GOD, depois A→S, B→A...), Desceram começa por
+ *  quem partiu do mais alto também (GOD→S, depois S→A, A→B...). As
+ *  duas seguem a mesma regra (`tier_anterior` crescente em índice —
+ *  0=GOD é o "melhor" — com `tier_atual` como desempate pra saltos de
+ *  mais de um tier, ex.: alguém que caiu de A pra C). */
+function tierIndex(tier: string): number {
+  return TIER_ORDER.indexOf(tier as (typeof TIER_ORDER)[number])
+}
+
+function byTierTransition(a: PatchDeltaRow, b: PatchDeltaRow): number {
+  const anterior = tierIndex(a.tier_anterior) - tierIndex(b.tier_anterior)
+  if (anterior !== 0) return anterior
+  return tierIndex(a.tier_atual) - tierIndex(b.tier_atual)
+}
+
 function splitByDirection(rows: PatchDeltaRow[]): { subiram: PatchDeltaRow[]; desceram: PatchDeltaRow[] } {
   const subiram: PatchDeltaRow[] = []
   const desceram: PatchDeltaRow[] = []
   for (const row of rows) {
-    const antes = TIER_ORDER.indexOf(row.tier_anterior as (typeof TIER_ORDER)[number])
-    const depois = TIER_ORDER.indexOf(row.tier_atual as (typeof TIER_ORDER)[number])
+    const antes = tierIndex(row.tier_anterior)
+    const depois = tierIndex(row.tier_atual)
     if (depois < antes) subiram.push(row)
     else desceram.push(row)
   }
+  subiram.sort(byTierTransition)
+  desceram.sort(byTierTransition)
   return { subiram, desceram }
 }
 
