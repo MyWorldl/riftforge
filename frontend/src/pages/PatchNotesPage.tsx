@@ -265,7 +265,6 @@ function TierChangeGroups({
   const groups = groupByLane(rows)
   return (
     <div className="tier-change-groups">
-      <p className="table-caption">Campeões que mudaram de tier</p>
       {groups.map(([lane, laneRows]) => {
         const { subiram, desceram } = splitByDirection(laneRows)
         return (
@@ -328,11 +327,13 @@ function CategoryIcon({
   changes,
   championsMeta,
   ddragonPatch,
+  category,
 }: {
   championId: string
   changes: PatchChangeRow[]
   championsMeta: Record<string, ChampionMeta> | null
   ddragonPatch: string
+  category: PatchCategory
 }) {
   const meta = championsMeta?.[championId]
   const { pos, neg, neutral } = countChangeDirections(changes)
@@ -343,7 +344,7 @@ function CategoryIcon({
   const name = meta?.name ?? championId
   return (
     <span
-      className="patch-category-icon-btn"
+      className={`patch-category-icon-btn patch-category-icon-btn-${category}`}
       title={summaryParts.length > 0 ? `${name} — ${summaryParts.join(' · ')}` : name}
       tabIndex={0}
     >
@@ -422,11 +423,10 @@ function ChampionChangeDetailBody({
  *  usuário: sem texto/seta de "mais detalhes", o card inteiro é o alvo
  *  do clique, e a borda vira roxa (`--brand`) no hover pra dar a
  *  impressão de que é clicável. Cada card guarda seu próprio
- *  `expanded`, então abrir um não afeta os outros. `patch-selected-
- *  panel-{buff,nerf,ajuste}` (via `classifyChampionCategory`, mesma
- *  categoria da galeria) dá o wash de fundo verde/vermelho/âmbar —
- *  mesmo padrão do pódio de Classificações (`.podium-card.podium-1/2/3`
- *  com gradiente + borda por posição). */
+ *  `expanded`, então abrir um não afeta os outros. Pedido do usuário:
+ *  sem tingimento de fundo por categoria aqui (isso ficou só na
+ *  galeria de ícones/`.patch-category-gallery-*` acima) — o card volta
+ *  à cor neutra padrão (`--code-bg`/`--border`). */
 function SelectedChampionPanel({
   championId,
   changes,
@@ -445,11 +445,10 @@ function SelectedChampionPanel({
   const [expanded, setExpanded] = useState(false)
   const meta = championsMeta?.[championId]
   const { pos, neg, neutral } = countChangeDirections(changes)
-  const category = classifyChampionCategory(changes)
   const toggle = () => setExpanded((v) => !v)
   return (
     <div
-      className={`patch-selected-panel patch-selected-panel-${category}`}
+      className="patch-selected-panel"
       role="button"
       tabIndex={0}
       aria-expanded={expanded}
@@ -534,6 +533,7 @@ function ChangesByCategory({
                     changes={rows}
                     championsMeta={championsMeta}
                     ddragonPatch={ddragonPatch}
+                    category={key}
                   />
                 ))}
               </div>
@@ -844,6 +844,11 @@ function PatchNotesPage() {
         </>
       )}
 
+      {/* Pedido do usuário: um subtítulo próprio ("Mudanças") pra essa
+          seção, mesmo padrão de "Impacto no score" — antes pulava direto
+          do `<h1>` pras mudanças, sem indicar o que a seção é. */}
+      <h2>Mudanças</h2>
+
       {changesError && <p className="error" role="alert">Backend indisponível: {changesError}</p>}
 
       {changes && changes.patch_anterior && grouped && (
@@ -855,10 +860,11 @@ function PatchNotesPage() {
             scoreDeltaIndex={scoreDeltaIndex}
             abilities={abilities}
           />
-          {/* Pedido do usuário: o resumo ("N campeões alterados") sai do
-              topo da seção (onde competia com a introdução da página por
-              atenção) e vira o fechamento dela, depois dos cards. */}
-          <p className="table-caption">
+          {/* Pedido do usuário: essa legenda ficava fora do escopo visual
+              dos cards acima (mesma largura de texto corrido, sem
+              destaque próprio) — vira nota de rodapé de verdade: menor,
+              itálico, separada por uma linha fina. */}
+          <p className="table-caption patch-changes-footnote">
             Comparando patch <strong>{changes.patch_anterior}</strong> → <strong>{changes.patch_atual}</strong> ·{' '}
             {grouped.length} campeões alterados
           </p>
@@ -873,12 +879,12 @@ function PatchNotesPage() {
 
       <div className="section-divider" />
 
-      <h2>Impacto no score</h2>
-      <p>
-        Maiores altas e quedas de score entre os dois patches mais recentes — derivado do próprio
-        modelo (partidas jogadas), reflete impacto estatístico, não só mudanças diretas da Riot.
-      </p>
-
+      {/* Pedido do usuário: "Campeões que mudaram de tier" e "Impacto no
+          score" viram duas seções próprias, nessa ordem — antes a lista
+          de tier vinha depois das tabelas de altas/quedas, dentro da
+          mesma seção "Impacto no score". O filtro de Elo é compartilhado
+          pelas duas (mesmo fetch, `result`), então fica aqui, antes de
+          ambas, em vez de duplicado ou preso só a uma. */}
       <div className="filters">
         <label>
           Elo
@@ -899,6 +905,20 @@ function PatchNotesPage() {
         </p>
       )}
 
+      {result && result.patch_anterior && result.mudancas_tier.length > 0 && (
+        <>
+          <h2>Campeões que mudaram de tier</h2>
+          <TierChangeGroups rows={result.mudancas_tier} championsMeta={championsMeta} ddragonPatch={ddragonPatch} />
+          <div className="section-divider" />
+        </>
+      )}
+
+      <h2>Impacto no score</h2>
+      <p>
+        Maiores altas e quedas de score entre os dois patches mais recentes — derivado do próprio
+        modelo (partidas jogadas), reflete impacto estatístico, não só mudanças diretas da Riot.
+      </p>
+
       {result && result.patch_anterior && (
         <>
           <p className="table-caption">
@@ -907,7 +927,6 @@ function PatchNotesPage() {
           </p>
           <DeltaTable title="Maiores altas" rows={result.altas} />
           <DeltaTable title="Maiores quedas" rows={result.quedas} />
-          <TierChangeGroups rows={result.mudancas_tier} championsMeta={championsMeta} ddragonPatch={ddragonPatch} />
         </>
       )}
 

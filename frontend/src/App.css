@@ -921,6 +921,19 @@
   margin: 0;
 }
 
+/* Pedido do usuário: essa legenda (depois dos cards de Mudanças)
+   ficava com a mesma largura/peso de um parágrafo normal, "fora do
+   escopo" visual do que está acima dela — vira nota de rodapé de
+   verdade: menor, itálica, separada por uma linha fina acima. */
+.patch-changes-footnote {
+  max-width: 960px;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  font-style: italic;
+}
+
 .section-divider {
   width: 100%;
   max-width: 960px;
@@ -1022,6 +1035,23 @@
   }
 }
 
+/* Pedido do usuário: a bordinha de cada ícone (antes sempre cinza,
+   `--border`) vira a cor da categoria — mesmos tons de `--pos-border`/
+   `--neg-border`/`--warn-border` já usados na caixa da galeria ao
+   redor. Hover continua roxo por cima (mesma prioridade de
+   especificidade que os cards de resumo). */
+.patch-category-icon-btn-buff {
+  border-color: var(--pos-border);
+}
+
+.patch-category-icon-btn-nerf {
+  border-color: var(--neg-border);
+}
+
+.patch-category-icon-btn-ajuste {
+  border-color: var(--warn-border);
+}
+
 .patch-category-icon-btn:hover,
 .patch-category-icon-btn:focus-visible {
   border-color: var(--brand);
@@ -1055,7 +1085,10 @@
    inteiro é clicável (expande/recolhe), e o hover na borda (roxo,
    `--brand`) é o único sinal visual de que dá pra clicar. Largura
    subiu de 720px pra 960px (mesmo teto de `.patch-category-columns`/
-   `.podium`) pra preencher melhor a página. */
+   `.podium`) pra preencher melhor a página. Pedido do usuário: sem
+   tingimento por categoria aqui — isso ficou só na galeria de ícones
+   acima (`.patch-category-gallery-*`/`.patch-category-icon-btn-*`),
+   o card volta pra cor neutra padrão. */
 .patch-selected-panel {
   width: 100%;
   max-width: 960px;
@@ -1071,28 +1104,6 @@
   .patch-selected-panel {
     transition: none;
   }
-}
-
-/* Pedido do usuário: destaque por categoria (verde/vermelho/âmbar),
-   mesmo padrão de `.podium-card.podium-1/2/3` em Classificações —
-   gradiente sutil da cor da categoria (`--pos-bg`/`--neg-bg`/
-   `--warn-bg`) até `--code-bg`, borda na cor cheia. O hover (roxo,
-   abaixo) tem prioridade sobre a borda de categoria — mesma
-   especificidade de seletor, mas `:hover`/`:focus-visible` vêm depois
-   no arquivo, então vencem no empate. */
-.patch-selected-panel-buff {
-  border-color: var(--pos-border);
-  background: linear-gradient(160deg, var(--pos-bg), var(--code-bg));
-}
-
-.patch-selected-panel-nerf {
-  border-color: var(--neg-border);
-  background: linear-gradient(160deg, var(--neg-bg), var(--code-bg));
-}
-
-.patch-selected-panel-ajuste {
-  border-color: var(--warn-border);
-  background: linear-gradient(160deg, var(--warn-bg), var(--code-bg));
 }
 
 .patch-selected-panel:hover,
