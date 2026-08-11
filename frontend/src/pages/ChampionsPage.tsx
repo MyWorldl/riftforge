@@ -149,21 +149,21 @@ function buildDeltaIndex(patchNotes: PatchNotesResult | null): Map<string, Patch
   return index
 }
 
-/** Pedido do usuário: mesmo padrão de "Variação" de `RankingsPage.tsx`
- *  (`DeltaPositionBadge`) — mudança discreta e visível, não um número
- *  contínuo escondido atrás de tooltip. Antes mostrava a diferença de
- *  score (▲13.5) com a troca de tier só no `title`; agora mostra a
- *  troca de tier direto (mesmo badge/seta de `ScoreImpactBadges` em
- *  `PatchNotesPage.tsx`), "—" quando o campeão não cruzou de tier. */
+/** Pedido do usuário (segunda rodada): não é troca de tier, é a mesma
+ *  coisa que `DeltaPositionBadge` de `RankingsPage.tsx` mostra pra
+ *  jogador — posição no ranking por score. Calculada pelo backend
+ *  (`patch_diff.py::_rank_by_lane`) só dentro da própria rota, por isso
+ *  a coluna inteira some quando "Todas as rotas" está selecionado (ver
+ *  `!lane` no cabeçalho/célula abaixo) — misturar posição de rotas
+ *  diferentes não compara a mesma coisa. */
 function VariationBadge({ delta }: { delta: PatchDeltaRow | undefined }) {
-  if (!delta || delta.tier_anterior === delta.tier_atual) {
+  if (!delta || delta.delta_posicao === 0) {
     return <span className="delta-position delta-position-none">—</span>
   }
+  const subiu = delta.delta_posicao > 0
   return (
-    <span className="tier-change-badge">
-      <span className={`tier-badge tier-${delta.tier_anterior}`}>{delta.tier_anterior}</span>
-      <span aria-hidden="true">→</span>
-      <span className={`tier-badge tier-${delta.tier_atual}`}>{delta.tier_atual}</span>
+    <span className={`delta-position ${subiu ? 'delta-position-up' : 'delta-position-down'}`}>
+      {subiu ? '▲' : '▼'} {Math.abs(delta.delta_posicao)}
     </span>
   )
 }
@@ -442,7 +442,7 @@ function ChampionsPage() {
               <th>#</th>
               <th>Campeão</th>
               <SortableHeader label="Tier" sortKeyFor="score" currentKey={sortKey} currentDir={sortDir} onSort={handleSort} />
-              <th title="Mudança de tier em relação ao patch anterior" className="col-hide-tablet">Variação</th>
+              {lane && <th title="Posição no ranking por score dentro da rota, em relação ao patch anterior" className="col-hide-tablet">Variação</th>}
               {!lane && <th className="col-hide-tablet">Função</th>}
               <th title="Contribuição de cada camada no score (Performance/Kit/Build/Meta)">Score</th>
               <SortableHeader label="Taxa de Vitória" sortKeyFor="win_rate" currentKey={sortKey} currentDir={sortDir} onSort={handleSort} />
@@ -496,7 +496,7 @@ function ChampionsPage() {
                     <span className={`tier-badge tier-${row.score_tier}`}>{row.score_tier}</span>
                     {row.tier_provisorio && <span className="provisional-mark" title="Amostra pequena — tier provisório, teto em A">*</span>}
                   </td>
-                  <td className="col-hide-tablet"><VariationBadge delta={delta} /></td>
+                  {lane && <td className="col-hide-tablet"><VariationBadge delta={delta} /></td>}
                   {!lane && <td className="col-hide-tablet"><LaneCell lane={row.lane} /></td>}
                   <td><LayerContributionBar row={row} /></td>
                   <td>{formatPct(row.win_rate)}</td>

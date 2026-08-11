@@ -97,3 +97,29 @@ def test_sem_mudanca_de_tier_lista_fica_vazia():
     anterior = [{"champion_id": "Ahri", "lane": "MIDDLE", "score_final": 60.0, "score_tier": "A"}]
     result = diff_patches(atual, anterior)
     assert result["mudancas_tier"] == []
+
+
+def test_posicao_calculada_dentro_da_propria_rota():
+    # Ahri sobe de #2 pra #1 em MIDDLE só porque Zed caiu — Yasuo (TOP)
+    # não deve interferir no ranking de MIDDLE nem ser afetado por ele.
+    atual = [
+        {"champion_id": "Ahri", "lane": "MIDDLE", "score_final": 70.0, "score_tier": "S"},
+        {"champion_id": "Zed", "lane": "MIDDLE", "score_final": 40.0, "score_tier": "C"},
+        {"champion_id": "Yasuo", "lane": "TOP", "score_final": 90.0, "score_tier": "S"},
+    ]
+    anterior = [
+        {"champion_id": "Ahri", "lane": "MIDDLE", "score_final": 60.0, "score_tier": "A"},
+        {"champion_id": "Zed", "lane": "MIDDLE", "score_final": 65.0, "score_tier": "A"},
+        {"champion_id": "Yasuo", "lane": "TOP", "score_final": 90.0, "score_tier": "S"},
+    ]
+    result = diff_patches(atual, anterior)
+    by_champion = {d["champion_id"]: d for d in result["altas"] + result["quedas"]}
+    assert by_champion["Ahri"]["posicao_anterior"] == 2
+    assert by_champion["Ahri"]["posicao_atual"] == 1
+    assert by_champion["Ahri"]["delta_posicao"] == 1
+    assert by_champion["Zed"]["posicao_anterior"] == 1
+    assert by_champion["Zed"]["posicao_atual"] == 2
+    assert by_champion["Zed"]["delta_posicao"] == -1
+    # Yasuo é o único em TOP nos dois patches — sempre #1, delta 0, e o
+    # próprio delta de score 0 já o exclui de altas/quedas (ver teste
+    # `test_delta_zero_nao_aparece_em_altas_nem_quedas`).

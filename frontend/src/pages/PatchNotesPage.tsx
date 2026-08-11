@@ -236,23 +236,26 @@ function ScoreImpactBadges({ rows }: { rows: PatchDeltaRow[] | undefined }) {
   )
 }
 
-/** Uma mudança por `<li>`, reaproveitada tanto por "Atributos" quanto por
- *  "Habilidades" (`ChampionChangeCard` abaixo) — só o agrupamento em volta
- *  muda entre as duas seções. */
+/** Uma mudança por `<li>`, reaproveitada por "Atributos" (com cabeçalho
+ *  próprio por linha — não tem ícone/nome pra agrupar) e por dentro de
+ *  `AbilityChangeGroup` (sem cabeçalho — o ícone/nome da habilidade já
+ *  aparece uma vez só no grupo, `showAbilityHeader=false`). */
 function ChangeListItem({
   change,
   abilityImage,
   ddragonPatch,
+  showAbilityHeader = true,
 }: {
   change: PatchChangeRow
   abilityImage: string | null
   ddragonPatch: string
+  showAbilityHeader?: boolean
 }) {
   const direction = classifyChangeDirection(change)
   return (
     <li className="patch-change-item">
       <div className="patch-change-field">
-        {abilityImage && ddragonPatch && (
+        {showAbilityHeader && abilityImage && ddragonPatch && (
           <img
             className="patch-change-ability-icon"
             src={change.category === 'passive' ? passiveImageUrl(ddragonPatch, abilityImage) : spellImageUrl(ddragonPatch, abilityImage)}
@@ -262,8 +265,14 @@ function ChangeListItem({
             loading="lazy"
           />
         )}
-        {!abilityImage && change.spell_key && <span className="patch-change-spell-key">{change.spell_key}</span>}
-        {change.spell_name ? `${change.spell_name} — ${change.field_label}` : change.field_label}
+        {showAbilityHeader && !abilityImage && change.spell_key && (
+          <span className="patch-change-spell-key">{change.spell_key}</span>
+        )}
+        {showAbilityHeader
+          ? change.spell_name
+            ? `${change.spell_name} — ${change.field_label}`
+            : change.field_label
+          : change.field_label}
       </div>
       {change.category === 'passive' ? (
         <div className="patch-change-text-diff">
@@ -280,6 +289,66 @@ function ChangeListItem({
         </div>
       )}
     </li>
+  )
+}
+
+function groupBySpell(changes: PatchChangeRow[]): [string, PatchChangeRow[]][] {
+  const map = new Map<string, PatchChangeRow[]>()
+  for (const change of changes) {
+    const key = change.spell_key ?? change.category
+    const list = map.get(key) ?? []
+    list.push(change)
+    map.set(key, list)
+  }
+  return [...map.entries()]
+}
+
+/** Pedido do usuário (caso Warwick): uma habilidade com várias mudanças
+ *  (7 "Valor de efeito N" diferentes, por exemplo) não repete o
+ *  ícone/nome uma vez por linha — aparece uma vez no cabeçalho do
+ *  grupo, e as mudanças ficam numa lista compacta embaixo. */
+function AbilityChangeGroup({
+  spellKey,
+  changes,
+  abilityImage,
+  ddragonPatch,
+}: {
+  spellKey: string
+  changes: PatchChangeRow[]
+  abilityImage: string | null
+  ddragonPatch: string
+}) {
+  const isPassive = changes[0].category === 'passive'
+  const name = changes[0].spell_name ?? (isPassive ? 'Passiva' : spellKey)
+  return (
+    <div className="patch-change-ability-group">
+      <div className="patch-change-ability-group-header">
+        {abilityImage && ddragonPatch ? (
+          <img
+            className="patch-change-ability-icon"
+            src={isPassive ? passiveImageUrl(ddragonPatch, abilityImage) : spellImageUrl(ddragonPatch, abilityImage)}
+            alt=""
+            width={24}
+            height={24}
+            loading="lazy"
+          />
+        ) : (
+          !isPassive && <span className="patch-change-spell-key">{spellKey}</span>
+        )}
+        <span>{!isPassive && `${spellKey} — `}{name}</span>
+      </div>
+      <ul className="patch-change-list patch-change-list-nested">
+        {changes.map((change, index) => (
+          <ChangeListItem
+            key={index}
+            change={change}
+            abilityImage={null}
+            ddragonPatch={ddragonPatch}
+            showAbilityHeader={false}
+          />
+        ))}
+      </ul>
+    </div>
   )
 }
 
@@ -327,16 +396,15 @@ function ChampionChangeCard({
       {abilityChanges.length > 0 && (
         <>
           <p className="patch-change-subheading">Habilidades do campeão</p>
-          <ul className="patch-change-list">
-            {abilityChanges.map((change, index) => (
-              <ChangeListItem
-                key={index}
-                change={change}
-                abilityImage={abilityImageFor(change, detail)}
-                ddragonPatch={ddragonPatch}
-              />
-            ))}
-          </ul>
+          {groupBySpell(abilityChanges).map(([spellKey, groupChanges]) => (
+            <AbilityChangeGroup
+              key={spellKey}
+              spellKey={spellKey}
+              changes={groupChanges}
+              abilityImage={abilityImageFor(groupChanges[0], detail)}
+              ddragonPatch={ddragonPatch}
+            />
+          ))}
         </>
       )}
     </div>

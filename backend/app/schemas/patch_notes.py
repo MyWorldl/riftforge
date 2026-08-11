@@ -9,6 +9,11 @@ class PatchDeltaRow(BaseModel):
     delta: float
     tier_anterior: str
     tier_atual: str
+    # Posição no ranking por score dentro da própria rota (1 = melhor) —
+    # "Variação" em Campeões usa isto, não `delta` (revisão pós-repaginação).
+    posicao_anterior: int
+    posicao_atual: int
+    delta_posicao: int
 
 
 class PatchNotesResponse(BaseModel):

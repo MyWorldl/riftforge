@@ -1058,6 +1058,40 @@
   margin-right: 4px;
 }
 
+/* Pedido do usuário: menos poluição visual — cada habilidade com
+   mudança vira uma caixinha própria (ícone+nome uma vez só no topo),
+   em vez de linhas soltas repetindo o nome da habilidade a cada
+   atributo alterado (caso Warwick, que tinha 15 linhas assim). */
+.patch-change-ability-group {
+  margin-bottom: 8px;
+  padding: 8px;
+  border-radius: 6px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+}
+
+.patch-change-ability-group:last-child {
+  margin-bottom: 0;
+}
+
+.patch-change-ability-group-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-h);
+  margin-bottom: 6px;
+}
+
+.patch-change-list-nested .patch-change-item {
+  padding-top: 6px;
+}
+
+.patch-change-list-nested .patch-change-item:first-child {
+  padding-top: 0;
+}
+
 /* Pedido do usuário: a tabela de "Campeões que mudaram de tier" tinha
    centenas de linhas (uma por campeão+rota) — vira grupos por rota com
    chips compactos que quebram linha, escaneável sem rolagem infinita. */

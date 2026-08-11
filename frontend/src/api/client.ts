@@ -379,6 +379,9 @@ export interface PatchDeltaRow {
   delta: number
   tier_anterior: string
   tier_atual: string
+  posicao_anterior: number
+  posicao_atual: number
+  delta_posicao: number
 }
 
 export interface PatchNotesResult {
