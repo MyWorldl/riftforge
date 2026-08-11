@@ -22,7 +22,18 @@ def get_patch_notes(
 
 
 @router.get("/patch-notes/changes", response_model=PatchChangesResponse)
-def get_patch_changes(patch: str | None = None, db: Session = Depends(get_db)) -> dict:
+def get_patch_changes(
+    patch: str | None = None,
+    game_name: str | None = None,
+    tag_line: str | None = None,
+    region: str | None = None,
+    db: Session = Depends(get_db),
+) -> dict:
     """Complementa `/patch-notes`: mudança numérica bruta que a Riot de fato
-    publicou no Data Dragon pro patch. Nenhuma chamada Riot/Data Dragon."""
-    return patch_notes_service.get_patch_changes(db, patch)
+    publicou no Data Dragon pro patch. Nenhuma chamada Riot/Data Dragon.
+
+    Revisão técnica §5.3 (Sprint B item 2): `game_name`/`tag_line`/`region`
+    opcionais — quando os três primeiros vêm juntos, filtra `mudancas` pro
+    Roadmap de Progressão dessa identidade ("Mudanças que te afetam" no
+    frontend). Omitidos, comportamento idêntico a antes."""
+    return patch_notes_service.get_patch_changes(db, patch, game_name, tag_line, region)

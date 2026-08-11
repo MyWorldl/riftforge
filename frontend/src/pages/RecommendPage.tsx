@@ -10,7 +10,7 @@ import {
   type KitProfileRow,
 } from '../api/client'
 import FlagSelect from '../components/FlagSelect'
-import { formatPct } from '../components/championDisplay'
+import { IconInfo, ScoreExplanationPanel, formatPct } from '../components/championDisplay'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { useFilterParam } from '../hooks/useFilterParam'
 import { CHAMPIONS_COUNTRY_OPTIONS, CHAMPIONS_ENABLED_REGIONS } from '../constants/regions'
@@ -79,6 +79,11 @@ function RecommendPage() {
   const [loading, setLoading] = useState(false)
 
   const [kitProfile, setKitProfile] = useState<KitProfileRow[] | null>(null)
+
+  // Sprint B item 1 (revisão técnica §5.5): "por quê" — só um resultado
+  // expandido por vez, mesmo padrão de `ChampionsPage.tsx` (chave =
+  // champion_id, não índice, porque `topResults` pode reordenar).
+  const [expandedChampionId, setExpandedChampionId] = useState<string | null>(null)
 
   useEffect(() => {
     fetchChampions()
@@ -232,29 +237,42 @@ function RecommendPage() {
         <ol className="recommend-results">
           {topResults.map(({ row, kit }) => {
             const meta = championsMeta?.[row.champion_id]
+            const expanded = expandedChampionId === row.champion_id
             return (
               <li key={row.champion_id} className="recommend-result">
-                <Link
-                  to={detailHref(row.champion_id, row.elo_tier, row.lane, row.patch, row.region)}
-                  className="champion-cell"
-                >
-                  {meta && ddragonPatch && (
-                    <img src={championImageUrl(ddragonPatch, meta.image.full)} alt="" width={32} height={32} />
+                <div className="recommend-result-row">
+                  <Link
+                    to={detailHref(row.champion_id, row.elo_tier, row.lane, row.patch, row.region)}
+                    className="champion-cell"
+                  >
+                    {meta && ddragonPatch && (
+                      <img src={championImageUrl(ddragonPatch, meta.image.full)} alt="" width={32} height={32} />
+                    )}
+                    <span>{meta?.name ?? row.champion_id}</span>
+                  </Link>
+                  <span className={`tier-badge tier-${row.score_tier}`}>{row.score_tier}</span>
+                  <span>{formatPct(row.win_rate)} vitórias</span>
+                  {useProfile && kit && (
+                    <span className="recommend-axes">
+                      Dano {kit.dano_score ?? '—'} · Alcance{' '}
+                      {kit.alcance_score != null ? kit.alcance_score.toFixed(1) : '—'} · Resiliência{' '}
+                      {kit.resiliencia_score ?? '—'}
+                    </span>
                   )}
-                  <span>{meta?.name ?? row.champion_id}</span>
-                </Link>
-                <span className={`tier-badge tier-${row.score_tier}`}>{row.score_tier}</span>
-                <span>{formatPct(row.win_rate)} vitórias</span>
-                {useProfile && kit && (
-                  <span className="recommend-axes">
-                    Dano {kit.dano_score ?? '—'} · Alcance{' '}
-                    {kit.alcance_score != null ? kit.alcance_score.toFixed(1) : '—'} · Resiliência{' '}
-                    {kit.resiliencia_score ?? '—'}
-                  </span>
-                )}
-                {useProfile && !kit && (
-                  <span className="recommend-axes">Sem dado de Kit pra esse patch</span>
-                )}
+                  {useProfile && !kit && (
+                    <span className="recommend-axes">Sem dado de Kit pra esse patch</span>
+                  )}
+                  <button
+                    type="button"
+                    className={`icon-toggle ${expanded ? 'icon-toggle-active' : ''}`}
+                    onClick={() => setExpandedChampionId(expanded ? null : row.champion_id)}
+                    title={expanded ? 'Ocultar explicação' : 'Por que esse tier?'}
+                    aria-label="Explicação do score"
+                  >
+                    <IconInfo />
+                  </button>
+                </div>
+                {expanded && <ScoreExplanationPanel row={row} />}
               </li>
             )
           })}

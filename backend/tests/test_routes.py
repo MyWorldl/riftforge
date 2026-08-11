@@ -8,6 +8,7 @@ from app.db.models import (
     ChampionKitScore,
     ChampionMatchup,
     ChampionMetaContext,
+    ChampionPatchChange,
     ChampionScore,
     Patch,
     PlayerRanking,
@@ -453,6 +454,60 @@ def test_patch_notes_changes_empty(client):
         "patch_anterior": None,
         "mudancas": [],
     }
+
+
+def _seed_patch_change(db_session, **overrides) -> ChampionPatchChange:
+    defaults = dict(
+        patch="16.15",
+        patch_anterior="16.14",
+        champion_id="Ahri",
+        category="stat",
+        spell_key=None,
+        spell_name=None,
+        field="attackdamage",
+        field_label="Dano de ataque",
+        before_value="53",
+        after_value="55",
+    )
+    defaults.update(overrides)
+    row = ChampionPatchChange(**defaults)
+    db_session.add(row)
+    db_session.commit()
+    return row
+
+
+def test_patch_notes_changes_affecting_me_filters_by_roadmap(client, db_session):
+    """Sprint B item 2 (revisão técnica §5.3): "Mudanças que te afetam" —
+    sem identidade, devolve tudo (retrocompatível); com identidade, só o
+    que está no roadmap ativo/concluído dela. `Zed` mudou mas não está no
+    roadmap de "Fulano" — precisa sumir do resultado filtrado."""
+    _seed_patch(db_session, "16.15", 16015)
+    _seed_patch_change(db_session, champion_id="Ahri")
+    _seed_patch_change(db_session, champion_id="Zed", field="attackrange", field_label="Alcance")
+    _seed_roadmap_step(db_session, champion_id="Ahri")  # roadmap de "fulano"/"br1"
+
+    unfiltered = client.get("/patch-notes/changes")
+    assert {m["champion_id"] for m in unfiltered.json()["mudancas"]} == {"Ahri", "Zed"}
+
+    affecting_me = client.get(
+        "/patch-notes/changes?game_name=Fulano&tag_line=BR1&region=br1"
+    )
+    assert affecting_me.status_code == 200
+    body = affecting_me.json()
+    assert [m["champion_id"] for m in body["mudancas"]] == ["Ahri"]
+
+
+def test_patch_notes_changes_affecting_me_empty_roadmap(client, db_session):
+    """Identidade sem nenhum passo de roadmap — filtra pra lista vazia,
+    não é erro nem cai pro comportamento sem filtro."""
+    _seed_patch(db_session, "16.15", 16015)
+    _seed_patch_change(db_session, champion_id="Ahri")
+
+    response = client.get(
+        "/patch-notes/changes?game_name=NinguemTemRoadmap&tag_line=BR1&region=br1"
+    )
+    assert response.status_code == 200
+    assert response.json()["mudancas"] == []
 
 
 def test_stats_champions_empty(client):

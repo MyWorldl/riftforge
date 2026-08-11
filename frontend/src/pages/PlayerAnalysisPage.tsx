@@ -26,6 +26,17 @@ function roadmapTokenStorageKey(region: string, gameName: string, tagLine: strin
   return `riftforge:roadmap_token:${region}:${gameName}:${tagLine}`.toLowerCase()
 }
 
+/** Sprint B item 2 (revisão técnica §5.3): última identidade buscada, pra
+ *  `PatchNotesPage.tsx` montar o bloco "Mudanças que te afetam" sem exigir
+ *  nova busca. Mesma política de privacidade do token acima — só
+ *  localStorage, nunca enviado a lugar nenhum além do próprio endpoint que
+ *  o usuário já está chamando. */
+export const LAST_IDENTITY_STORAGE_KEY = 'riftforge:last_identity'
+
+function saveLastIdentity(region: string, gameName: string, tagLine: string): void {
+  localStorage.setItem(LAST_IDENTITY_STORAGE_KEY, JSON.stringify({ region, gameName, tagLine }))
+}
+
 /** Roadmap de Progressão do Jogador (rodada 28) — passo ativo mostra o
  *  gap atual (sempre negativo, é isso que o qualifica pra virar passo)
  *  e a amostra que embasa ele. Reaproveita `.value-neg`/`.value-pos` já
@@ -72,6 +83,7 @@ function PlayerAnalysisPage() {
     fetchPlayerLookup({ region, gameName, tagLine })
       .then((data) => {
         setResult(data)
+        saveLastIdentity(region, gameName, tagLine)
         if (data.roadmap.roadmap_token) {
           localStorage.setItem(roadmapTokenStorageKey(region, gameName, tagLine), data.roadmap.roadmap_token)
         }

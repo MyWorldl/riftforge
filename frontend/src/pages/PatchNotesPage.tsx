@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import {
   championImageUrl,
   fetchChampions,
@@ -11,6 +12,7 @@ import {
   type PatchNotesResult,
 } from '../api/client'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
+import { LAST_IDENTITY_STORAGE_KEY } from './PlayerAnalysisPage'
 
 const ELO_TIERS = [
   'IRON', 'BRONZE', 'SILVER', 'GOLD', 'PLATINUM',
@@ -207,6 +209,12 @@ function PatchNotesPage() {
   const [championsMeta, setChampionsMeta] = useState<Record<string, ChampionMeta> | null>(null)
   const [ddragonPatch, setDdragonPatch] = useState('')
 
+  // Sprint B item 2 (revisão técnica §5.3): "Mudanças que te afetam" — só
+  // busca se houver identidade salva (última busca em PlayerAnalysisPage.tsx).
+  // Sem identidade, o bloco simplesmente não existe, resto da página igual.
+  const [myChanges, setMyChanges] = useState<PatchChangesResult | null>(null)
+  const [myIdentity, setMyIdentity] = useState<{ region: string; gameName: string; tagLine: string } | null>(null)
+
   useEffect(() => {
     fetchChampions()
       .then((data) => {
@@ -220,6 +228,22 @@ function PatchNotesPage() {
     fetchPatchChanges()
       .then(setChanges)
       .catch((err: Error) => setChangesError(err.message))
+  }, [])
+
+  useEffect(() => {
+    const raw = localStorage.getItem(LAST_IDENTITY_STORAGE_KEY)
+    if (!raw) return
+    let identity: { region: string; gameName: string; tagLine: string }
+    try {
+      identity = JSON.parse(raw)
+    } catch {
+      return
+    }
+    if (!identity.region || !identity.gameName || !identity.tagLine) return
+    setMyIdentity(identity)
+    fetchPatchChanges(identity)
+      .then(setMyChanges)
+      .catch(() => {})
   }, [])
 
   useEffect(() => {
@@ -255,6 +279,36 @@ function PatchNotesPage() {
           notas oficiais da Riot
         </a>.
       </p>
+
+      {myChanges && myChanges.mudancas.length > 0 && (
+        <>
+          <h2>Mudanças que te afetam</h2>
+          <p>
+            Campeões do seu{' '}
+            {myIdentity && (
+              <Link
+                to={`/jogador?${new URLSearchParams(myIdentity)}`}
+              >
+                roadmap de progressão
+              </Link>
+            )}{' '}
+            que mudaram neste patch.
+          </p>
+          <div className="patch-change-grid">
+            {groupByChampion(myChanges.mudancas).map(([championId, rows]) => (
+              <ChampionChangeCard
+                key={championId}
+                championId={championId}
+                changes={rows}
+                championsMeta={championsMeta}
+                ddragonPatch={ddragonPatch}
+                scoreDeltas={scoreDeltaIndex.get(championId)}
+              />
+            ))}
+          </div>
+          <div className="section-divider" />
+        </>
+      )}
 
       {changesError && <p className="error" role="alert">Backend indisponível: {changesError}</p>}
 

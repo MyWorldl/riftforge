@@ -440,8 +440,19 @@ export interface PatchChangesResult {
   mudancas: PatchChangeRow[]
 }
 
-export async function fetchPatchChanges(): Promise<PatchChangesResult> {
-  return request('/patch-notes/changes', 'Falha ao buscar mudanças do patch')
+export async function fetchPatchChanges(identity?: {
+  gameName: string
+  tagLine: string
+  region: string
+}): Promise<PatchChangesResult> {
+  const params = new URLSearchParams()
+  if (identity) {
+    params.set('game_name', identity.gameName)
+    params.set('tag_line', identity.tagLine)
+    params.set('region', identity.region)
+  }
+  const query = params.toString()
+  return request(`/patch-notes/changes${query ? `?${query}` : ''}`, 'Falha ao buscar mudanças do patch')
 }
 
 export interface MatchupRow {

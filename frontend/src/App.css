@@ -1982,13 +1982,19 @@
 }
 
 .recommend-result {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+/* Sprint B item 1 (revisão técnica §5.5): a linha do resultado em si —
+   separada de `.recommend-result` porque este último agora também
+   embrulha o painel de explicação expansível abaixo dela. */
+.recommend-result-row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--border);
-  border-radius: 8px;
 }
 
 .recommend-axes {
