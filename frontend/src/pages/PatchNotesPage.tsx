@@ -16,6 +16,7 @@ import {
   type PatchNotesResult,
 } from '../api/client'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
+import { TIER_ORDER } from '../lib/recommendation'
 import { LAST_IDENTITY_STORAGE_KEY } from './PlayerAnalysisPage'
 
 const ELO_TIERS = [
@@ -143,38 +144,97 @@ function groupByLane(rows: PatchDeltaRow[]): [string, PatchDeltaRow[]][] {
   return [...map.entries()].sort((a, b) => LANE_ORDER.indexOf(a[0]) - LANE_ORDER.indexOf(b[0]))
 }
 
+/** Separa quem subiu de quem desceu dentro da própria rota — pedido do
+ *  usuário depois de ver que uma rota só (ex: Topo) podia juntar ~65
+ *  campeões numa parede só de chips, mais densa que a tabela antiga mas
+ *  ainda não organizada de verdade. `TIER_ORDER[0]` é o melhor tier
+ *  (GOD), por isso "subiu" = índice novo MENOR que o antigo. */
+function splitByDirection(rows: PatchDeltaRow[]): { subiram: PatchDeltaRow[]; desceram: PatchDeltaRow[] } {
+  const subiram: PatchDeltaRow[] = []
+  const desceram: PatchDeltaRow[] = []
+  for (const row of rows) {
+    const antes = TIER_ORDER.indexOf(row.tier_anterior as (typeof TIER_ORDER)[number])
+    const depois = TIER_ORDER.indexOf(row.tier_atual as (typeof TIER_ORDER)[number])
+    if (depois < antes) subiram.push(row)
+    else desceram.push(row)
+  }
+  return { subiram, desceram }
+}
+
+function TierChip({
+  row,
+  championsMeta,
+  ddragonPatch,
+}: {
+  row: PatchDeltaRow
+  championsMeta: Record<string, ChampionMeta> | null
+  ddragonPatch: string
+}) {
+  const meta = championsMeta?.[row.champion_id]
+  return (
+    <span className="tier-change-chip">
+      {meta && ddragonPatch && (
+        <img src={championImageUrl(ddragonPatch, meta.image.full)} alt="" width={20} height={20} loading="lazy" />
+      )}
+      {meta?.name ?? row.champion_id}
+      <span className={`tier-badge tier-${row.tier_anterior}`}>{row.tier_anterior}</span>
+      <span aria-hidden="true">→</span>
+      <span className={`tier-badge tier-${row.tier_atual}`}>{row.tier_atual}</span>
+    </span>
+  )
+}
+
 /** Pedido do usuário: a tabela antiga (uma linha por campeão+rota,
  *  centenas de linhas num patch normal) virou uma lista longa demais
- *  pra usar de verdade. Agrupado por rota, em chips compactos que
- *  quebram linha — a mesma informação (campeão, tier antes/depois),
- *  só que escaneável em segundos em vez de rolagem infinita. */
+ *  pra usar de verdade. Agrupado por rota e, dentro dela, por direção
+ *  (subiu/desceu) — a mesma informação (campeão, tier antes/depois, foto),
+ *  em chips compactos que quebram linha, escaneável sem rolagem infinita. */
 function TierChangeGroups({
   rows,
   championsMeta,
+  ddragonPatch,
 }: {
   rows: PatchDeltaRow[]
   championsMeta: Record<string, ChampionMeta> | null
+  ddragonPatch: string
 }) {
   if (rows.length === 0) return null
   const groups = groupByLane(rows)
   return (
     <div className="tier-change-groups">
       <p className="table-caption">Campeões que mudaram de tier</p>
-      {groups.map(([lane, laneRows]) => (
-        <div className="tier-change-lane-group" key={lane}>
-          <h3 className="tier-change-lane-title">{LANE_LABELS[lane] ?? lane}</h3>
-          <div className="tier-change-chips">
-            {laneRows.map((row) => (
-              <span className="tier-change-chip" key={`${row.champion_id}-${row.lane}`}>
-                {championsMeta?.[row.champion_id]?.name ?? row.champion_id}
-                <span className={`tier-badge tier-${row.tier_anterior}`}>{row.tier_anterior}</span>
-                <span aria-hidden="true">→</span>
-                <span className={`tier-badge tier-${row.tier_atual}`}>{row.tier_atual}</span>
-              </span>
-            ))}
+      {groups.map(([lane, laneRows]) => {
+        const { subiram, desceram } = splitByDirection(laneRows)
+        return (
+          <div className="tier-change-lane-group" key={lane}>
+            <h3 className="tier-change-lane-title">{LANE_LABELS[lane] ?? lane}</h3>
+            {subiram.length > 0 && (
+              <>
+                <p className="tier-change-direction-label tier-change-direction-up">
+                  Subiram de tier ({subiram.length})
+                </p>
+                <div className="tier-change-chips">
+                  {subiram.map((row) => (
+                    <TierChip key={`${row.champion_id}-${row.lane}`} row={row} championsMeta={championsMeta} ddragonPatch={ddragonPatch} />
+                  ))}
+                </div>
+              </>
+            )}
+            {desceram.length > 0 && (
+              <>
+                <p className="tier-change-direction-label tier-change-direction-down">
+                  Desceram de tier ({desceram.length})
+                </p>
+                <div className="tier-change-chips">
+                  {desceram.map((row) => (
+                    <TierChip key={`${row.champion_id}-${row.lane}`} row={row} championsMeta={championsMeta} ddragonPatch={ddragonPatch} />
+                  ))}
+                </div>
+              </>
+            )}
           </div>
-        </div>
-      ))}
+        )
+      })}
     </div>
   )
 }
@@ -382,7 +442,6 @@ function ChampionChangeCard({
         )}
         <span>{meta?.name ?? championId}</span>
       </div>
-      <ScoreImpactBadges rows={scoreDeltas} />
       {attributeChanges.length > 0 && (
         <>
           <p className="patch-change-subheading">Atributos do campeão</p>
@@ -407,6 +466,10 @@ function ChampionChangeCard({
           ))}
         </>
       )}
+      {/* Pedido do usuário: o destaque de mudança de tier (score+tier
+          badge) sai de logo abaixo do nome e vira o fechamento do card,
+          depois de atributos/habilidades. */}
+      <ScoreImpactBadges rows={scoreDeltas} />
     </div>
   )
 }
@@ -508,15 +571,6 @@ function PatchNotesPage() {
   return (
     <main className="center">
       <h1>Patch Notes</h1>
-      <p>
-        O que a Riot mudou de verdade neste patch, direto dos dados públicos do jogo — não é o texto
-        oficial (esse fica só no site da Riot), mas os valores numéricos que de fato foram alterados.
-        Alguns ajustes de proporção/escala não aparecem aqui porque a API pública da Riot não expõe
-        esse dado; pra ver a nota completa, veja as{' '}
-        <a href="https://www.leagueoflegends.com/en-us/news/tags/patch-notes/" target="_blank" rel="noreferrer">
-          notas oficiais da Riot
-        </a>.
-      </p>
 
       {myChanges && myChanges.mudancas.length > 0 && (
         <>
@@ -618,9 +672,26 @@ function PatchNotesPage() {
           </p>
           <DeltaTable title="Maiores altas" rows={result.altas} />
           <DeltaTable title="Maiores quedas" rows={result.quedas} />
-          <TierChangeGroups rows={result.mudancas_tier} championsMeta={championsMeta} />
+          <TierChangeGroups rows={result.mudancas_tier} championsMeta={championsMeta} ddragonPatch={ddragonPatch} />
         </>
       )}
+
+      <div className="section-divider" />
+
+      {/* Pedido do usuário: a introdução (o que essa página é/de onde vem
+          o dado) sai do topo — onde competia com o título por atenção
+          antes mesmo do usuário ver qualquer dado — e vira o fechamento
+          da página, junto do disclaimer da Riot que já fica logo abaixo
+          (renderizado por `AppLayout.tsx`, fora deste `<main>`). */}
+      <p>
+        O que a Riot mudou de verdade neste patch, direto dos dados públicos do jogo — não é o texto
+        oficial (esse fica só no site da Riot), mas os valores numéricos que de fato foram alterados.
+        Alguns ajustes de proporção/escala não aparecem aqui porque a API pública da Riot não expõe
+        esse dado; pra ver a nota completa, veja as{' '}
+        <a href="https://www.leagueoflegends.com/en-us/news/tags/patch-notes/" target="_blank" rel="noreferrer">
+          notas oficiais da Riot
+        </a>.
+      </p>
     </main>
   )
 }

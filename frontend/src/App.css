@@ -936,6 +936,12 @@
   width: 100%;
   max-width: 960px;
   align-self: flex-start;
+  /* Pedido do usuário (caso Alistar): sem isto, todo card na mesma linha
+     do grid estica pra bater com o mais alto da fileira — um card com 1
+     mudança ao lado de um com 10 ficava com um vazio enorme embaixo,
+     mesmo sem ter conteúdo pra preencher. `start` deixa cada card na
+     altura natural do próprio conteúdo. */
+  align-items: start;
 }
 
 .patch-change-card {
@@ -963,7 +969,9 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  margin-bottom: 10px;
+  /* Pedido do usuário: este bloco (destaque de mudança de tier) saiu do
+     topo do card pro final — margem vira "acima", não "abaixo". */
+  margin-top: 10px;
   padding: 6px 8px;
   border-radius: 6px;
   background: var(--bg);
@@ -1001,10 +1009,24 @@
   border-top: none;
 }
 
+/* Pedido do usuário (exemplo próprio, mockup): o atributo (o que mudou)
+   é o elemento principal — bullet + destaque forte — e o valor
+   antes/depois vira secundário, menor, embaixo. Antes os dois tinham o
+   mesmo peso visual (mesmo tamanho de fonte, sem hierarquia nenhuma). */
 .patch-change-field {
-  font-size: 13px;
-  color: var(--text);
-  margin-bottom: 2px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-h);
+  margin-bottom: 3px;
+}
+
+.patch-change-field::before {
+  content: '•';
+  color: var(--brand);
+  font-weight: 700;
 }
 
 .patch-change-spell-key {
@@ -1013,16 +1035,18 @@
   text-align: center;
   font-weight: 700;
   color: var(--accent);
-  margin-right: 4px;
 }
 
 .patch-change-values {
   font-family: var(--mono);
-  font-size: 13px;
+  font-size: 12px;
+  color: var(--text);
+  padding-left: 16px;
 }
 
 .patch-change-text-diff {
   font-size: 12px;
+  padding-left: 16px;
 }
 
 .patch-change-before {
@@ -1107,6 +1131,30 @@
   font-size: var(--text-lg);
 }
 
+/* Pedido do usuário: dentro de cada rota, separa quem subiu de quem
+   desceu — sem isso uma rota grande virava uma parede só de chips
+   (~65 num patch cheio), mais densa que a tabela antiga mas ainda sem
+   organização de verdade. */
+.tier-change-direction-label {
+  margin: var(--space-3) 0 var(--space-1);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.tier-change-lane-group > .tier-change-direction-label:first-of-type {
+  margin-top: 0;
+}
+
+.tier-change-direction-up {
+  color: var(--pos);
+}
+
+.tier-change-direction-down {
+  color: var(--neg);
+}
+
 .tier-change-chips {
   display: flex;
   flex-wrap: wrap;
@@ -1117,11 +1165,15 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 10px;
+  padding: 4px 10px 4px 4px;
   border: 1px solid var(--border);
   border-radius: 999px;
   font-size: 13px;
   background: var(--code-bg);
+}
+
+.tier-change-chip img {
+  border-radius: 999px;
 }
 
 .stats-table th,
