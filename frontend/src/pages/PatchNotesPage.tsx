@@ -418,9 +418,11 @@ function ChampionChangeDetailBody({
  *  sem precisar clicar no ícone pra revelar — uma linha de resumo por
  *  campeão (foto+nome+contagem Buff/Nerf/Ajuste, badges sólidos com
  *  `--badge-buff`/`-nerf`/`-ajuste`). O corpo completo
- *  (`ChampionChangeDetailBody`) continua atrás de "mais detalhes" —
- *  cada linha guarda seu próprio `expanded`, então abrir uma não afeta
- *  as outras. */
+ *  (`ChampionChangeDetailBody`) continua atrás de um clique — pedido do
+ *  usuário: sem texto/seta de "mais detalhes", o card inteiro é o alvo
+ *  do clique, e a borda vira roxa (`--brand`) no hover pra dar a
+ *  impressão de que é clicável. Cada card guarda seu próprio
+ *  `expanded`, então abrir um não afeta os outros. */
 function SelectedChampionPanel({
   championId,
   changes,
@@ -439,8 +441,21 @@ function SelectedChampionPanel({
   const [expanded, setExpanded] = useState(false)
   const meta = championsMeta?.[championId]
   const { pos, neg, neutral } = countChangeDirections(changes)
+  const toggle = () => setExpanded((v) => !v)
   return (
-    <div className="patch-selected-panel">
+    <div
+      className="patch-selected-panel"
+      role="button"
+      tabIndex={0}
+      aria-expanded={expanded}
+      onClick={toggle}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          toggle()
+        }
+      }}
+    >
       <div className="patch-selected-panel-header">
         {meta && ddragonPatch && (
           <img src={championImageUrl(ddragonPatch, meta.image.full)} alt="" width={40} height={40} />
@@ -452,14 +467,6 @@ function SelectedChampionPanel({
           {neutral > 0 && <span className="patch-count-badge patch-count-badge-ajuste">{neutral} Ajuste</span>}
         </span>
       </div>
-      <button
-        type="button"
-        className="patch-selected-panel-toggle"
-        aria-expanded={expanded}
-        onClick={() => setExpanded((v) => !v)}
-      >
-        {expanded ? '↑ menos detalhes' : '↓ mais detalhes...'}
-      </button>
       {expanded && (
         <div className="patch-selected-panel-body">
           <ChampionChangeDetailBody
@@ -475,11 +482,12 @@ function SelectedChampionPanel({
   )
 }
 
-/** Pedido do usuário: a galeria de ícones (hover = resumo rápido)
- *  continua, mas agora logo abaixo dela aparecem os resumos de TODOS os
- *  campeões da categoria de uma vez — sem precisar clicar em nenhum
- *  ícone pra revelar. Reaproveita `classifyChampionCategory` pra
- *  bucketizar, ordenado do campeão com mais mudanças pro com menos. */
+/** Pedido do usuário (mockup próprio): as três categorias ficam lado a
+ *  lado, cada uma só com título+galeria de ícones (hover = resumo
+ *  rápido) — os cards de resumo por campeão saem de dentro de cada
+ *  categoria e viram uma lista única, combinada, logo abaixo das três
+ *  colunas (ordem buff → nerf → ajuste, cada bucket já ordenado do
+ *  campeão com mais mudanças pro com menos). */
 function ChangesByCategory({
   grouped,
   championsMeta,
@@ -500,44 +508,47 @@ function ChangesByCategory({
   for (const key of Object.keys(buckets) as PatchCategory[]) {
     buckets[key].sort((a, b) => b[1].length - a[1].length)
   }
+  const allEntries = CATEGORY_SECTIONS.flatMap(({ key }) => buckets[key])
 
   return (
     <>
-      {CATEGORY_SECTIONS.map(({ key, label, icon }) => {
-        const entries = buckets[key]
-        if (entries.length === 0) return null
-        return (
-          <div className="patch-category-section" key={key}>
-            <h3 className={`patch-category-heading patch-category-${key}`}>
-              {icon} {label} <span className="patch-category-count">({entries.length})</span>
-            </h3>
-            <div className="patch-category-gallery">
-              {entries.map(([championId, rows]) => (
-                <CategoryIcon
-                  key={championId}
-                  championId={championId}
-                  changes={rows}
-                  championsMeta={championsMeta}
-                  ddragonPatch={ddragonPatch}
-                />
-              ))}
+      <div className="patch-category-columns">
+        {CATEGORY_SECTIONS.map(({ key, label, icon }) => {
+          const entries = buckets[key]
+          if (entries.length === 0) return null
+          return (
+            <div className="patch-category-column" key={key}>
+              <h3 className={`patch-category-heading patch-category-${key}`}>
+                {icon} {label} <span className="patch-category-count">({entries.length})</span>
+              </h3>
+              <div className="patch-category-gallery">
+                {entries.map(([championId, rows]) => (
+                  <CategoryIcon
+                    key={championId}
+                    championId={championId}
+                    changes={rows}
+                    championsMeta={championsMeta}
+                    ddragonPatch={ddragonPatch}
+                  />
+                ))}
+              </div>
             </div>
-            <div className="patch-category-panels">
-              {entries.map(([championId, rows]) => (
-                <SelectedChampionPanel
-                  key={championId}
-                  championId={championId}
-                  changes={rows}
-                  championsMeta={championsMeta}
-                  ddragonPatch={ddragonPatch}
-                  scoreDeltas={scoreDeltaIndex.get(championId)}
-                  abilities={abilities}
-                />
-              ))}
-            </div>
-          </div>
-        )
-      })}
+          )
+        })}
+      </div>
+      <div className="patch-category-panels">
+        {allEntries.map(([championId, rows]) => (
+          <SelectedChampionPanel
+            key={championId}
+            championId={championId}
+            changes={rows}
+            championsMeta={championsMeta}
+            ddragonPatch={ddragonPatch}
+            scoreDeltas={scoreDeltaIndex.get(championId)}
+            abilities={abilities}
+          />
+        ))}
+      </div>
     </>
   )
 }

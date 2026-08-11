@@ -929,16 +929,21 @@
   margin: 12px 0;
 }
 
-/* Pedido do usuário: segmenta a lista em Buff/Nerf/Ajuste — cada bloco
-   com cor e ícone próprios, pra não misturar tudo numa lista só. */
-.patch-category-section {
+/* Pedido do usuário (mockup próprio): as três categorias lado a lado
+   em vez de empilhadas — cada coluna só com título+galeria de ícones,
+   os cards de resumo saem daqui e viram uma lista única embaixo. */
+.patch-category-columns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-6);
   width: 100%;
-  max-width: 720px;
+  max-width: 960px;
   margin-bottom: var(--space-5);
 }
 
-.patch-category-section:last-child {
-  margin-bottom: 0;
+.patch-category-column {
+  flex: 1 1 200px;
+  min-width: 180px;
 }
 
 .patch-category-heading {
@@ -1022,13 +1027,29 @@
   gap: 10px;
 }
 
+/* Pedido do usuário: sem texto/seta de "mais detalhes" — o card
+   inteiro é clicável (expande/recolhe), e o hover na borda (roxo,
+   `--brand`) é o único sinal visual de que dá pra clicar. */
 .patch-selected-panel {
   width: 100%;
   max-width: 720px;
   background: var(--code-bg);
-  border: 1px solid var(--border);
+  border: 2px solid var(--border);
   border-radius: 10px;
   padding: 12px 14px;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .patch-selected-panel {
+    transition: none;
+  }
+}
+
+.patch-selected-panel:hover,
+.patch-selected-panel:focus-visible {
+  border-color: var(--brand);
 }
 
 .patch-selected-panel-header {
@@ -1074,23 +1095,6 @@
 
 .patch-count-badge-ajuste {
   background: var(--badge-ajuste);
-}
-
-.patch-selected-panel-toggle {
-  display: inline-block;
-  margin-top: 10px;
-  padding: 0;
-  border: none;
-  background: none;
-  color: var(--brand);
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.patch-selected-panel-toggle:hover,
-.patch-selected-panel-toggle:focus-visible {
-  text-decoration: underline;
 }
 
 .patch-selected-panel-body {
