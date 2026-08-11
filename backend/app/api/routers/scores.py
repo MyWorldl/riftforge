@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db
@@ -15,6 +15,8 @@ def get_champion_scores(
     lane: Lane | None = None,
     patch: str | None = None,
     region: str = "br1",
+    limit: int = Query(default=1000, ge=1, le=1000),
+    offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
 ) -> list[dict]:
     """Placar com o modelo de score em camadas (Performance/Kit/Build/Meta),
@@ -22,8 +24,12 @@ def get_champion_scores(
     `champion_scores`, nunca consulta a Riot em tempo real.
 
     Item 4.3 (revisão técnica): a explicação por camada e o perfil de poder
-    saíram daqui — ver `GET /scores/champions/{champion_id}/explain`."""
-    return score_service.list_scores(db, elo_tier, lane, patch, region)
+    saíram daqui — ver `GET /scores/champions/{champion_id}/explain`.
+
+    Revisão técnica §1.11 (Sprint A item 2): `limit`/`offset` opcionais,
+    default cobre o volume real de hoje sem quebrar nenhum consumo atual
+    (o frontend sempre pede a lista inteira)."""
+    return score_service.list_scores(db, elo_tier, lane, patch, region, limit, offset)
 
 
 @router.get("/champions/{champion_id}/explain", response_model=ExplainResponse)

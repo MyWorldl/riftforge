@@ -18,14 +18,24 @@ class ChampionScoreRepository:
         return row[0] if row else None
 
     def list_by_patch(
-        self, elo_tier: str, patch: str, region: str, lane: str | None = None
+        self,
+        elo_tier: str,
+        patch: str,
+        region: str,
+        lane: str | None = None,
+        limit: int = 1000,
+        offset: int = 0,
     ) -> list[ChampionScore]:
+        """Revisão técnica §1.11 (Sprint A item 2): `limit`/`offset` com
+        teto real (sem paginação nenhuma antes) — `order_by(ChampionScore.id)`
+        garante resultado determinístico entre páginas (sem ordem explícita,
+        o banco não garante a mesma ordem em duas consultas)."""
         query = self.db.query(ChampionScore).filter_by(
             elo_tier=elo_tier, patch=patch, region=region
         )
         if lane:
             query = query.filter_by(lane=lane)
-        return query.all()
+        return query.order_by(ChampionScore.id).offset(offset).limit(limit).all()
 
     def list_available_patches(self, elo_tier: str, region: str) -> list[str]:
         rows = (

@@ -7,7 +7,7 @@ from app.adapters.riot_api import PLATFORM_TO_CONTINENT
 from app.core.adapters import data_dragon, riot_api
 from app.core.cache import cached
 from app.core.champions import resolve_champion_id
-from app.core.config import get_settings
+from app.core.config import Settings, get_settings
 from app.repositories.baseline_repository import BaselineRepository
 from app.repositories.champion_score_repository import ChampionScoreRepository
 from app.services.player_roadmap_service import (
@@ -44,7 +44,12 @@ def _detect_elo_tier(puuid: str, platform_region: str | None) -> tuple[str, bool
 
 
 async def lookup_player(
-    db: Session, game_name: str, tag_line: str, region: str | None, elo_tier: str | None
+    db: Session,
+    game_name: str,
+    tag_line: str,
+    region: str | None,
+    elo_tier: str | None,
+    settings: Settings | None = None,
 ) -> dict:
     """ "Análise do Jogador" — busca sob demanda de um jogador por Riot ID
     (`Nome#Tag`). Diferente do resto do backend, chama a Riot API por
@@ -74,7 +79,12 @@ async def lookup_player(
     `/health`) era atendido enquanto isso. As chamadas bloqueantes agora
     rodam em `asyncio.to_thread`, e as `player_lookup_recent_matches`
     partidas são buscadas em paralelo via `asyncio.gather` em vez de um
-    loop serial."""
+    loop serial.
+
+    Revisão técnica §4.2 (Sprint A item 1): `settings` opcional, injetado
+    pelo router via `Depends(get_settings)` — omitido, cai no singleton de
+    sempre. Propagado pra `sync_roadmap_steps` abaixo, mesmo motivo."""
+    settings = settings or get_settings()
     # Item novo (filtro de região, piloto br1+euw1): mesma região escolhida
     # pro lookup real na Riot também escopa a comparação contra
     # `ChampionScore`/`Baseline` abaixo — comparar as partidas de um
@@ -102,7 +112,7 @@ async def lookup_player(
     match_ids = await asyncio.to_thread(
         riot_api.get_match_ids_by_puuid,
         puuid,
-        count=get_settings().player_lookup_recent_matches,
+        count=settings.player_lookup_recent_matches,
         continent_region=continent,
     )
     matches = await asyncio.gather(
@@ -196,7 +206,7 @@ async def lookup_player(
     identity = resolve_identity(
         account.get("gameName", game_name), account.get("tagLine", tag_line), score_region
     )
-    roadmap = sync_roadmap_steps(db, identity, campeoes)
+    roadmap = sync_roadmap_steps(db, identity, campeoes, settings)
 
     return {
         "game_name": account.get("gameName", game_name),

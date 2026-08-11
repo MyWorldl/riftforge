@@ -3,7 +3,7 @@ from riotwatcher import ApiError
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db
-from app.core.config import get_settings
+from app.core.config import Settings, get_settings
 from app.core.limiter import limiter
 from app.core.riot_gate import ensure_riot_proxy_enabled
 from app.schemas.player import PlayerLookupResponse, PlayerRoadmapDeleteResponse
@@ -11,6 +11,11 @@ from app.services import player_service
 from app.services import player_roadmap_service
 
 router = APIRouter(prefix="/player", tags=["player"])
+# Revisão técnica §4.2: usado só pelo `@limiter.limit(...)` abaixo — o
+# decorador precisa do valor no momento do import, então isto é a exceção
+# que a própria revisão reconhece como inevitável (não confundir com o
+# `Depends(get_settings)` no parâmetro de `get_player_lookup`, que É a
+# versão testável/override-ável, usada dentro do corpo da rota).
 settings = get_settings()
 
 
@@ -23,6 +28,7 @@ async def get_player_lookup(
     region: str | None = None,
     elo_tier: str | None = None,
     db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
 ) -> dict:
     """"Análise do Jogador" — busca sob demanda de um jogador por Riot ID
     (`Nome#Tag`). Diferente do resto do backend, ESTA rota faz chamadas
@@ -33,10 +39,16 @@ async def get_player_lookup(
 
     `elo_tier` omitido (revisão técnica §5.3): detecta o elo real do
     jogador via League-V4 em vez de assumir GOLD fixo — ver
-    `player_service._detect_elo_tier`."""
+    `player_service._detect_elo_tier`.
+
+    Revisão técnica §4.2 (Sprint A item 1): `settings` via `Depends`, não
+    lido direto do módulo — `app.dependency_overrides[get_settings]` num
+    teste passa a alcançar `lookup_player`/`sync_roadmap_steps` de
+    verdade, coisa que o `settings` global acima (só pro decorador de
+    rate limit) nunca alcançaria."""
     ensure_riot_proxy_enabled()
     try:
-        return await player_service.lookup_player(db, game_name, tag_line, region, elo_tier)
+        return await player_service.lookup_player(db, game_name, tag_line, region, elo_tier, settings)
     except ApiError as exc:
         raise HTTPException(status_code=exc.response.status_code, detail=str(exc)) from exc
 

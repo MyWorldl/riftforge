@@ -10,6 +10,7 @@ from app.db.models import (
     ChampionMetaContext,
     ChampionScore,
     Patch,
+    PlayerRanking,
     PlayerRoadmapStep,
 )
 
@@ -93,6 +94,33 @@ def test_scores_champions_with_data(client, db_session):
     # Item 4.3: explicacao/perfil_poder não devem mais vir embutidos aqui.
     assert "explicacao" not in row
     assert "perfil_poder" not in row
+
+
+def test_scores_champions_limit_offset(client, db_session):
+    """Sprint A item 2 (revisão técnica §1.11): `limit`/`offset` de verdade,
+    não só aceitos e ignorados — ordena por `id` (ordem de inserção aqui),
+    então `limit=1&offset=1` tem que devolver exatamente a segunda linha
+    semeada."""
+    _seed_patch(db_session, "16.14", 16014)
+    _seed_champion_score(db_session, champion_id="Aatrox", lane="TOP")
+    _seed_champion_score(db_session, champion_id="Ahri", lane="MIDDLE")
+    _seed_champion_score(db_session, champion_id="Jinx", lane="BOTTOM")
+
+    response = client.get("/scores/champions?elo_tier=GOLD&patch=16.14&limit=1&offset=1")
+    assert response.status_code == 200
+    rows = response.json()
+    assert len(rows) == 1
+    assert rows[0]["champion_id"] == "Ahri"
+
+    all_response = client.get("/scores/champions?elo_tier=GOLD&patch=16.14")
+    assert len(all_response.json()) == 3
+
+
+def test_scores_champions_limit_rejects_out_of_bounds(client):
+    response = client.get("/scores/champions?elo_tier=GOLD&limit=0")
+    assert response.status_code == 422
+    response = client.get("/scores/champions?elo_tier=GOLD&limit=1001")
+    assert response.status_code == 422
 
 
 def test_scores_champions_region_defaults_to_br1_and_isolates_euw1(client, db_session):
@@ -267,6 +295,49 @@ def test_rankings_empty(client):
     response = client.get("/rankings?region=br1")
     assert response.status_code == 200
     assert response.json() == []
+
+
+def test_rankings_region_omitted_uses_overridden_settings(client, db_session):
+    """Sprint A item 1 (revisão técnica §4.2): prova o motivo real de
+    trocar `get_settings()` direto por `Depends(get_settings)` em
+    `ranking_service.get_rankings` — antes desta mudança,
+    `app.dependency_overrides[get_settings]` não alcançava o service (só
+    o router lia via `Depends`, o service chamava o singleton global
+    direto). Sem `region` na query, o default agora vem do override, não
+    do `riot_platform_region` real da config."""
+    from app.main import app
+
+    db_session.add(
+        PlayerRanking(
+            queue="RANKED_SOLO_5x5",
+            tier="CHALLENGER",
+            region="euw1",
+            puuid="puuid-euw1",
+            game_name="Fulano",
+            tag_line="EUW1",
+            summoner_level=100,
+            profile_icon_id=1,
+            league_points=1000,
+            wins=10,
+            losses=5,
+            rank_position=1,
+            delta_posicao=None,
+        )
+    )
+    db_session.commit()
+
+    base_settings = get_settings()
+    override = base_settings.model_copy(update={"riot_platform_region": "euw1"})
+    app.dependency_overrides[get_settings] = lambda: override
+    try:
+        response = client.get("/rankings")
+    finally:
+        del app.dependency_overrides[get_settings]
+
+    assert response.status_code == 200
+    rows = response.json()
+    assert len(rows) == 1
+    assert rows[0]["region"] == "euw1"
 
 
 def test_meta_coverage_empty_db(client):

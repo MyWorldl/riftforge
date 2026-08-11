@@ -14,7 +14,13 @@ from app.repositories.skill_expression_repository import SkillExpressionReposito
 
 
 def list_scores(
-    db: Session, elo_tier: str, lane: str | None, patch: str | None, region: str
+    db: Session,
+    elo_tier: str,
+    lane: str | None,
+    patch: str | None,
+    region: str,
+    limit: int = 1000,
+    offset: int = 0,
 ) -> list[dict]:
     """Placar com o modelo de score em camadas (Performance/Kit/Build/Meta),
     tier God-E, indicador de confiança e selo Trap — lê só de
@@ -24,7 +30,12 @@ def list_scores(
     aqui — cada um pesava por linha (4 camadas + 2 barras), multiplicado por
     ~300-700 linhas, pra uma informação que só é lida quando o usuário clica
     no ícone (ⓘ) de uma linha específica. Ver `get_explanation` abaixo,
-    exposta em `GET /scores/champions/{champion_id}/explain`."""
+    exposta em `GET /scores/champions/{champion_id}/explain`.
+
+    Revisão técnica §1.11 (Sprint A item 2): `limit`/`offset` com default
+    generoso o bastante pra não mudar nada do comportamento atual (o
+    frontend sempre pediu a lista inteira, e o maior volume real hoje —
+    ~170 campeões × 5 rotas — fica bem abaixo do teto)."""
     score_repo = ChampionScoreRepository(db)
     perf_repo = PerformanceRepository(db)
     skill_repo = SkillExpressionRepository(db)
@@ -34,7 +45,7 @@ def list_scores(
         if patch is None:
             return []
 
-    rows = score_repo.list_by_patch(elo_tier, patch, region, lane)
+    rows = score_repo.list_by_patch(elo_tier, patch, region, lane, limit, offset)
 
     # Win rate/pick rate/ban rate já existem em ChampionPerformanceScore
     # (calculados na Camada 1) — reaproveita a mesma linha já buscada pra

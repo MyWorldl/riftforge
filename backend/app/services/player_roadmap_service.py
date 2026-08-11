@@ -3,7 +3,7 @@ from dataclasses import dataclass
 
 from sqlalchemy.orm import Session
 
-from app.core.config import get_settings
+from app.core.config import Settings, get_settings
 from app.db.models import PlayerRoadmapStep
 from app.repositories.player_roadmap_repository import PlayerRoadmapRepository
 
@@ -54,7 +54,10 @@ def _serialize(step: PlayerRoadmapStep) -> dict:
 
 
 def sync_roadmap_steps(
-    db: Session, identity: PlayerIdentity, campeoes: list[dict]
+    db: Session,
+    identity: PlayerIdentity,
+    campeoes: list[dict],
+    settings: Settings | None = None,
 ) -> dict:
     """Roadmap de Progressão do Jogador (rodada 28) — efeito colateral de
     escrita de `player_service.lookup_player()`. Recebe `campeoes` já
@@ -70,8 +73,17 @@ def sync_roadmap_steps(
     (zero — alcançou a média do elo) e nunca reabre depois. Com o teto de
     `roadmap_max_active_steps` cheio, um gap novo pior que o menos ruim
     dos ativos substitui esse (que vira "replaced", não é apagado — pode
-    reativar se voltar a ser o pior gap)."""
-    settings = get_settings()
+    reativar se voltar a ser o pior gap).
+
+    Revisão técnica §4.2 (Sprint A item 1): `settings` opcional — omitido,
+    cai no singleton `@lru_cache` de sempre (compatível com todo chamador
+    existente, incluindo os testes que já chamam esta função sem esse
+    argumento). Passado explicitamente pelo router via `Depends(get_settings)`
+    (através de `player_service.lookup_player`), o override de settings em
+    teste (`app.dependency_overrides`) passa a alcançar esta função — antes
+    não alcançava, porque `get_settings()` chamado direto aqui ignora
+    qualquer override da árvore de dependências do FastAPI."""
+    settings = settings or get_settings()
     repo = PlayerRoadmapRepository(db)
 
     existing_rows = repo.get_all_for_player(

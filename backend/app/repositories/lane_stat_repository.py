@@ -25,8 +25,17 @@ class LaneStatRepository:
             for row in self.db.query(ChampionBanStat).filter_by(patch=patch, tier=tier).all()
         }
 
-    def list_lane_stats(self, patch: str, tier: str, lane: str | None = None) -> list[ChampionLaneStat]:
+    def list_lane_stats(
+        self,
+        patch: str,
+        tier: str,
+        lane: str | None = None,
+        limit: int = 1000,
+        offset: int = 0,
+    ) -> list[ChampionLaneStat]:
+        """Revisão técnica §1.11 (Sprint A item 2): `limit`/`offset` com
+        teto real, mesmo padrão de `ChampionScoreRepository.list_by_patch`."""
         query = self.db.query(ChampionLaneStat).filter_by(patch=patch, tier=tier)
         if lane:
             query = query.filter_by(lane=lane)
-        return query.all()
+        return query.order_by(ChampionLaneStat.id).offset(offset).limit(limit).all()
