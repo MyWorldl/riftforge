@@ -136,8 +136,11 @@ function PatchHighlights() {
         <div className="home-highlights-col">
           <h2>Cobertura de meta por rota</h2>
           <p className="explain-sub">
-            % dos top picks da rota com taxa de vitória saudável (≥50%) — quanto maior, mais rotas
-            diferentes estão competitivas nesse patch.
+            Dos 10 campeões mais escolhidos em cada rota, quantos também estão vencendo mais da
+            metade das partidas (≥50% de vitórias). 100% quer dizer que os campeões populares ali
+            realmente são bons — quem todo mundo escolhe, funciona. Um número baixo quer dizer o
+            contrário: boa parte do que está sendo escolhido está perdendo mais do que ganhando,
+            sinal de que popularidade e força de campeão andam separadas nessa rota.
           </p>
           <ul className="home-coverage-list">
             {coverage?.cobertura

@@ -403,7 +403,12 @@
    depois, ele só encaixa, sem editar breakpoint nenhum. */
 .home-shortcuts {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  /* `auto-fill` (não `auto-fit`) de propósito: com 5 cards, `auto-fit`
+     colapsa as colunas vazias da última linha e faz o card sozinho
+     esticar pra largura inteira — `auto-fill` mantém a grade de colunas
+     fixa mesmo com uma célula vaga, então o último card fica do
+     tamanho normal, só que sozinho na própria linha (nunca esticado). */
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   gap: var(--space-3);
   width: 100%;
   max-width: 900px;
@@ -1029,6 +1034,60 @@
 .patch-change-after {
   color: var(--pos);
   margin: 0;
+}
+
+/* Pedido do usuário: separa visualmente "Atributos do campeão" de
+   "Habilidades do campeão" dentro do card — antes vinha tudo numa lista
+   só, na ordem em que o backend calculou o diff. */
+.patch-change-subheading {
+  margin: 10px 0 4px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text);
+}
+
+.patch-change-subheading:first-of-type {
+  margin-top: 0;
+}
+
+.patch-change-ability-icon {
+  vertical-align: middle;
+  border-radius: 4px;
+  margin-right: 4px;
+}
+
+/* Pedido do usuário: a tabela de "Campeões que mudaram de tier" tinha
+   centenas de linhas (uma por campeão+rota) — vira grupos por rota com
+   chips compactos que quebram linha, escaneável sem rolagem infinita. */
+.tier-change-groups {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  width: 100%;
+}
+
+.tier-change-lane-title {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-lg);
+}
+
+.tier-change-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.tier-change-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 13px;
+  background: var(--code-bg);
 }
 
 .stats-table th,
@@ -1683,6 +1742,13 @@
 
 .delta-position-none {
   color: var(--text);
+}
+
+.tier-change-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
 }
 
 .explain-base,

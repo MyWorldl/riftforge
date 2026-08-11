@@ -2,9 +2,13 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   championImageUrl,
+  fetchChampionAbilities,
   fetchChampions,
   fetchPatchChanges,
   fetchPatchNotes,
+  passiveImageUrl,
+  spellImageUrl,
+  type ChampionDetail,
   type ChampionMeta,
   type PatchChangeRow,
   type PatchChangesResult,
@@ -25,6 +29,75 @@ const LANE_LABELS: Record<string, string> = {
   MIDDLE: 'Meio',
   BOTTOM: 'Atirador',
   UTILITY: 'Suporte',
+}
+
+const LANE_ORDER = ['TOP', 'JUNGLE', 'MIDDLE', 'BOTTOM', 'UTILITY']
+
+/** Pedido do usuário: cor por direção real (bom/ruim pro campeão), não
+ *  por "antes é sempre vermelho, depois é sempre verde" (o que fazia
+ *  Recarga subir aparecer em verde, mesmo sendo pior pro campeão).
+ *  `field_label` mapeia 1:1 com o `field` que o backend usa
+ *  (`patch_notes_diff.py`) pra esses casos — os únicos que dá pra
+ *  classificar com segurança. "Valor de efeito N" (spell genérico) fica
+ *  de fora de propósito: o Data Dragon não rotula esses índices
+ *  (dano? duração? recarga escondida num efeito?), então colorir seria
+ *  chute, não fato — mesma linha de raciocínio já documentada no
+ *  próprio backend pra esse campo. */
+const HIGHER_IS_BETTER_LABELS = new Set([
+  'Vida', 'Vida por nível',
+  'Mana', 'Mana por nível',
+  'Velocidade de movimento',
+  'Armadura', 'Armadura por nível',
+  'Resistência mágica', 'Resistência mágica por nível',
+  'Alcance de ataque',
+  'Regeneração de vida', 'Regeneração de vida por nível',
+  'Regeneração de mana', 'Regeneração de mana por nível',
+  'Chance de crítico', 'Chance de crítico por nível',
+  'Dano de ataque', 'Dano de ataque por nível',
+  'Velocidade de ataque', 'Velocidade de ataque por nível',
+  'Alcance',
+])
+
+const LOWER_IS_BETTER_LABELS = new Set(['Recarga', 'Custo'])
+
+/** Campos de escala por rank vêm como string "18/16/14/12/10" — compara
+ *  só o primeiro rank (rank 1), suficiente pra saber a direção real da
+ *  mudança sem precisar parsear a string inteira. */
+function firstNumber(value: string): number | null {
+  const n = parseFloat(value.split('/')[0])
+  return Number.isNaN(n) ? null : n
+}
+
+type ChangeDirection = 'pos' | 'neg' | 'neutral'
+
+function classifyChangeDirection(change: PatchChangeRow): ChangeDirection {
+  const higherIsBetter = HIGHER_IS_BETTER_LABELS.has(change.field_label)
+  const lowerIsBetter = LOWER_IS_BETTER_LABELS.has(change.field_label)
+  if (!higherIsBetter && !lowerIsBetter) return 'neutral'
+  const before = firstNumber(change.before_value)
+  const after = firstNumber(change.after_value)
+  if (before === null || after === null || before === after) return 'neutral'
+  const increased = after > before
+  const better = higherIsBetter ? increased : !increased
+  return better ? 'pos' : 'neg'
+}
+
+const SPELL_KEYS = ['Q', 'W', 'E', 'R']
+
+/** Ícone de habilidade — `PatchChangeRow` não traz o nome do arquivo de
+ *  imagem (só `spell_key`/`spell_name`), então precisa do detalhe
+ *  completo do campeão (`fetchChampionAbilities`, mesmo endpoint que
+ *  `ChampionDetailPage.tsx` já usa). `abilities` é um cache por
+ *  `champion_id`, buscado uma vez por campeão que aparece na página
+ *  (ver `useEffect` em `PatchNotesPage`), não por mudança individual. */
+function abilityImageFor(change: PatchChangeRow, detail: ChampionDetail | undefined): string | null {
+  if (!detail) return null
+  if (change.category === 'passive') return detail.passive.image.full
+  if (change.spell_key) {
+    const index = SPELL_KEYS.indexOf(change.spell_key)
+    if (index >= 0) return detail.spells[index]?.image.full ?? null
+  }
+  return null
 }
 
 function DeltaTable({ title, rows }: { title: string; rows: PatchDeltaRow[] }) {
@@ -60,33 +133,48 @@ function DeltaTable({ title, rows }: { title: string; rows: PatchDeltaRow[] }) {
   )
 }
 
-function TierChangeTable({ rows }: { rows: PatchDeltaRow[] }) {
+function groupByLane(rows: PatchDeltaRow[]): [string, PatchDeltaRow[]][] {
+  const map = new Map<string, PatchDeltaRow[]>()
+  for (const row of rows) {
+    const list = map.get(row.lane) ?? []
+    list.push(row)
+    map.set(row.lane, list)
+  }
+  return [...map.entries()].sort((a, b) => LANE_ORDER.indexOf(a[0]) - LANE_ORDER.indexOf(b[0]))
+}
+
+/** Pedido do usuário: a tabela antiga (uma linha por campeão+rota,
+ *  centenas de linhas num patch normal) virou uma lista longa demais
+ *  pra usar de verdade. Agrupado por rota, em chips compactos que
+ *  quebram linha — a mesma informação (campeão, tier antes/depois),
+ *  só que escaneável em segundos em vez de rolagem infinita. */
+function TierChangeGroups({
+  rows,
+  championsMeta,
+}: {
+  rows: PatchDeltaRow[]
+  championsMeta: Record<string, ChampionMeta> | null
+}) {
   if (rows.length === 0) return null
+  const groups = groupByLane(rows)
   return (
-    <div className="table-scroll">
+    <div className="tier-change-groups">
       <p className="table-caption">Campeões que mudaram de tier</p>
-      <table className="stats-table">
-        <thead>
-          <tr>
-            <th>Campeão</th>
-            <th>Rota</th>
-            <th>Tier</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr key={`${row.champion_id}-${row.lane}`}>
-              <td>{row.champion_id}</td>
-              <td>{LANE_LABELS[row.lane] ?? row.lane}</td>
-              <td>
+      {groups.map(([lane, laneRows]) => (
+        <div className="tier-change-lane-group" key={lane}>
+          <h3 className="tier-change-lane-title">{LANE_LABELS[lane] ?? lane}</h3>
+          <div className="tier-change-chips">
+            {laneRows.map((row) => (
+              <span className="tier-change-chip" key={`${row.champion_id}-${row.lane}`}>
+                {championsMeta?.[row.champion_id]?.name ?? row.champion_id}
                 <span className={`tier-badge tier-${row.tier_anterior}`}>{row.tier_anterior}</span>
-                <span aria-hidden="true"> → </span>
+                <span aria-hidden="true">→</span>
                 <span className={`tier-badge tier-${row.tier_atual}`}>{row.tier_atual}</span>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+              </span>
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   )
 }
@@ -148,20 +236,75 @@ function ScoreImpactBadges({ rows }: { rows: PatchDeltaRow[] | undefined }) {
   )
 }
 
+/** Uma mudança por `<li>`, reaproveitada tanto por "Atributos" quanto por
+ *  "Habilidades" (`ChampionChangeCard` abaixo) — só o agrupamento em volta
+ *  muda entre as duas seções. */
+function ChangeListItem({
+  change,
+  abilityImage,
+  ddragonPatch,
+}: {
+  change: PatchChangeRow
+  abilityImage: string | null
+  ddragonPatch: string
+}) {
+  const direction = classifyChangeDirection(change)
+  return (
+    <li className="patch-change-item">
+      <div className="patch-change-field">
+        {abilityImage && ddragonPatch && (
+          <img
+            className="patch-change-ability-icon"
+            src={change.category === 'passive' ? passiveImageUrl(ddragonPatch, abilityImage) : spellImageUrl(ddragonPatch, abilityImage)}
+            alt=""
+            width={20}
+            height={20}
+            loading="lazy"
+          />
+        )}
+        {!abilityImage && change.spell_key && <span className="patch-change-spell-key">{change.spell_key}</span>}
+        {change.spell_name ? `${change.spell_name} — ${change.field_label}` : change.field_label}
+      </div>
+      {change.category === 'passive' ? (
+        <div className="patch-change-text-diff">
+          <p className="patch-change-before">{change.before_value}</p>
+          <p className="patch-change-after">{change.after_value}</p>
+        </div>
+      ) : (
+        <div className="patch-change-values">
+          <span>{change.before_value}</span>
+          <span aria-hidden="true"> → </span>
+          <span className={direction === 'pos' ? 'value-pos' : direction === 'neg' ? 'value-neg' : ''}>
+            {change.after_value}
+          </span>
+        </div>
+      )}
+    </li>
+  )
+}
+
 function ChampionChangeCard({
   championId,
   changes,
   championsMeta,
   ddragonPatch,
   scoreDeltas,
+  abilities,
 }: {
   championId: string
   changes: PatchChangeRow[]
   championsMeta: Record<string, ChampionMeta> | null
   ddragonPatch: string
   scoreDeltas: PatchDeltaRow[] | undefined
+  abilities: Record<string, ChampionDetail>
 }) {
   const meta = championsMeta?.[championId]
+  const detail = abilities[championId]
+  // Pedido do usuário: separar o que é atributo base (vida, armadura...)
+  // do que é habilidade (Q/W/E/R/passiva) — antes vinha tudo misturado
+  // na mesma lista, na ordem em que o backend calculou o diff.
+  const attributeChanges = changes.filter((c) => c.category === 'stat')
+  const abilityChanges = changes.filter((c) => c.category !== 'stat')
   return (
     <div className="patch-change-card">
       <div className="patch-change-header">
@@ -171,28 +314,31 @@ function ChampionChangeCard({
         <span>{meta?.name ?? championId}</span>
       </div>
       <ScoreImpactBadges rows={scoreDeltas} />
-      <ul className="patch-change-list">
-        {changes.map((change, index) => (
-          <li className="patch-change-item" key={index}>
-            <div className="patch-change-field">
-              {change.spell_key && <span className="patch-change-spell-key">{change.spell_key}</span>}
-              {change.spell_name ? `${change.spell_name} — ${change.field_label}` : change.field_label}
-            </div>
-            {change.category === 'passive' ? (
-              <div className="patch-change-text-diff">
-                <p className="patch-change-before">{change.before_value}</p>
-                <p className="patch-change-after">{change.after_value}</p>
-              </div>
-            ) : (
-              <div className="patch-change-values">
-                <span className="value-neg">{change.before_value}</span>
-                <span aria-hidden="true"> → </span>
-                <span className="value-pos">{change.after_value}</span>
-              </div>
-            )}
-          </li>
-        ))}
-      </ul>
+      {attributeChanges.length > 0 && (
+        <>
+          <p className="patch-change-subheading">Atributos do campeão</p>
+          <ul className="patch-change-list">
+            {attributeChanges.map((change, index) => (
+              <ChangeListItem key={index} change={change} abilityImage={null} ddragonPatch={ddragonPatch} />
+            ))}
+          </ul>
+        </>
+      )}
+      {abilityChanges.length > 0 && (
+        <>
+          <p className="patch-change-subheading">Habilidades do campeão</p>
+          <ul className="patch-change-list">
+            {abilityChanges.map((change, index) => (
+              <ChangeListItem
+                key={index}
+                change={change}
+                abilityImage={abilityImageFor(change, detail)}
+                ddragonPatch={ddragonPatch}
+              />
+            ))}
+          </ul>
+        </>
+      )}
     </div>
   )
 }
@@ -214,6 +360,30 @@ function PatchNotesPage() {
   // Sem identidade, o bloco simplesmente não existe, resto da página igual.
   const [myChanges, setMyChanges] = useState<PatchChangesResult | null>(null)
   const [myIdentity, setMyIdentity] = useState<{ region: string; gameName: string; tagLine: string } | null>(null)
+
+  // Pedido do usuário: ícone da habilidade ao lado de cada mudança que
+  // referencia uma — `PatchChangeRow` não traz o nome do arquivo de
+  // imagem, só dá pra conseguir com o detalhe completo do campeão
+  // (`fetchChampionAbilities`). Busca só uma vez por campeão (não por
+  // mudança), e só os que ainda não estão no cache (`abilities`).
+  const [abilities, setAbilities] = useState<Record<string, ChampionDetail>>({})
+
+  useEffect(() => {
+    const ids = new Set<string>()
+    for (const row of changes?.mudancas ?? []) ids.add(row.champion_id)
+    for (const row of myChanges?.mudancas ?? []) ids.add(row.champion_id)
+    const missing = [...ids].filter((id) => !(id in abilities))
+    if (missing.length === 0) return
+    Promise.allSettled(missing.map((id) => fetchChampionAbilities(id).then((r) => [id, r.champion] as const)))
+      .then((results) => {
+        const found = results
+          .filter((r): r is PromiseFulfilledResult<readonly [string, ChampionDetail]> => r.status === 'fulfilled')
+          .map((r) => r.value)
+        if (found.length === 0) return
+        setAbilities((prev) => ({ ...prev, ...Object.fromEntries(found) }))
+      })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [changes, myChanges])
 
   useEffect(() => {
     fetchChampions()
@@ -303,6 +473,7 @@ function PatchNotesPage() {
                 championsMeta={championsMeta}
                 ddragonPatch={ddragonPatch}
                 scoreDeltas={scoreDeltaIndex.get(championId)}
+                abilities={abilities}
               />
             ))}
           </div>
@@ -314,10 +485,6 @@ function PatchNotesPage() {
 
       {changes && changes.patch_anterior && grouped && (
         <>
-          <p className="table-caption">
-            Comparando patch <strong>{changes.patch_anterior}</strong> → <strong>{changes.patch_atual}</strong> ·{' '}
-            {grouped.length} campeões alterados
-          </p>
           <div className="patch-change-grid">
             {grouped.map(([championId, rows]) => (
               <ChampionChangeCard
@@ -327,9 +494,17 @@ function PatchNotesPage() {
                 championsMeta={championsMeta}
                 ddragonPatch={ddragonPatch}
                 scoreDeltas={scoreDeltaIndex.get(championId)}
+                abilities={abilities}
               />
             ))}
           </div>
+          {/* Pedido do usuário: o resumo ("N campeões alterados") sai do
+              topo da seção (onde competia com a introdução da página por
+              atenção) e vira o fechamento dela, depois dos cards. */}
+          <p className="table-caption">
+            Comparando patch <strong>{changes.patch_anterior}</strong> → <strong>{changes.patch_atual}</strong> ·{' '}
+            {grouped.length} campeões alterados
+          </p>
         </>
       )}
 
@@ -375,7 +550,7 @@ function PatchNotesPage() {
           </p>
           <DeltaTable title="Maiores altas" rows={result.altas} />
           <DeltaTable title="Maiores quedas" rows={result.quedas} />
-          <TierChangeTable rows={result.mudancas_tier} />
+          <TierChangeGroups rows={result.mudancas_tier} championsMeta={championsMeta} />
         </>
       )}
     </main>
