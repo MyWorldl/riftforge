@@ -83,6 +83,22 @@ function classifyChangeDirection(change: PatchChangeRow): ChangeDirection {
   return better ? 'pos' : 'neg'
 }
 
+/** Conta a direção de cada mudança do campeão — base tanto da
+ *  categorização Buff/Nerf/Ajuste quanto dos badges de contagem no
+ *  painel de detalhe ("2 Buff / 1 Nerf / 3 Ajuste"). */
+function countChangeDirections(changes: PatchChangeRow[]): { pos: number; neg: number; neutral: number } {
+  let pos = 0
+  let neg = 0
+  let neutral = 0
+  for (const change of changes) {
+    const direction = classifyChangeDirection(change)
+    if (direction === 'pos') pos++
+    else if (direction === 'neg') neg++
+    else neutral++
+  }
+  return { pos, neg, neutral }
+}
+
 /** Pedido do usuário: segmenta a visão do patch em Buff/Nerf/Ajuste —
  *  conta quantas mudanças do campeão são boas (`pos`) vs. ruins (`neg`)
  *  pra ele (reaproveita `classifyChangeDirection`, mesma lógica de
@@ -92,13 +108,7 @@ function classifyChangeDirection(change: PatchChangeRow): ChangeDirection {
 type PatchCategory = 'buff' | 'nerf' | 'ajuste'
 
 function classifyChampionCategory(changes: PatchChangeRow[]): PatchCategory {
-  let pos = 0
-  let neg = 0
-  for (const change of changes) {
-    const direction = classifyChangeDirection(change)
-    if (direction === 'pos') pos++
-    else if (direction === 'neg') neg++
-  }
+  const { pos, neg } = countChangeDirections(changes)
   if (pos > neg) return 'buff'
   if (neg > pos) return 'nerf'
   return 'ajuste'
@@ -308,13 +318,181 @@ const CATEGORY_SECTIONS: { key: PatchCategory; label: string; icon: ReactNode }[
   { key: 'ajuste', label: 'Ajuste', icon: <IconAjuste /> },
 ]
 
-/** Pedido do usuário: em vez de um grid de colunas com cards de altura
- *  bem diferente entre si (visual desorganizado — colunas curtas ao
- *  lado de colunas enormes), vira lista de coluna única, do campeão com
- *  mais mudanças pro com menos. E segmentado em 3 blocos (Buff/Nerf/
- *  Ajuste, cada um com cor+ícone próprio) em vez de uma lista só —
- *  reaproveita `classifyChampionCategory` (soma de direção por mudança
- *  individual, já calculada pra colorir cada valor). */
+/** Pedido do usuário (mockup próprio): cada categoria vira uma galeria
+ *  compacta só de ícones — não mais um card completo por campeão. O
+ *  ícone leva o resumo rápido no `title` (tooltip nativo do navegador,
+ *  aparece no hover sem precisar clicar); clicar seleciona o campeão e
+ *  abre o painel de detalhe (`SelectedChampionPanel`) logo abaixo das
+ *  três galerias, compartilhado entre elas — só um campeão expandido
+ *  por vez, seja qual for a categoria de onde veio o clique. Clicar de
+ *  novo no mesmo ícone fecha o painel. */
+function CategoryIconButton({
+  championId,
+  changes,
+  championsMeta,
+  ddragonPatch,
+  selected,
+  onSelect,
+}: {
+  championId: string
+  changes: PatchChangeRow[]
+  championsMeta: Record<string, ChampionMeta> | null
+  ddragonPatch: string
+  selected: boolean
+  onSelect: (championId: string) => void
+}) {
+  const meta = championsMeta?.[championId]
+  const { pos, neg, neutral } = countChangeDirections(changes)
+  const summaryParts: string[] = []
+  if (pos > 0) summaryParts.push(`${pos} buff`)
+  if (neg > 0) summaryParts.push(`${neg} nerf`)
+  if (neutral > 0) summaryParts.push(`${neutral} ajuste`)
+  const name = meta?.name ?? championId
+  return (
+    <button
+      type="button"
+      className={`patch-category-icon-btn${selected ? ' patch-category-icon-btn-selected' : ''}`}
+      title={summaryParts.length > 0 ? `${name} — ${summaryParts.join(' · ')}` : name}
+      aria-pressed={selected}
+      onClick={() => onSelect(championId)}
+    >
+      {meta && ddragonPatch ? (
+        <img src={championImageUrl(ddragonPatch, meta.image.full)} alt={name} width={40} height={40} loading="lazy" />
+      ) : (
+        <span className="patch-category-icon-fallback" aria-hidden="true">{championId.slice(0, 2)}</span>
+      )}
+    </button>
+  )
+}
+
+/** Corpo de detalhe reaproveitado pelo painel expandido — extraído do
+ *  antigo `ChampionChangeCard` (Atributos/Habilidades/Mudança de tier),
+ *  sem o cabeçalho próprio (o painel que chama já mostra ícone+nome). */
+function ChampionChangeDetailBody({
+  championId,
+  changes,
+  ddragonPatch,
+  scoreDeltas,
+  abilities,
+}: {
+  championId: string
+  changes: PatchChangeRow[]
+  ddragonPatch: string
+  scoreDeltas: PatchDeltaRow[] | undefined
+  abilities: Record<string, ChampionDetail>
+}) {
+  const detail = abilities[championId]
+  // Pedido do usuário: separar o que é atributo base (vida, armadura...)
+  // do que é habilidade (Q/W/E/R/passiva) — antes vinha tudo misturado
+  // na mesma lista, na ordem em que o backend calculou o diff.
+  const attributeChanges = changes.filter((c) => c.category === 'stat')
+  const abilityChanges = changes.filter((c) => c.category !== 'stat')
+  return (
+    <>
+      {attributeChanges.length > 0 && (
+        <>
+          <p className="patch-change-subheading">Atributos do campeão</p>
+          <ul className="patch-change-list">
+            {attributeChanges.map((change, index) => (
+              <ChangeListItem key={index} change={change} abilityImage={null} ddragonPatch={ddragonPatch} />
+            ))}
+          </ul>
+        </>
+      )}
+      {abilityChanges.length > 0 && (
+        <>
+          <p className="patch-change-subheading">Habilidades do campeão</p>
+          {groupBySpell(abilityChanges).map(([spellKey, groupChanges]) => (
+            <AbilityChangeGroup
+              key={spellKey}
+              spellKey={spellKey}
+              changes={groupChanges}
+              abilityImage={abilityImageFor(groupChanges[0], detail)}
+              ddragonPatch={ddragonPatch}
+            />
+          ))}
+        </>
+      )}
+      {scoreDeltas && scoreDeltas.length > 0 && (
+        <>
+          <p className="patch-change-subheading">Mudança de tier</p>
+          <ScoreImpactBadges rows={scoreDeltas} />
+        </>
+      )}
+    </>
+  )
+}
+
+/** Pedido do usuário: revelação em dois estágios. Selecionar um ícone
+ *  na galeria abre primeiro só o resumo (foto+nome+contagem Buff/Nerf/
+ *  Ajuste desse campeão, badges sólidos com `--badge-buff`/`-nerf`/
+ *  `-ajuste`); o corpo completo (`ChampionChangeDetailBody`) só aparece
+ *  depois de clicar em "mais detalhes". Troca de campeão selecionado
+ *  sempre volta a fechar o detalhe, pra não confundir com o campeão
+ *  anterior. */
+function SelectedChampionPanel({
+  championId,
+  changes,
+  championsMeta,
+  ddragonPatch,
+  scoreDeltas,
+  abilities,
+}: {
+  championId: string
+  changes: PatchChangeRow[]
+  championsMeta: Record<string, ChampionMeta> | null
+  ddragonPatch: string
+  scoreDeltas: PatchDeltaRow[] | undefined
+  abilities: Record<string, ChampionDetail>
+}) {
+  const [expanded, setExpanded] = useState(false)
+  useEffect(() => {
+    setExpanded(false)
+  }, [championId])
+  const meta = championsMeta?.[championId]
+  const { pos, neg, neutral } = countChangeDirections(changes)
+  return (
+    <div className="patch-selected-panel">
+      <div className="patch-selected-panel-header">
+        {meta && ddragonPatch && (
+          <img src={championImageUrl(ddragonPatch, meta.image.full)} alt="" width={40} height={40} />
+        )}
+        <span className="patch-selected-panel-name">{meta?.name ?? championId}</span>
+        <span className="patch-selected-panel-counts">
+          {pos > 0 && <span className="patch-count-badge patch-count-badge-buff">{pos} Buff</span>}
+          {neg > 0 && <span className="patch-count-badge patch-count-badge-nerf">{neg} Nerf</span>}
+          {neutral > 0 && <span className="patch-count-badge patch-count-badge-ajuste">{neutral} Ajuste</span>}
+        </span>
+      </div>
+      <button
+        type="button"
+        className="patch-selected-panel-toggle"
+        aria-expanded={expanded}
+        onClick={() => setExpanded((v) => !v)}
+      >
+        {expanded ? '↑ menos detalhes' : '↓ mais detalhes...'}
+      </button>
+      {expanded && (
+        <div className="patch-selected-panel-body">
+          <ChampionChangeDetailBody
+            championId={championId}
+            changes={changes}
+            ddragonPatch={ddragonPatch}
+            scoreDeltas={scoreDeltas}
+            abilities={abilities}
+          />
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** Pedido do usuário (mockup próprio): cada categoria (Buff/Nerf/
+ *  Ajuste) vira uma galeria de ícones só — reaproveita
+ *  `classifyChampionCategory` pra bucketizar, ordenado do campeão com
+ *  mais mudanças pro com menos. Um único campeão fica selecionado por
+ *  vez entre as três galerias (`selectedChampionId`), e o painel de
+ *  detalhe aparece uma vez só, depois delas. */
 function ChangesByCategory({
   grouped,
   championsMeta,
@@ -328,6 +506,8 @@ function ChangesByCategory({
   scoreDeltaIndex: Map<string, PatchDeltaRow[]>
   abilities: Record<string, ChampionDetail>
 }) {
+  const [selectedChampionId, setSelectedChampionId] = useState<string | null>(null)
+
   const buckets: Record<PatchCategory, [string, PatchChangeRow[]][]> = { buff: [], nerf: [], ajuste: [] }
   for (const entry of grouped) {
     buckets[classifyChampionCategory(entry[1])].push(entry)
@@ -335,6 +515,11 @@ function ChangesByCategory({
   for (const key of Object.keys(buckets) as PatchCategory[]) {
     buckets[key].sort((a, b) => b[1].length - a[1].length)
   }
+
+  const selectedEntry = selectedChampionId
+    ? grouped.find(([championId]) => championId === selectedChampionId)
+    : undefined
+
   return (
     <>
       {CATEGORY_SECTIONS.map(({ key, label, icon }) => {
@@ -345,22 +530,32 @@ function ChangesByCategory({
             <h3 className={`patch-category-heading patch-category-${key}`}>
               {icon} {label} <span className="patch-category-count">({entries.length})</span>
             </h3>
-            <div className="patch-change-grid">
+            <div className="patch-category-gallery">
               {entries.map(([championId, rows]) => (
-                <ChampionChangeCard
+                <CategoryIconButton
                   key={championId}
                   championId={championId}
                   changes={rows}
                   championsMeta={championsMeta}
                   ddragonPatch={ddragonPatch}
-                  scoreDeltas={scoreDeltaIndex.get(championId)}
-                  abilities={abilities}
+                  selected={championId === selectedChampionId}
+                  onSelect={(id) => setSelectedChampionId((prev) => (prev === id ? null : id))}
                 />
               ))}
             </div>
           </div>
         )
       })}
+      {selectedEntry && (
+        <SelectedChampionPanel
+          championId={selectedEntry[0]}
+          changes={selectedEntry[1]}
+          championsMeta={championsMeta}
+          ddragonPatch={ddragonPatch}
+          scoreDeltas={scoreDeltaIndex.get(selectedEntry[0])}
+          abilities={abilities}
+        />
+      )}
     </>
   )
 }
@@ -524,75 +719,6 @@ function AbilityChangeGroup({
           />
         ))}
       </ul>
-    </div>
-  )
-}
-
-function ChampionChangeCard({
-  championId,
-  changes,
-  championsMeta,
-  ddragonPatch,
-  scoreDeltas,
-  abilities,
-}: {
-  championId: string
-  changes: PatchChangeRow[]
-  championsMeta: Record<string, ChampionMeta> | null
-  ddragonPatch: string
-  scoreDeltas: PatchDeltaRow[] | undefined
-  abilities: Record<string, ChampionDetail>
-}) {
-  const meta = championsMeta?.[championId]
-  const detail = abilities[championId]
-  // Pedido do usuário: separar o que é atributo base (vida, armadura...)
-  // do que é habilidade (Q/W/E/R/passiva) — antes vinha tudo misturado
-  // na mesma lista, na ordem em que o backend calculou o diff.
-  const attributeChanges = changes.filter((c) => c.category === 'stat')
-  const abilityChanges = changes.filter((c) => c.category !== 'stat')
-  return (
-    <div className="patch-change-card">
-      <div className="patch-change-header">
-        {meta && ddragonPatch && (
-          <img src={championImageUrl(ddragonPatch, meta.image.full)} alt="" width={32} height={32} />
-        )}
-        <span>{meta?.name ?? championId}</span>
-      </div>
-      {attributeChanges.length > 0 && (
-        <>
-          <p className="patch-change-subheading">Atributos do campeão</p>
-          <ul className="patch-change-list">
-            {attributeChanges.map((change, index) => (
-              <ChangeListItem key={index} change={change} abilityImage={null} ddragonPatch={ddragonPatch} />
-            ))}
-          </ul>
-        </>
-      )}
-      {abilityChanges.length > 0 && (
-        <>
-          <p className="patch-change-subheading">Habilidades do campeão</p>
-          {groupBySpell(abilityChanges).map(([spellKey, groupChanges]) => (
-            <AbilityChangeGroup
-              key={spellKey}
-              spellKey={spellKey}
-              changes={groupChanges}
-              abilityImage={abilityImageFor(groupChanges[0], detail)}
-              ddragonPatch={ddragonPatch}
-            />
-          ))}
-        </>
-      )}
-      {/* Pedido do usuário: o destaque de mudança de tier (score+tier
-          badge) sai de logo abaixo do nome e vira o fechamento do card,
-          depois de atributos/habilidades — com cabeçalho próprio, mesmo
-          padrão de "Atributos"/"Habilidades do campeão", pra segmentar
-          bem o que o usuário está vendo. */}
-      {scoreDeltas && scoreDeltas.length > 0 && (
-        <>
-          <p className="patch-change-subheading">Mudança de tier</p>
-          <ScoreImpactBadges rows={scoreDeltas} />
-        </>
-      )}
     </div>
   )
 }

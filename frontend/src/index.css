@@ -47,6 +47,18 @@
   --warn: #b45309;
   --warn-bg: rgba(180, 83, 9, 0.1);
   --warn-border: rgba(180, 83, 9, 0.4);
+  /* Badges sólidos "Buff"/"Nerf"/"Ajuste" (texto branco fixo por cima) —
+     não pode reaproveitar --pos/--neg/--warn direto: essas variam por
+     tema pra funcionar como COR DE TEXTO sobre --code-bg (a variante
+     escura é clara de propósito, pra contrastar com fundo escuro) — como
+     FUNDO de badge com texto branco em cima, a variante escura falha
+     feio (--warn escuro chega a 1.53:1). Mesmo padrão de --power-N e
+     --tier-N abaixo: fixo, independente de tema. Valores = os mesmos de
+     --pos/--neg/--warn no claro, já verificados pra branco em cima
+     (5.08 / 6.54 / 5.02:1). */
+  --badge-buff: #1a7f37;
+  --badge-nerf: #b3261e;
+  --badge-ajuste: #b45309;
   /* Perfil de poder (item 3.2): estrutural (Kit+Build) vs. meta
      (Performance+Meta). Cores distintas do verde/vermelho acima de
      propósito — não é "bom/ruim", é "de onde vem o poder". O badge é
