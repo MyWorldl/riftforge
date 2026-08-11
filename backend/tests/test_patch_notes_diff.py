@@ -23,8 +23,20 @@ def test_ignora_campos_cosmeticos_fora_da_lista_permitida():
     # `image`/`sprite` mudam de nome todo patch por reempacotamento de
     # spritesheet (confirmado contra dado real: Ziggs 16.14 -> 16.15) —
     # não é uma mudança de gameplay, não deve aparecer no diff.
-    antes = _champion(passive={"name": "Passiva", "description": "Mesma.", "image": {"sprite": "passive5.png"}})
-    depois = _champion(passive={"name": "Passiva", "description": "Mesma.", "image": {"sprite": "passive7.png"}})
+    antes = _champion(
+        passive={
+            "name": "Passiva",
+            "description": "Mesma.",
+            "image": {"sprite": "passive5.png"},
+        }
+    )
+    depois = _champion(
+        passive={
+            "name": "Passiva",
+            "description": "Mesma.",
+            "image": {"sprite": "passive7.png"},
+        }
+    )
     assert diff_champion_detail("Ziggs", antes, depois) == []
 
 
@@ -42,8 +54,22 @@ def test_mudanca_de_atributo_base_detectada():
 def test_mudanca_de_recarga_de_habilidade_detectada():
     # Caso real: Mordekaiser E no patch 16.15 (bate com a nota oficial da
     # Riot — nerf de recarga).
-    antes = _champion(spells=[{}, {}, {"name": "Harvester of Sorrow", "cooldownBurn": "18/16/14/12/10"}, {}])
-    depois = _champion(spells=[{}, {}, {"name": "Harvester of Sorrow", "cooldownBurn": "16/14/12/10/8"}, {}])
+    antes = _champion(
+        spells=[
+            {},
+            {},
+            {"name": "Harvester of Sorrow", "cooldownBurn": "18/16/14/12/10"},
+            {},
+        ]
+    )
+    depois = _champion(
+        spells=[
+            {},
+            {},
+            {"name": "Harvester of Sorrow", "cooldownBurn": "16/14/12/10/8"},
+            {},
+        ]
+    )
     result = diff_champion_detail("Mordekaiser", antes, depois)
     assert len(result) == 1
     assert result[0]["category"] == "spell"
@@ -55,14 +81,88 @@ def test_mudanca_de_recarga_de_habilidade_detectada():
 
 
 def test_mudanca_de_efeito_sem_rotulo_semantico_ainda_aparece():
-    antes = _champion(spells=[{"name": "Q", "effectBurn": [None, "100", "50"]}])
-    depois = _champion(spells=[{"name": "Q", "effectBurn": [None, "120", "50"]}])
+    # Placeholder {{ e1 }} continua no tooltip "depois" — sinal de que o
+    # índice 1 ainda é o valor de verdade exibido ao jogador (habilidade
+    # não migrou pro sistema de variáveis nomeadas).
+    antes = _champion(
+        spells=[
+            {
+                "name": "Q",
+                "effectBurn": [None, "100", "50"],
+                "tooltip": "Causa {{ e1 }} de dano.",
+            }
+        ]
+    )
+    depois = _champion(
+        spells=[
+            {
+                "name": "Q",
+                "effectBurn": [None, "120", "50"],
+                "tooltip": "Causa {{ e1 }} de dano.",
+            }
+        ]
+    )
     result = diff_champion_detail("Ashe", antes, depois)
     assert len(result) == 1
     assert result[0]["field"] == "effect_1"
     assert result[0]["field_label"] == "Valor de efeito 1"
     assert result[0]["before_value"] == "100"
     assert result[0]["after_value"] == "120"
+
+
+def test_mudanca_de_efeito_suprimida_quando_habilidade_migra_pra_variavel_nomeada():
+    # Achado com dados reais (patch 16.14 -> 16.15, Warwick/Zyra/Caitlyn/
+    # Ekko/Lissandra): quando a Riot migra o tooltip pro sistema de
+    # variáveis nomeadas, o índice de effectBurn some do texto e o valor
+    # bruto vira lixo remanescente (zera ou reescala sem relação com o
+    # jogo de verdade) — reportar isso como mudança seria falso positivo.
+    antes = _champion(
+        spells=[
+            {
+                "name": "Q",
+                "effectBurn": [None, "100"],
+                "tooltip": "Causa {{ e1 }} de dano.",
+            }
+        ]
+    )
+    depois = _champion(
+        spells=[
+            {
+                "name": "Q",
+                "effectBurn": [None, "0"],
+                "tooltip": "Causa {{ basedamage }} de dano.",
+            }
+        ]
+    )
+    assert diff_champion_detail("Warwick", antes, depois) == []
+
+
+def test_mudanca_de_efeito_mantida_quando_so_um_indice_da_habilidade_migra():
+    # Um índice migra (some do tooltip), outro continua real — só o que
+    # migrou é suprimido, o resto do diff continua funcionando normal.
+    antes = _champion(
+        spells=[
+            {
+                "name": "Q",
+                "effectBurn": [None, "100", "50"],
+                "tooltip": "{{ e1 }} dano, {{ e2 }} cura.",
+            }
+        ]
+    )
+    depois = _champion(
+        spells=[
+            {
+                "name": "Q",
+                "effectBurn": [None, "0", "70"],
+                "tooltip": "{{ basedamage }} dano, {{ e2 }} cura.",
+            }
+        ]
+    )
+    result = diff_champion_detail("Warwick", antes, depois)
+    assert len(result) == 1
+    assert result[0]["field"] == "effect_2"
+    assert result[0]["before_value"] == "50"
+    assert result[0]["after_value"] == "70"
 
 
 def test_mudanca_de_descricao_de_passiva_detectada():

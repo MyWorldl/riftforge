@@ -18,8 +18,37 @@ relação com gameplay — `passive.image.sprite` muda de nome de arquivo
 de spritesheet, não por mudança de jogo. Só os campos explicitamente
 listados abaixo entram no diff.
 
+Achado novo (pedido do usuário, investigação com dados reais do patch
+16.14 -> 16.15 contra os 173 campeões): `effectBurn` fica não-confiável
+quando a Riot migra o tooltip de uma habilidade do formato antigo
+(`{{ e2 }}`, que lê direto do índice 2 do array) pro formato novo de
+variáveis nomeadas (`{{ nomeDaVariavel }}`). Quando isso acontece, o
+array antigo vira lixo remanescente — ou zera (Warwick Q/W/E: 13
+índices reais viraram "0" no mesmo patch, sem nenhuma nota oficial de
+"dano zerado") ou é reescalado sem relação com o jogo de verdade (Zyra
+W índice 1: "35" -> "0.35", mesmo valor real de 35%, só formato de
+armazenamento diferente — o tooltip passou a multiplicar por 100 na
+exibição). Confirmado contra a Community Dragon também: o array
+equivalente lá (`EffectNAmount`) está igualmente zerado pro Warwick Q,
+então não é limitação só do Data Dragon — o valor real desapareceu de
+toda fonte pública quando a habilidade migra.
+
+Verificação: rodei esse diff contra os 173 campeões reais do patch
+16.14 -> 16.15 e achei 26 mudanças de `effectBurn` no total — as 26
+eram esse artefato de migração (nenhuma real perdida ao suprimir,
+ver `_effect_placeholder_still_used`). Pra campeões com o kit inteiro
+já migrado (ex: Locke — Q/W/E/R com `effectBurn` zerado nos DOIS
+patches, `vars` sempre vazio) não tem mudança real pra detectar: o
+comportamento correto é não aparecer nada mesmo (nunca inventar um
+"antes" que também é lixo), não uma falha de coleta pra corrigir — o
+valor de verdade dessas habilidades só existe nos arquivos binários
+internos do jogo, fora do alcance de qualquer API pública (Data
+Dragon ou Community Dragon).
+
 Função pura, testável sem banco/rede — quem busca os dois JSONs do Data
 Dragon e persiste o resultado é `app/jobs/compute_patch_changes.py`."""
+
+import re
 
 STAT_LABELS: dict[str, str] = {
     "hp": "Vida",
@@ -51,6 +80,18 @@ SPELL_FIELD_LABELS: dict[str, str] = {
 }
 
 SPELL_KEYS = ["Q", "W", "E", "R"]
+
+
+def _effect_placeholder_still_used(tooltip: str, effect_index: int) -> bool:
+    """`True` quando o tooltip "depois" ainda referencia `effectBurn[N]`
+    pelo placeholder clássico `{{ eN }}` — sinal de que esse índice
+    continua sendo o valor de verdade exibido ao jogador, não um resto
+    de uma habilidade já migrada pro sistema de variáveis nomeadas (ver
+    docstring do módulo). Regex tolerante a espaço (`{{e2}}`/`{{ e2 }}`)
+    em vez de string fixa, mais robusto contra variação de formatação
+    entre habilidades."""
+    pattern = re.compile(r"\{\{\s*e" + str(effect_index) + r"\s*\}\}")
+    return bool(pattern.search(tooltip))
 
 
 def _diff_stats(champion_id: str, before: dict, after: dict) -> list[dict]:
@@ -99,7 +140,9 @@ def _diff_spells(champion_id: str, before: dict, after: dict) -> list[dict]:
     spells_after = after.get("spells", [])
     changes = []
 
-    for index, (spell_before, spell_after) in enumerate(zip(spells_before, spells_after)):
+    for index, (spell_before, spell_after) in enumerate(
+        zip(spells_before, spells_after)
+    ):
         spell_key = SPELL_KEYS[index] if index < len(SPELL_KEYS) else f"Spell{index}"
         spell_name = spell_after.get("name") or spell_before.get("name")
 
@@ -122,11 +165,21 @@ def _diff_spells(champion_id: str, before: dict, after: dict) -> list[dict]:
         # `effectBurn` não tem rótulo semântico no Data Dragon (não dá pra
         # saber se o índice N é "dano" ou "duração" sem ler a descrição
         # com placeholders {{ eN }}, fora do escopo desta versão) — ainda
-        # assim o valor bruto que mudou é sinal real, só com rótulo genérico.
+        # assim o valor bruto que mudou é sinal real, só com rótulo genérico
+        # — SE o índice ainda for o valor de verdade (ver
+        # `_effect_placeholder_still_used` e a docstring do módulo pro
+        # achado que motivou esse guard: quando a habilidade migra pro
+        # sistema de variáveis nomeadas, o índice vira lixo remanescente
+        # e reportar a mudança seria um falso positivo).
         effect_before = spell_before.get("effectBurn", [])
         effect_after = spell_after.get("effectBurn", [])
-        for effect_index, (valor_antes, valor_depois) in enumerate(zip(effect_before, effect_after)):
+        tooltip_after = spell_after.get("tooltip", "")
+        for effect_index, (valor_antes, valor_depois) in enumerate(
+            zip(effect_before, effect_after)
+        ):
             if valor_antes == valor_depois:
+                continue
+            if not _effect_placeholder_still_used(tooltip_after, effect_index):
                 continue
             changes.append(
                 {
