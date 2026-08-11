@@ -422,7 +422,11 @@ function ChampionChangeDetailBody({
  *  usuário: sem texto/seta de "mais detalhes", o card inteiro é o alvo
  *  do clique, e a borda vira roxa (`--brand`) no hover pra dar a
  *  impressão de que é clicável. Cada card guarda seu próprio
- *  `expanded`, então abrir um não afeta os outros. */
+ *  `expanded`, então abrir um não afeta os outros. `patch-selected-
+ *  panel-{buff,nerf,ajuste}` (via `classifyChampionCategory`, mesma
+ *  categoria da galeria) dá o wash de fundo verde/vermelho/âmbar —
+ *  mesmo padrão do pódio de Classificações (`.podium-card.podium-1/2/3`
+ *  com gradiente + borda por posição). */
 function SelectedChampionPanel({
   championId,
   changes,
@@ -441,10 +445,11 @@ function SelectedChampionPanel({
   const [expanded, setExpanded] = useState(false)
   const meta = championsMeta?.[championId]
   const { pos, neg, neutral } = countChangeDirections(changes)
+  const category = classifyChampionCategory(changes)
   const toggle = () => setExpanded((v) => !v)
   return (
     <div
-      className="patch-selected-panel"
+      className={`patch-selected-panel patch-selected-panel-${category}`}
       role="button"
       tabIndex={0}
       aria-expanded={expanded}

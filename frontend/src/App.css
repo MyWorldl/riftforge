@@ -1025,14 +1025,18 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
+  width: 100%;
+  max-width: 960px;
 }
 
 /* Pedido do usuário: sem texto/seta de "mais detalhes" — o card
    inteiro é clicável (expande/recolhe), e o hover na borda (roxo,
-   `--brand`) é o único sinal visual de que dá pra clicar. */
+   `--brand`) é o único sinal visual de que dá pra clicar. Largura
+   subiu de 720px pra 960px (mesmo teto de `.patch-category-columns`/
+   `.podium`) pra preencher melhor a página. */
 .patch-selected-panel {
   width: 100%;
-  max-width: 720px;
+  max-width: 960px;
   background: var(--code-bg);
   border: 2px solid var(--border);
   border-radius: 10px;
@@ -1045,6 +1049,28 @@
   .patch-selected-panel {
     transition: none;
   }
+}
+
+/* Pedido do usuário: destaque por categoria (verde/vermelho/âmbar),
+   mesmo padrão de `.podium-card.podium-1/2/3` em Classificações —
+   gradiente sutil da cor da categoria (`--pos-bg`/`--neg-bg`/
+   `--warn-bg`) até `--code-bg`, borda na cor cheia. O hover (roxo,
+   abaixo) tem prioridade sobre a borda de categoria — mesma
+   especificidade de seletor, mas `:hover`/`:focus-visible` vêm depois
+   no arquivo, então vencem no empate. */
+.patch-selected-panel-buff {
+  border-color: var(--pos-border);
+  background: linear-gradient(160deg, var(--pos-bg), var(--code-bg));
+}
+
+.patch-selected-panel-nerf {
+  border-color: var(--neg-border);
+  background: linear-gradient(160deg, var(--neg-bg), var(--code-bg));
+}
+
+.patch-selected-panel-ajuste {
+  border-color: var(--warn-border);
+  background: linear-gradient(160deg, var(--warn-bg), var(--code-bg));
 }
 
 .patch-selected-panel:hover,
