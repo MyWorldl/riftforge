@@ -6,16 +6,23 @@ import { REGIONS } from '../constants/regions'
 import {
   championImageUrl,
   fetchChampions,
-  fetchMetaCoverage,
+  fetchChampionScores,
   fetchPatchNotes,
+  fetchRankings,
   type ChampionMeta,
-  type MetaCoverageResult,
+  type ChampionScoreRow,
   type PatchNotesResult,
+  type RankingRow,
 } from '../api/client'
 import { LANE_LABELS } from '../components/championDisplay'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 
 const DEFAULT_ELO_TIER = 'GOLD'
+const LANE_ORDER = ['TOP', 'JUNGLE', 'MIDDLE', 'BOTTOM', 'UTILITY']
+// Pedido do usuário: "melhores jogadores da região do usuário atual" — sem
+// conta/login ainda pra saber a região de verdade, usa BR fixo (a única
+// região com coleta de ranking madura hoje).
+const BEST_PLAYERS_REGION = 'br1'
 
 /** Sprint C item C3 (repaginação, pesquisa de design §2): mesmo estilo de
  *  ícone (stroke 16x16) já usado em `AppLayout.tsx` — duplicado aqui em
@@ -76,17 +83,35 @@ const SHORTCUTS = [
   { to: '/jogador', label: 'Análise do Jogador', description: 'Seu histórico recente e roadmap de progressão.', icon: <IconUser /> },
 ]
 
+/** Pega o campeão de maior `score_final` por rota — base do painel
+ *  "Melhores campeões atuais de cada rota" (substituiu "Cobertura de
+ *  meta", pedido do usuário). `LANE_ORDER` garante a ordem fixa
+ *  Topo/Selva/Meio/Atirador/Suporte independente da ordem que o
+ *  backend devolveu as linhas. */
+function bestChampionPerLane(scores: ChampionScoreRow[] | null): [string, ChampionScoreRow][] {
+  if (!scores) return []
+  const best = new Map<string, ChampionScoreRow>()
+  for (const row of scores) {
+    const current = best.get(row.lane)
+    if (!current || row.score_final > current.score_final) best.set(row.lane, row)
+  }
+  return LANE_ORDER.filter((lane) => best.has(lane)).map((lane) => [lane, best.get(lane) as ChampionScoreRow])
+}
+
 /** Item novo (revisão técnica §6, Tier 1): "melhores subidas do patch" +
- *  "contexto por rota" — os dois já eram calculados (`/patch-notes` e
- *  `compute_meta.py`), só nunca tinham lugar na Home, que até aqui só
- *  tinha o formulário de busca. Falha em silêncio (o widget some) em vez
- *  de mostrar erro — a Home não deve quebrar por causa de um resumo
- *  opcional. */
+ *  contexto adicional — os dados já eram calculados noutro lugar (`/patch-
+ *  notes`, `/scores/champions`, `/rankings`), só nunca tinham lugar na
+ *  Home, que até aqui só tinha o formulário de busca. Falha em silêncio
+ *  (a coluna some) em vez de mostrar erro — a Home não deve quebrar por
+ *  causa de um resumo opcional. Pedido do usuário: "Cobertura de meta"
+ *  virou "Melhores campeões atuais de cada rota", e uma terceira coluna
+ *  ("Melhores jogadores") entrou ao lado de "Maiores altas". */
 function PatchHighlights() {
   const [championsMeta, setChampionsMeta] = useState<Record<string, ChampionMeta> | null>(null)
   const [ddragonPatch, setDdragonPatch] = useState('')
   const [patchNotes, setPatchNotes] = useState<PatchNotesResult | null>(null)
-  const [coverage, setCoverage] = useState<MetaCoverageResult | null>(null)
+  const [laneScores, setLaneScores] = useState<ChampionScoreRow[] | null>(null)
+  const [topPlayers, setTopPlayers] = useState<RankingRow[] | null>(null)
 
   useEffect(() => {
     fetchChampions()
@@ -98,15 +123,19 @@ function PatchHighlights() {
     fetchPatchNotes(DEFAULT_ELO_TIER)
       .then(setPatchNotes)
       .catch(() => setPatchNotes(null))
-    fetchMetaCoverage(DEFAULT_ELO_TIER)
-      .then(setCoverage)
-      .catch(() => setCoverage(null))
+    fetchChampionScores({ eloTier: DEFAULT_ELO_TIER })
+      .then(setLaneScores)
+      .catch(() => setLaneScores(null))
+    fetchRankings({ region: BEST_PLAYERS_REGION })
+      .then((rows) => setTopPlayers(rows.slice(0, 5)))
+      .catch(() => setTopPlayers(null))
   }, [])
 
   const topAltas = patchNotes?.altas.slice(0, 5) ?? []
-  const hasCoverage = (coverage?.cobertura.length ?? 0) > 0
+  const bestByLane = bestChampionPerLane(laneScores)
+  const hasTopPlayers = (topPlayers?.length ?? 0) > 0
 
-  if (topAltas.length === 0 && !hasCoverage) return null
+  if (topAltas.length === 0 && bestByLane.length === 0 && !hasTopPlayers) return null
 
   return (
     <div className="home-highlights">
@@ -132,30 +161,44 @@ function PatchHighlights() {
         </div>
       )}
 
-      {hasCoverage && (
+      {hasTopPlayers && (
         <div className="home-highlights-col">
-          <h2>Cobertura de meta por rota</h2>
-          <p className="explain-sub">
-            Dos 10 campeões mais escolhidos em cada rota, quantos também estão vencendo mais da
-            metade das partidas (≥50% de vitórias). 100% quer dizer que os campeões populares ali
-            realmente são bons — quem todo mundo escolhe, funciona. Um número baixo quer dizer o
-            contrário: boa parte do que está sendo escolhido está perdendo mais do que ganhando,
-            sinal de que popularidade e força de campeão andam separadas nessa rota.
-          </p>
-          <ul className="home-coverage-list">
-            {coverage?.cobertura
-              .slice()
-              .sort((a, b) => (LANE_LABELS[a.lane] ?? a.lane).localeCompare(LANE_LABELS[b.lane] ?? b.lane))
-              .map((row) => (
-                <li key={row.lane}>
-                  <span className="home-coverage-label">{LANE_LABELS[row.lane] ?? row.lane}</span>
-                  <span className="home-coverage-bar-cell">
-                    <span className="home-coverage-bar" style={{ width: `${row.cobertura * 100}%` }} />
-                  </span>
-                  <span className="home-coverage-value">{(row.cobertura * 100).toFixed(0)}%</span>
-                </li>
-              ))}
+          <h2>Melhores jogadores (BR)</h2>
+          <ul className="home-highlights-list">
+            {(topPlayers ?? []).map((row) => (
+              <li key={`${row.tier}-${row.rank_position}`}>
+                <span className="home-highlights-rank">#{row.rank_position}</span>
+                <span className="home-highlights-name">
+                  {row.game_name ?? '—'}
+                  {row.tag_line ? `#${row.tag_line}` : ''}
+                </span>
+                <span className="explain-sub">{row.league_points} LP</span>
+              </li>
+            ))}
           </ul>
+          <Link to="/classificacoes" className="home-highlights-link">Ver tudo →</Link>
+        </div>
+      )}
+
+      {bestByLane.length > 0 && (
+        <div className="home-highlights-col">
+          <h2>Melhores campeões atuais de cada rota</h2>
+          <ul className="home-highlights-list">
+            {bestByLane.map(([lane, row]) => {
+              const meta = championsMeta?.[row.champion_id]
+              return (
+                <li key={lane}>
+                  {meta && ddragonPatch && (
+                    <img src={championImageUrl(ddragonPatch, meta.image.full)} alt="" width={28} height={28} />
+                  )}
+                  <span className="home-highlights-name">{meta?.name ?? row.champion_id}</span>
+                  <span className="explain-sub">{LANE_LABELS[lane] ?? lane}</span>
+                  <span className={`tier-badge tier-${row.score_tier}`}>{row.score_tier}</span>
+                </li>
+              )
+            })}
+          </ul>
+          <Link to="/campeoes" className="home-highlights-link">Ver tudo →</Link>
         </div>
       )}
     </div>
@@ -191,8 +234,12 @@ function HomePage() {
         <img src={heroImage} alt="RiftForge" className="hero-image" />
       </div>
 
+      {/* Pedido do usuário: texto de boas-vindas de verdade (é a Home),
+          no máximo 2 linhas — antes ia direto pra explicação técnica do
+          score, sem nenhum acolhimento antes disso. */}
       <p className="hero-tagline">
-        Poder dos campeões de League of Legends por elo, rota e patch — score em camadas com tier God-E.
+        Bem-vindo ao RiftForge! O jeito mais rápido de saber quem está forte agora,
+        por elo, rota e patch.
       </p>
 
       <nav className="home-shortcuts" aria-label="Atalhos">

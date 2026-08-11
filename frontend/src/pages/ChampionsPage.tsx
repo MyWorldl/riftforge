@@ -86,20 +86,6 @@ const LANES = [
   { value: 'UTILITY', label: 'Suporte' },
 ]
 
-/** Item novo (revisão técnica §6, Tier 1): `ChampionMeta.tags` já vem do
- *  Data Dragon (`client.ts`) e nunca foi usado na UI. Classes fixas do
- *  próprio Data Dragon (não mudam por patch) — filtra client-side sobre
- *  `championsMeta`, mesmo padrão de `matchesNameSearch`. */
-const CHAMPION_CLASSES = [
-  { value: '', label: 'Todas as classes' },
-  { value: 'Fighter', label: 'Lutador' },
-  { value: 'Tank', label: 'Tanque' },
-  { value: 'Mage', label: 'Mago' },
-  { value: 'Assassin', label: 'Assassino' },
-  { value: 'Marksman', label: 'Atirador' },
-  { value: 'Support', label: 'Suporte' },
-]
-
 /** Ícones oficiais de posição da Riot (position-select do client),
  *  servidos pelo CommunityDragon — mesma categoria de asset que o Data
  *  Dragon já usado pro resto do site, só que o Data Dragon não tem esse
@@ -243,7 +229,6 @@ function ChampionsPage() {
   const [scoresError, setScoresError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
-  const [classFilter, setClassFilter] = useState('')
   const [sortKey, setSortKey] = useState<SortKey>('score')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
   const [compareKeys, setCompareKeys] = useState<string[]>([])
@@ -329,9 +314,7 @@ function ChampionsPage() {
   }, [eloTier, lane, patch, country])
 
   const filteredScores = scores
-    ? scores
-        .filter((row) => matchesNameSearch(row, search, championsMeta))
-        .filter((row) => !classFilter || championsMeta?.[row.champion_id]?.tags.includes(classFilter))
+    ? scores.filter((row) => matchesNameSearch(row, search, championsMeta))
     : null
   const displayedScores = filteredScores ? sortScores(filteredScores, sortKey, sortDir) : null
 
@@ -398,20 +381,6 @@ function ChampionsPage() {
             aria-pressed={lane === l.value}
           >
             <img src={LANE_ICONS[l.value]} alt={l.label} width={18} height={18} />
-          </button>
-        ))}
-      </div>
-
-      <div className="role-filter">
-        {CHAMPION_CLASSES.map((c) => (
-          <button
-            key={c.value}
-            type="button"
-            className={`role-filter-btn ${classFilter === c.value ? 'role-filter-btn-active' : ''}`}
-            onClick={() => setClassFilter(c.value)}
-            aria-pressed={classFilter === c.value}
-          >
-            {c.label}
           </button>
         ))}
       </div>

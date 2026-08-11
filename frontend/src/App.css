@@ -396,19 +396,20 @@
 }
 
 /* Sprint C item C3 (repaginação, pesquisa de design §2: "cards em grid" >
-   lista de links solta): grid de atalho pras seções principais — a busca
-   de jogador abaixo continua sendo a ação primária da Home (por isso vem
-   antes dela no fluxo de leitura), isto é navegação secundária. `auto-fit`
-   + `minmax` em vez de contagem fixa de colunas: se um atalho novo entrar
-   depois, ele só encaixa, sem editar breakpoint nenhum. */
+   lista de links solta): atalho pras seções principais — a busca de
+   jogador abaixo continua sendo a ação primária da Home (por isso vem
+   antes dela no fluxo de leitura), isto é navegação secundária.
+   Pedido do usuário (revisão): virou `flex` + `justify-content:center`
+   em vez de `grid`/`auto-fill` — com 5+ cards, o `grid` deixava o
+   último sozinho colado à esquerda da própria linha; `flex-wrap` com
+   `justify-content:center` centraliza a última linha incompleta
+   automaticamente (cada linha do wrap é seu próprio "grupo" flex),
+   sem esticar o card (`flex-grow:0` no card abaixo, mesma garantia de
+   antes). */
 .home-shortcuts {
-  display: grid;
-  /* `auto-fill` (não `auto-fit`) de propósito: com 5 cards, `auto-fit`
-     colapsa as colunas vazias da última linha e faz o card sozinho
-     esticar pra largura inteira — `auto-fill` mantém a grade de colunas
-     fixa mesmo com uma célula vaga, então o último card fica do
-     tamanho normal, só que sozinho na própria linha (nunca esticado). */
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: var(--space-3);
   width: 100%;
   max-width: 900px;
@@ -418,6 +419,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
+  flex: 0 1 200px;
   padding: var(--space-4);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
@@ -502,6 +504,59 @@
   color: #fff;
 }
 
+.player-search-submit:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.player-search-submit:disabled:hover {
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+
+/* Pedido do usuário: estrutura visual de "Minha Conta" — sem backend de
+   autenticação ainda, então campos ficam desabilitados de propósito
+   (`input:disabled` abaixo). Vertical (um campo por linha), diferente
+   de `.player-search-form` (horizontal) — mais natural pra um form de
+   perfil do que pra uma busca de 2 campos + botão. */
+.account-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  max-width: 420px;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-sizing: border-box;
+}
+
+.account-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 14px;
+  color: var(--text);
+}
+
+.account-form input {
+  font: inherit;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border-control);
+  background: var(--bg);
+  color: var(--text-h);
+}
+
+.account-form input:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.account-form .player-search-submit {
+  align-self: flex-start;
+}
+
 /* Item novo (revisão técnica §6): "melhores subidas do patch" + "contexto
    por rota" na Home — reaproveitam dado que já existia, só ganharam um
    lugar pra aparecer. */
@@ -555,6 +610,15 @@
   color: var(--text-h);
 }
 
+/* Pedido do usuário: coluna "Melhores jogadores (BR)" — posição do
+   ranking (#1, #2...) no lugar do ícone de campeão que as outras
+   colunas usam, largura fixa pra alinhar os nomes que vêm depois. */
+.home-highlights-rank {
+  width: 24px;
+  color: var(--text);
+  font-weight: 600;
+}
+
 .home-highlights-link {
   align-self: flex-start;
   color: var(--accent);
@@ -564,48 +628,6 @@
 
 .home-highlights-link:hover {
   text-decoration: underline;
-}
-
-.home-coverage-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.home-coverage-list li {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-}
-
-.home-coverage-label {
-  width: 70px;
-  color: var(--text);
-}
-
-.home-coverage-bar-cell {
-  flex: 1;
-  height: 8px;
-  border-radius: 4px;
-  background: var(--border);
-  overflow: hidden;
-}
-
-.home-coverage-bar {
-  display: block;
-  height: 100%;
-  background: var(--accent);
-}
-
-.home-coverage-value {
-  width: 36px;
-  text-align: right;
-  color: var(--text-h);
-  font-weight: 600;
 }
 
 .placeholder-page {
@@ -808,6 +830,32 @@
 .flag-select-option-focus {
   outline: 2px solid var(--accent-border);
   outline-offset: -2px;
+}
+
+/* Pedido do usuário: seletor de idioma no top bar, entre tema e
+   configurações — trigger é o mesmo `.icon-toggle` do resto do top
+   bar, só o menu (`.lang-select-menu`) é próprio: abre alinhado à
+   direita (`right:0`, não `left:0` como `.flag-select-menu`) porque o
+   trigger fica perto da borda direita da página, abrir pra esquerda
+   evitaria o menu vazar pra fora da tela. Reaproveita `.flag-select-
+   option`/`-active`/`-focus` (genéricas, não específicas de bandeira). */
+.lang-select {
+  position: relative;
+}
+
+.lang-select-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  min-width: 190px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 4px;
+  list-style: none;
+  margin: 0;
+  z-index: 20;
+  box-shadow: var(--shadow);
 }
 
 .filters-loading {

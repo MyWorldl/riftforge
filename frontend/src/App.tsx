@@ -1,5 +1,6 @@
 import { Route, Routes } from 'react-router-dom'
 import AppLayout from './components/AppLayout'
+import AccountPage from './pages/AccountPage'
 import ChampionDetailPage from './pages/ChampionDetailPage'
 import ChampionsPage from './pages/ChampionsPage'
 import DesktopPage from './pages/DesktopPage'
@@ -24,6 +25,7 @@ function App() {
         <Route path="/jogador" element={<PlayerAnalysisPage />} />
         <Route path="/patch-notes" element={<PatchNotesPage />} />
         <Route path="/desktop" element={<DesktopPage />} />
+        <Route path="/conta" element={<AccountPage />} />
       </Route>
     </Routes>
   )

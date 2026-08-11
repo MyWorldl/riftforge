@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
+import LanguageSelect from './LanguageSelect'
 import ThemeToggle from './ThemeToggle'
 
 function IconHome() {
@@ -176,17 +177,18 @@ function AppLayout() {
 
         <div className="top-bar-actions">
           <ThemeToggle />
-          {/* Preview: configurações do site ainda não existem, botão fica
-              desabilitado até a tela real ser construída. */}
-          <button
-            type="button"
+          <LanguageSelect />
+          {/* Estrutura de "Minha Conta" já existe (`/conta`) — sem
+              backend de autenticação ainda, mas o botão deixou de ser
+              preview desabilitado. */}
+          <NavLink
+            to="/conta"
             className="icon-toggle"
-            disabled
-            title="Configurações (em breve)"
-            aria-label="Configurações (em breve)"
+            title="Minha Conta"
+            aria-label="Minha Conta"
           >
             <IconSettings />
-          </button>
+          </NavLink>
         </div>
       </header>
 
