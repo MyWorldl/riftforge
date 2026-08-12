@@ -35,7 +35,7 @@ Baseado em `Core/Estrutura_roadmap/00_INDEX.md` (fonte de verdade atual — tem 
 ## Fase 6 — Progressão de chave Riot (em paralelo, a partir da Fase 5)
 - [x] Pedir Personal Key assim que o MVP estiver minimamente funcional (App ID 864953, aprovada — não expira em 24h como a Development Key, mas ainda não pode ser exposta no backend público; segue usada só localmente pelo job).
 - [ ] **Adiado** — Domínio próprio, Termos de Uso e Política de Privacidade. Só necessário quando o app for abrir para o público em geral.
-- [ ] **Adiado** — Submeter pedido de Production Key. Enquanto o app ficar em uso pessoal/protótipo, a Personal Key já cobre a necessidade.
+- [x] Pedido de Production Key submetido (confirmado pelo usuário em 2026-08-12; data exata do envio não registrada). Nota: `Core/Estrutura_roadmap/09_BACKLOG.md` item 2.7 listava Termos de Uso/Política de Privacidade/domínio próprio (linha acima) como dependência declarada — a submissão ocorreu antes desses itens, não depois. Riot declara prazo de revisão de até 3 semanas (`developer.riotgames.com/docs/faqs`), mas relatos reais de outros desenvolvedores mostram casos de 6+ semanas. Aguardando resposta — ver Fase 9.
 
 ## Fase 7 — Segurança e conformidade
 - [x] HTTPS obrigatório — já garantido pela Vercel (frontend/backend) e Supabase (banco) por padrão.
@@ -52,7 +52,7 @@ Baseado em `Core/Estrutura_roadmap/00_INDEX.md` (fonte de verdade atual — tem 
 - [x] Alertas de 429: sem automação por ora (decisão consciente) — checagem manual via Vercel Runtime Logs, documentado no README § Operação.
 
 ## Fase 9 — Lançamento público
-- [ ] **Adiado** — Deploy final após aprovação da Production Key. Retomar quando houver interesse em abrir o app ao público em geral.
+- [ ] **Aguardando aprovação da Riot** — pedido de Production Key já submetido (Fase 6). Deploy final e retomada dos itens adiados de domínio/Termos de Uso/Política de Privacidade ficam pra quando a chave for aprovada.
 
 ## Fase 10 — Evolução para Desktop
 - [x] Empacotar o frontend web com Tauri, reaproveitando o backend/API existente (`frontend/src-tauri/`). Build de release gera instaladores MSI e NSIS; em dev fala com o backend local, no build final usa o backend publicado (mesmo `.env.production` da web). Ver README § Desktop.
