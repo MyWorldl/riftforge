@@ -7,7 +7,11 @@ import pytest
 
 from app.db.models import Match
 from app.jobs import ingest_matches
-from app.jobs.ingest_matches import _patch_sequence, _process_summoner
+from app.jobs.ingest_matches import (
+    _extract_match_stats,
+    _patch_sequence,
+    _process_summoner,
+)
 
 
 def test_patch_sequence_orders_by_major_then_minor():
@@ -18,6 +22,64 @@ def test_patch_sequence_orders_by_major_then_minor():
 def test_patch_sequence_rejects_unexpected_format():
     with pytest.raises(ValueError, match="version_label em formato inesperado"):
         _patch_sequence("16.9.1-pbe")
+
+
+def test_extract_match_stats_reads_raw_riot_fields():
+    participant = {
+        "totalMinionsKilled": 175,
+        "neutralMinionsKilled": 32,
+        "goldEarned": 18394,
+        "totalDamageDealtToChampions": 46561,
+        "totalDamageTaken": 31520,
+        "visionScore": 15,
+        "doubleKills": 2,
+        "tripleKills": 1,
+        "quadraKills": 0,
+        "pentaKills": 0,
+        "challenges": {
+            "killParticipation": 0.4925373134328358,
+            "teamDamagePercentage": 0.25035003924657,
+        },
+    }
+    stats = _extract_match_stats(participant)
+    assert stats["total_cs"] == 175 + 32
+    assert stats["gold_earned"] == 18394
+    assert stats["damage_to_champions"] == 46561
+    assert stats["kill_participation"] == pytest.approx(0.4925373134328358)
+    assert stats["team_damage_percentage"] == pytest.approx(0.25035003924657)
+
+
+def test_extract_match_stats_handles_missing_challenges():
+    # Achado em dado real: `challenges` é ausente em partidas antigas — a
+    # Riot adicionou esse objeto depois. Sem isso, `.get('challenges')`
+    # retornaria `None` e `None.get(...)` quebraria com AttributeError.
+    participant = {
+        "totalMinionsKilled": 100,
+        "neutralMinionsKilled": 0,
+        "goldEarned": 10000,
+        "totalDamageDealtToChampions": 20000,
+        "totalDamageTaken": 15000,
+        "visionScore": 10,
+        "doubleKills": 0,
+        "tripleKills": 0,
+        "quadraKills": 0,
+        "pentaKills": 0,
+    }
+    stats = _extract_match_stats(participant)
+    assert stats["kill_participation"] is None
+    assert stats["team_damage_percentage"] is None
+    assert stats["total_cs"] == 100
+
+
+def test_extract_match_stats_total_cs_is_none_when_payload_trimmed():
+    # `Match.raw_payload` corta pra um subconjunto de campos (revisão
+    # técnica §2.2/§4.3) — `totalMinionsKilled`/`neutralMinionsKilled`
+    # nunca sobrevivem no payload salvo, então o backfill que reprocessa
+    # `raw_payload` (não a ingestão ao vivo, que usa o participante
+    # original) vê um dict sem essas chaves. `total_cs` deve virar `None`,
+    # nunca "0" — 0 seria indistinguível de "o jogador não farmou nada".
+    stats = _extract_match_stats({"championId": 1})
+    assert stats["total_cs"] is None
 
 
 class _FakeAdapter:
@@ -113,7 +175,11 @@ class _FakeMatchRiotAdapter:
                                     "style": 8100,
                                     "selections": [{"perk": 8112}],
                                 },
-                                {"description": "subStyle", "style": 8000, "selections": []},
+                                {
+                                    "description": "subStyle",
+                                    "style": 8000,
+                                    "selections": [],
+                                },
                             ]
                         },
                     }
@@ -123,7 +189,9 @@ class _FakeMatchRiotAdapter:
         }
 
 
-def test_process_summoner_trims_raw_payload_to_essential_subset(monkeypatch, db_session):
+def test_process_summoner_trims_raw_payload_to_essential_subset(
+    monkeypatch, db_session
+):
     """Sprint 2 item 14 (revisão técnica §2.2/§4.3): `raw_payload` grava só
     `participants[].{championId,teamPosition,win,perks,item0-5}` +
     `teams[].{teamId,bans}` — PUUID/Riot ID nunca entram (retenção, rodada
@@ -165,7 +233,11 @@ def test_process_summoner_trims_raw_payload_to_essential_subset(monkeypatch, db_
                                 "style": 8100,
                                 "selections": [{"perk": 8112}],
                             },
-                            {"description": "subStyle", "style": 8000, "selections": []},
+                            {
+                                "description": "subStyle",
+                                "style": 8000,
+                                "selections": [],
+                            },
                         ]
                     },
                 }

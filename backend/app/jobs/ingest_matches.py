@@ -63,7 +63,13 @@ CORE_ITEM_SLOTS = ["item0", "item1", "item2", "item3", "item4", "item5"]
 # `raw_payload`, já rodou) precisa — `championId`+`perks` — mais o essencial
 # pra qualquer backfill futuro plausível (posição resolvida, resultado,
 # build final, bans). Corta ~90% do volume por partida.
-_PARTICIPANT_FIELDS_TO_KEEP = {"championId", "teamPosition", "win", "perks", *CORE_ITEM_SLOTS}
+_PARTICIPANT_FIELDS_TO_KEEP = {
+    "championId",
+    "teamPosition",
+    "win",
+    "perks",
+    *CORE_ITEM_SLOTS,
+}
 
 
 def _extract_runes(participant: dict) -> tuple[int | None, int | None, int | None]:
@@ -81,6 +87,32 @@ def _extract_runes(participant: dict) -> tuple[int | None, int | None, int | Non
     primary_style_id = primary.get("style") if primary else None
     sub_style_id = sub.get("style") if sub else None
     return keystone_id, primary_style_id, sub_style_id
+
+
+def _extract_match_stats(participant: dict) -> dict:
+    """CS/ouro/dano/visão/multikills direto do payload da Riot;
+    `kill_participation`/`team_damage_percentage` vêm prontos de
+    `participant["challenges"]` — a própria Riot já calcula, não precisa
+    somar o time manualmente. `challenges` é ausente em partidas muito
+    antigas (a Riot adicionou depois), por isso `.get()` com `None`."""
+    challenges = participant.get("challenges") or {}
+    minions = participant.get("totalMinionsKilled")
+    neutral = participant.get("neutralMinionsKilled")
+    return {
+        "total_cs": minions + neutral
+        if minions is not None and neutral is not None
+        else None,
+        "gold_earned": participant.get("goldEarned"),
+        "damage_to_champions": participant.get("totalDamageDealtToChampions"),
+        "damage_taken": participant.get("totalDamageTaken"),
+        "vision_score": participant.get("visionScore"),
+        "double_kills": participant.get("doubleKills"),
+        "triple_kills": participant.get("tripleKills"),
+        "quadra_kills": participant.get("quadraKills"),
+        "penta_kills": participant.get("pentaKills"),
+        "kill_participation": challenges.get("killParticipation"),
+        "team_damage_percentage": challenges.get("teamDamagePercentage"),
+    }
 
 
 _VERSION_LABEL_RE = re.compile(r"^\d+\.\d+$")
@@ -235,6 +267,7 @@ def _process_summoner(
                         keystone_id=keystone_id,
                         primary_style_id=primary_style_id,
                         sub_style_id=sub_style_id,
+                        **_extract_match_stats(participant),
                     )
                 )
 

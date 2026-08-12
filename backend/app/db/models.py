@@ -85,6 +85,25 @@ class MatchParticipant(Base):
     primary_style_id: Mapped[int | None]
     sub_style_id: Mapped[int | None]
 
+    # Estatísticas de partida (rodada 29, pedido do usuário: abas Resumo/
+    # Campeões de Análise do Jogador) — mesmo padrão das runas acima:
+    # nuláveis, retroativo via `app/jobs/backfill_participant_match_stats.py`
+    # reprocessando `matches.raw_payload` já persistido, sem chamar a Riot
+    # de novo. `kill_participation`/`team_damage_percentage` vêm prontos de
+    # `participant["challenges"]` (a própria Riot já calcula), não precisa
+    # somar o time manualmente.
+    total_cs: Mapped[int | None]
+    gold_earned: Mapped[int | None]
+    damage_to_champions: Mapped[int | None]
+    damage_taken: Mapped[int | None]
+    vision_score: Mapped[int | None]
+    double_kills: Mapped[int | None]
+    triple_kills: Mapped[int | None]
+    quadra_kills: Mapped[int | None]
+    penta_kills: Mapped[int | None]
+    kill_participation: Mapped[float | None]
+    team_damage_percentage: Mapped[float | None]
+
     __table_args__ = (
         UniqueConstraint("match_id", "puuid"),
         # Revisão técnica §1.7: FK sem índice — `purge_puuid.py` filtra por
