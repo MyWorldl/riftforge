@@ -95,27 +95,86 @@ function includesKeyword(haystack: string, keywords: string[]): boolean {
   return keywords.some((keyword) => haystack.includes(keyword))
 }
 
-/** Campos de escala por rank vêm como string "18/16/14/12/10" — compara
- *  só o primeiro rank (rank 1), suficiente pra saber a direção real da
- *  mudança sem precisar parsear a string inteira. Também cobre valor
- *  puramente textual (ex: "Removed", ou o antes/depois de um efeito
- *  qualitativo tipo "Passive removed when swapping targets ⇒ ...") —
- *  `NaN` vira `null`, cai em `neutral` do mesmo jeito que antes. */
-function firstNumber(value: string): number | null {
-  const n = parseFloat(value.split('/')[0])
+/** Campos de escala por rank vêm como string "18/16/14/12/10" — extrai
+ *  TODOS os ranks (não só o primeiro), porque `classifyChangeDirection`
+ *  precisa comparar o array inteiro pra detectar transição
+ *  escala↔fixo e direção mista entre ranks (pedido do usuário, ver
+ *  abaixo). Também cobre valor puramente textual (ex: "Removed", ou um
+ *  valor composto tipo "6 + 1 per 33% bonus Attack Speed" — só extrai
+ *  o "6" nesse caso) — sem nenhum número, array vazio, cai em
+ *  `neutral` do mesmo jeito que antes. */
+function parseNumbers(value: string): number[] {
+  return value
+    .split('/')
+    .map((segment) => parseFloat(segment))
+    .filter((n) => !Number.isNaN(n))
+}
+
+/** Pedido do usuário (Imagem 2 da revisão): valor composto tipo "6 + 1
+ *  per 33% bonus Attack Speed" — a exigência percentual embutida tem
+ *  polaridade PRÓPRIA, sempre invertida em relação ao resto do valor
+ *  (precisar de MAIS % de um atributo bônus pra ativar o efeito é
+ *  sempre pior pro campeão, independente do rótulo externo ser "maior
+ *  é melhor"). `parseNumbers`/`firstNumber` não pegam essa mudança
+ *  sozinhos porque o número externo ("6") costuma ficar igual — só a
+ *  exigência muda. */
+const PER_PERCENT_REGEX = /per\s+(-?\d+(?:\.\d+)?)\s*%/i
+
+function perPercentRequirement(value: string): number | null {
+  const match = value.match(PER_PERCENT_REGEX)
+  if (!match) return null
+  const n = parseFloat(match[1])
   return Number.isNaN(n) ? null : n
 }
 
 type ChangeDirection = 'pos' | 'neg' | 'neutral'
 
+/** Pedido do usuário (revisão com 2 capturas de tela): "aumento = Buff
+ *  | Diminuição = Nerf | Aumento e Diminuição = Ajuste | Remoção =
+ *  Ajuste", mais dois casos estruturais que o simples antes/depois
+ *  numérico não cobre:
+ *  - Transição escala-por-rank ↔ valor fixo (Imagem 1: velocidade que
+ *    era "800/850/900/950/1000" virou só "850") é sempre Ajuste, nunca
+ *    buff/nerf — não dá pra comparar "ficava mais forte por upgrade"
+ *    com "é sempre o mesmo número" numa única direção boa/ruim, mesmo
+ *    que o número fixo seja maior ou menor que algum rank específico.
+ *  - Array de mesma forma mas com ranks que sobem E ranks que descem
+ *    ao mesmo tempo também é Ajuste (o "Aumento e Diminuição" da regra
+ *    acima) — só uma direção uniforme entre todos os ranks vira
+ *    buff/nerf. */
 function classifyChangeDirection(change: PatchChangeRow): ChangeDirection {
   const label = change.field_label.toLowerCase()
   const higherIsBetter = includesKeyword(label, HIGHER_IS_BETTER_KEYWORDS)
   const lowerIsBetter = !higherIsBetter && includesKeyword(label, LOWER_IS_BETTER_KEYWORDS)
   if (!higherIsBetter && !lowerIsBetter) return 'neutral'
-  const before = firstNumber(change.before_value)
-  const after = firstNumber(change.after_value)
-  if (before === null || after === null || before === after) return 'neutral'
+
+  const beforeRequirement = perPercentRequirement(change.before_value)
+  const afterRequirement = perPercentRequirement(change.after_value)
+  if (
+    beforeRequirement !== null &&
+    afterRequirement !== null &&
+    beforeRequirement !== afterRequirement
+  ) {
+    return afterRequirement > beforeRequirement ? 'neg' : 'pos'
+  }
+
+  const beforeNumbers = parseNumbers(change.before_value)
+  const afterNumbers = parseNumbers(change.after_value)
+  if (beforeNumbers.length === 0 || afterNumbers.length === 0) return 'neutral'
+  if (beforeNumbers.length !== afterNumbers.length) return 'neutral'
+
+  if (beforeNumbers.length > 1) {
+    const deltas = beforeNumbers.map((before, i) => afterNumbers[i] - before)
+    const signs = new Set(deltas.filter((delta) => delta !== 0).map((delta) => Math.sign(delta)))
+    if (signs.size !== 1) return 'neutral'
+    const increased = signs.has(1)
+    const better = higherIsBetter ? increased : !increased
+    return better ? 'pos' : 'neg'
+  }
+
+  const before = beforeNumbers[0]
+  const after = afterNumbers[0]
+  if (before === after) return 'neutral'
   const increased = after > before
   const better = higherIsBetter ? increased : !increased
   return better ? 'pos' : 'neg'

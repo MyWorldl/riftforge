@@ -46,16 +46,26 @@ FIELD_LABEL_TRANSLATIONS: dict[str, str] = {
     "Attack Damage": "Dano de Ataque",
     "Attack Damage Growth": "Crescimento de Dano de Ataque",
     "Attack Speed": "Velocidade de Ataque",
-    "Attack Speed Ratio": "Proporção de Velocidade de Ataque",
+    # Pedido do usuário: "Proporção" sugeria escala de dano — esse rótulo
+    # é o multiplicador de velocidade de ataque em si (atributo base do
+    # Bel'Veth), não uma proporção de outra coisa.
+    "Attack Speed Ratio": "Multiplicador de Velocidade de Ataque",
+    "Attack Speed After Spell Cast": "Velocidade de Ataque depois de Conjurar",
+    "Attack Speed per Stack": "Velocidade de Ataque por Acúmulo",
     "Basic Attack Damage Modifier": "Modificador de Dano do Ataque Básico",
     "Attack Cast Time": "Tempo de Conjuração do Ataque",
     "Total Attack Speed": "Velocidade de Ataque Total",
+    "True Form Total Attack Speed": "Velocidade de Ataque Total na Forma Verdadeira",
     "Total Attack Animation": "Animação de Ataque Total",
     "Model Size": "Tamanho do Modelo",
     "Size": "Tamanho",
+    "Speed": "Velocidade",
     "Health Regen": "Regeneração de Vida",
+    "Health Regeneration": "Regeneração de Vida",
     "Mana Regen": "Regeneração de Mana",
     "Crit Chance": "Chance de Crítico",
+    "Bonus Resistances": "Resistências Bônus",
+    "Total Armor and Magic Resistance": "Armadura e Resistência Mágica Total",
     # Recarga/custo/alcance
     "Cooldown": "Recarga",
     "Cost": "Custo",
@@ -75,6 +85,9 @@ FIELD_LABEL_TRANSLATIONS: dict[str, str] = {
     "Minion Damage Modifier": "Modificador de Dano contra Lacaios",
     "Damage Reduction": "Redução de Dano",
     "Number of Strikes": "Número de Golpes",
+    "Maximum Damage": "Dano Máximo",
+    "Outer Cone Bonus Damage": "Dano Bônus do Cone Externo",
+    "First Lash Damage": "Dano do Primeiro Golpe",
     # Proporções/escala
     "Ability Power Ratio": "Proporção de Poder de Habilidade",
     "Bonus Attack Damage Ratio": "Proporção de Dano de Ataque Bônus",
@@ -83,12 +96,15 @@ FIELD_LABEL_TRANSLATIONS: dict[str, str] = {
     # Cura/escudo/roubo de vida
     "Heal": "Cura",
     "Healing": "Cura",
+    "Healing On Champions": "Cura em Campeões",
+    "Heal per Bonus Health": "Cura por Vida Bônus",
     "Shield": "Escudo",
     "Lifesteal": "Roubo de Vida",
     "Lifesteal Scaling": "Escala de Roubo de Vida",
     # Duração/CC
     "Duration": "Duração",
     "Slow": "Lentidão",
+    "Slow Amount": "Quantidade de Lentidão",
     "Slow Duration": "Duração da Lentidão",
     "Knockup Duration": "Duração do Lançamento ao Ar",
     "Stun Duration": "Duração do Atordoamento",
@@ -101,8 +117,20 @@ FIELD_LABEL_TRANSLATIONS: dict[str, str] = {
     "Stacks": "Cargas",
     "Maximum Epic Monster Stacks": "Cargas Máximas em Monstros Épicos",
     "Basic Attack Range Bonus": "Bônus de Alcance do Ataque Básico",
-    # Diversos vistos nos patches reais
+    "Target Maximum Health Monster Cap": "Limite de Vida Máxima do Alvo (Monstros)",
+    # Passiva/efeitos qualitativos
+    "Passive Application Requirement": "Requisito de Aplicação da Passiva",
+    "Passive On-Hit Application": "Aplicação do Efeito Passivo ao Contato",
+    "Target Swapping": "Troca de Alvo",
+    "NEW": "NOVO",
+    # Diversos vistos nos patches reais (alguns específicos de campeão —
+    # "Nail"/"Prego" é o efeito do Locke, "Lash"/"Golpe" é o do Sylas)
     "Stolen Stats": "Atributos Roubados",
+    "Base Damage - Nail": "Dano Base - Prego",
+    "Three Nails Damage": "Dano dos Três Pregos",
+    "Grey Health Base Value": "Valor Base da Vida Cinza",
+    "Damage per Packmate": "Dano por Companheiro de Matilha",
+    "Caustic Wounds": "Feridas Cáusticas",
 }
 
 

@@ -38,9 +38,7 @@ def test_nome_de_habilidade_traduzido_quando_bate_com_a_posicao():
     }
     result = translate_spell_names(changes, spells_ptbr)
     assert result[0]["spell_name"] == "Pregos Ritualísticos"
-    assert (
-        result[0]["field_label"] == "Base Damage - Nail"
-    )  # sem tradução exata, fica em inglês
+    assert result[0]["field_label"] == "Dano Base - Prego"
 
 
 def test_nome_de_habilidade_com_dois_estados_nao_e_traduzido():
