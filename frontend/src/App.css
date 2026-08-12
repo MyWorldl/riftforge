@@ -967,6 +967,12 @@
   width: 100%;
   max-width: 900px;
   margin: 0;
+  /* Pedido do usuário: ficava "quase centralizado" em telas largas — o
+     pai (`.center`) é flex column com `align-items: center`, então um
+     item mais estreito que o espaço disponível (aqui, por causa do
+     `max-width: 900px`) é centralizado por padrão. `flex-start`
+     cola na esquerda como o resto do conteúdo da página. */
+  align-self: flex-start;
 }
 
 /* Pedido do usuário: essa legenda (depois dos cards de Mudanças)
