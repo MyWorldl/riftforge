@@ -129,19 +129,24 @@ function perPercentRequirement(value: string): number | null {
 
 type ChangeDirection = 'pos' | 'neg' | 'neutral'
 
-/** Pedido do usuário (revisão com 2 capturas de tela): "aumento = Buff
- *  | Diminuição = Nerf | Aumento e Diminuição = Ajuste | Remoção =
+/** Pedido do usuário (revisão com capturas de tela): "aumento = Buff |
+ *  Diminuição = Nerf | Aumento e Diminuição = Ajuste | Remoção =
  *  Ajuste", mais dois casos estruturais que o simples antes/depois
  *  numérico não cobre:
- *  - Transição escala-por-rank ↔ valor fixo (Imagem 1: velocidade que
- *    era "800/850/900/950/1000" virou só "850") é sempre Ajuste, nunca
+ *  - Transição escala-por-rank ↔ valor fixo (ex: velocidade que era
+ *    "800/850/900/950/1000" virou só "850") é sempre Ajuste, nunca
  *    buff/nerf — não dá pra comparar "ficava mais forte por upgrade"
  *    com "é sempre o mesmo número" numa única direção boa/ruim, mesmo
  *    que o número fixo seja maior ou menor que algum rank específico.
- *  - Array de mesma forma mas com ranks que sobem E ranks que descem
- *    ao mesmo tempo também é Ajuste (o "Aumento e Diminuição" da regra
- *    acima) — só uma direção uniforme entre todos os ranks vira
- *    buff/nerf. */
+ *  - Array de mesma forma com ranks em direção mista (ex: "Redução de
+ *    Dano 35/40/45/50/55% → 20/30/40/50/60%": os primeiros ranks
+ *    caíram, mas o valor no nível máximo subiu): o que decide é o
+ *    ÚLTIMO rank (o valor no nível máximo da habilidade, o que o
+ *    jogador de fato tem ao upar tudo) — se ele é melhor que o último
+ *    rank de antes, é Buff, mesmo com ranks intermediários em
+ *    direção contrária. Só vira Ajuste quando o último rank empata
+ *    entre antes/depois. Pra valor sem rank (só um número) o "último"
+ *    é o único elemento — mesma lógica, sem caso especial. */
 function classifyChangeDirection(change: PatchChangeRow): ChangeDirection {
   const label = change.field_label.toLowerCase()
   const higherIsBetter = includesKeyword(label, HIGHER_IS_BETTER_KEYWORDS)
@@ -163,17 +168,8 @@ function classifyChangeDirection(change: PatchChangeRow): ChangeDirection {
   if (beforeNumbers.length === 0 || afterNumbers.length === 0) return 'neutral'
   if (beforeNumbers.length !== afterNumbers.length) return 'neutral'
 
-  if (beforeNumbers.length > 1) {
-    const deltas = beforeNumbers.map((before, i) => afterNumbers[i] - before)
-    const signs = new Set(deltas.filter((delta) => delta !== 0).map((delta) => Math.sign(delta)))
-    if (signs.size !== 1) return 'neutral'
-    const increased = signs.has(1)
-    const better = higherIsBetter ? increased : !increased
-    return better ? 'pos' : 'neg'
-  }
-
-  const before = beforeNumbers[0]
-  const after = afterNumbers[0]
+  const before = beforeNumbers[beforeNumbers.length - 1]
+  const after = afterNumbers[afterNumbers.length - 1]
   if (before === after) return 'neutral'
   const increased = after > before
   const better = higherIsBetter ? increased : !increased

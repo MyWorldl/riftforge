@@ -6,15 +6,20 @@ português quando possível). Duas fontes bem diferentes:
    dicionário próprio: a Data Dragon já publica a tradução oficial no
    locale `pt_BR` (`get_champion_detail(..., locale="pt_BR")`), o mesmo
    texto que aparece no cliente do jogo em português. É a "base
-   confiável" que o usuário pediu. Só é aplicada quando o nome em
-   inglês bate com o nome da posição (Q/W/E/R) na Data Dragon —
-   habilidades com mais de um "estado" de conjuração (ex: Riven R
-   "Blade of the Exile"/"Wind Slash", duas entradas de nota pra mesma
-   tecla) não têm correspondência 1:1 (a Data Dragon só guarda UM nome
-   por posição), então ficam em inglês em vez de aplicar a tradução do
-   estado errado. Ver `translate_spell_names` — quem busca o pt_BR de
-   verdade é `compute_patch_changes.py` (só pros campeões que mudaram
-   nesse patch, não os ~170 inteiros).
+   confiável" que o usuário pediu. `translate_spell_names` casa pelo
+   NOME em inglês contra QUALQUER posição do kit (Q/W/E/R/passiva) —
+   não pela tecla que a nota oficial reportou. Achado com dado real
+   (Naafiri, patch 26.15): a nota chamava a mudança de "R - The Call of
+   the Pack", mas na Data Dragon dessa versão "The Call of the Pack" é
+   o nome da W (a R dela é "Hounds' Pursuit") — comparar só pela tecla
+   deixaria essa tradução em inglês por engano. Duas situações ainda
+   ficam em inglês de propósito: habilidade com mais de um "estado" de
+   conjuração (ex: Riven R "Blade of the Exile"/"Wind Slash" — a Data
+   Dragon só guarda UM nome por posição, "Wind Slash" não bate com
+   nenhuma), e nome que realmente não existe em nenhuma posição do kit
+   atual. Ver `translate_spell_names` — quem busca o pt_BR de verdade é
+   `compute_patch_changes.py` (só pros campeões que mudaram nesse
+   patch, não os ~170 inteiros).
 
 2. **Rótulo do atributo/efeito** (`field_label`, ex: "Cooldown", "Base
    Damage - Nail") — não existe fonte oficial pra isso; a Riot não
@@ -92,7 +97,7 @@ FIELD_LABEL_TRANSLATIONS: dict[str, str] = {
     "Ability Power Ratio": "Proporção de Poder de Habilidade",
     "Bonus Attack Damage Ratio": "Proporção de Dano de Ataque Bônus",
     "Attack Damage Ratio": "Proporção de Dano de Ataque",
-    "Attack Speed to Ability Haste Conversion": "Conversão de Velocidade de Ataque em Presteza de Habilidade",
+    "Attack Speed to Ability Haste Conversion": "Conversão de Velocidade de Ataque em Aceleração de Habilidade",
     # Cura/escudo/roubo de vida
     "Heal": "Cura",
     "Healing": "Cura",
@@ -147,25 +152,25 @@ def translate_spell_names(
     """`champion_spells_ptbr` mapeia `champion_id` -> {"Q": nome_pt, "W":
     nome_pt, ..., "passive": nome_pt, "_en": {"Q": nome_en, ...}} — quem
     monta isso é `compute_patch_changes.py` (busca a Data Dragon em
-    pt_BR só pros campeões que aparecem em `changes`). Só troca
-    `spell_name` quando o nome em inglês guardado bate com o que veio
-    da nota oficial — protege contra sobrescrever com a tradução errada
-    nos casos de habilidade com mais de um "estado" (ver docstring do
-    módulo)."""
+    pt_BR só pros campeões que aparecem em `changes`). Troca
+    `spell_name` quando o nome em inglês bate com QUALQUER posição do
+    kit (não só a tecla que a nota oficial reportou — ver docstring do
+    módulo pro caso real da Naafiri) — protege contra sobrescrever com
+    a tradução errada só nos casos de habilidade com mais de um
+    "estado" (Data Dragon guarda um nome só por posição, então o nome
+    do estado "errado" não bate com nenhuma)."""
     translated = []
     for change in changes:
         change = dict(change)
         champion_spells = champion_spells_ptbr.get(change["champion_id"])
         if champion_spells and change["spell_name"]:
-            key = "passive" if change["category"] == "passive" else change["spell_key"]
-            name_en = champion_spells.get("_en", {}).get(key)
-            name_pt = champion_spells.get(key)
-            if (
-                name_en
-                and name_pt
-                and name_en.lower() == change["spell_name"].strip().lower()
-            ):
-                change["spell_name"] = name_pt
+            spell_name_lower = change["spell_name"].strip().lower()
+            for slot, name_en in champion_spells.get("_en", {}).items():
+                if name_en and name_en.lower() == spell_name_lower:
+                    name_pt = champion_spells.get(slot)
+                    if name_pt:
+                        change["spell_name"] = name_pt
+                    break
         change["field_label"] = translate_field_label(change["field_label"])
         translated.append(change)
     return translated

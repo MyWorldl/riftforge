@@ -120,14 +120,21 @@ async def _fetch_champion_spells_ptbr(
                 )
                 return champion_id, {}
 
+        # .strip() nos dois lados: achado em dado real — a Data Dragon
+        # retorna a passiva do Bel'Veth como "Death in Lavender " (espaço
+        # sobrando no fim), o que quebrava silenciosamente o match
+        # case-insensitive contra o nome vindo da nota oficial (já sem
+        # espaço) e deixava a passiva em inglês na tela.
         names_en = {
-            slot: spell["name"] for slot, spell in zip(SPELL_SLOTS, detail_en["spells"])
+            slot: spell["name"].strip()
+            for slot, spell in zip(SPELL_SLOTS, detail_en["spells"])
         }
-        names_en["passive"] = detail_en["passive"]["name"]
+        names_en["passive"] = detail_en["passive"]["name"].strip()
         names_pt = {
-            slot: spell["name"] for slot, spell in zip(SPELL_SLOTS, detail_pt["spells"])
+            slot: spell["name"].strip()
+            for slot, spell in zip(SPELL_SLOTS, detail_pt["spells"])
         }
-        names_pt["passive"] = detail_pt["passive"]["name"]
+        names_pt["passive"] = detail_pt["passive"]["name"].strip()
         names_pt["_en"] = names_en
         return champion_id, names_pt
 

@@ -90,6 +90,44 @@ def test_passiva_traduzida_via_chave_passive():
     assert result[0]["spell_name"] == "Segunda Pele"
 
 
+def test_nome_de_habilidade_traduzido_mesmo_com_tecla_diferente_da_nota():
+    # Achado com dado real (Naafiri, patch 26.15): a nota oficial
+    # reportou a mudança como "R - The Call of the Pack", mas na Data
+    # Dragon dessa versão "The Call of the Pack" é o nome da W (a R
+    # dela é "Hounds' Pursuit"). Casar só pela tecla deixaria isso em
+    # inglês por engano — tem que casar pelo nome em qualquer posição.
+    changes = [
+        {
+            "champion_id": "Naafiri",
+            "category": "spell",
+            "spell_key": "R",
+            "spell_name": "The Call of the Pack",
+            "field": "damage",
+            "field_label": "Damage",
+            "before_value": "10",
+            "after_value": "12",
+        }
+    ]
+    spells_ptbr = {
+        "Naafiri": {
+            "Q": "Adagas Darkin",
+            "W": "Chamado da Matilha",
+            "E": "Eviscerar",
+            "R": "Caça dos Cães",
+            "passive": "Em Maior Número",
+            "_en": {
+                "Q": "Darkin Daggers",
+                "W": "The Call of the Pack",
+                "E": "Eviscerate",
+                "R": "Hounds' Pursuit",
+                "passive": "We Are More",
+            },
+        }
+    }
+    result = translate_spell_names(changes, spells_ptbr)
+    assert result[0]["spell_name"] == "Chamado da Matilha"
+
+
 def test_campeao_sem_dados_ptbr_mantem_original():
     changes = [
         {
