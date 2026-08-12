@@ -1,0 +1,143 @@
+"""Tradução pt-BR pros rótulos da nota oficial de patch (pedido do
+usuário: traduzir habilidades/atributos, usando uma base confiável em
+português quando possível). Duas fontes bem diferentes:
+
+1. **Nome de habilidade** (`spell_name`/passiva) — não precisa de
+   dicionário próprio: a Data Dragon já publica a tradução oficial no
+   locale `pt_BR` (`get_champion_detail(..., locale="pt_BR")`), o mesmo
+   texto que aparece no cliente do jogo em português. É a "base
+   confiável" que o usuário pediu. Só é aplicada quando o nome em
+   inglês bate com o nome da posição (Q/W/E/R) na Data Dragon —
+   habilidades com mais de um "estado" de conjuração (ex: Riven R
+   "Blade of the Exile"/"Wind Slash", duas entradas de nota pra mesma
+   tecla) não têm correspondência 1:1 (a Data Dragon só guarda UM nome
+   por posição), então ficam em inglês em vez de aplicar a tradução do
+   estado errado. Ver `translate_spell_names` — quem busca o pt_BR de
+   verdade é `compute_patch_changes.py` (só pros campeões que mudaram
+   nesse patch, não os ~170 inteiros).
+
+2. **Rótulo do atributo/efeito** (`field_label`, ex: "Cooldown", "Base
+   Damage - Nail") — não existe fonte oficial pra isso; a Riot não
+   expõe um dicionário rótulo→tradução, só o texto corrido do tooltip
+   em pt-BR (que não separa por rótulo isolado, então não dá pra
+   recortar a tradução de um pedaço específico com segurança).
+   `FIELD_LABEL_TRANSLATIONS` é um dicionário fixo com as frases mais
+   recorrentes entre patches (Cooldown/Custo/Dano/Vida/Armadura...,
+   levantado contra os patches 26.15/26.16 reais). Rótulo fora da
+   lista fica em inglês — decisão deliberada: nunca inventa uma
+   tradução parcial (ex: juntar palavra por palavra sem reordenar,
+   "Base Damage" virando "Base Dano" em vez de "Dano Base") que sairia
+   gramaticalmente errada. Cresce por patch — cada rótulo novo que
+   aparecer e não estiver aqui é um candidato pra entrar depois."""
+
+FIELD_LABEL_TRANSLATIONS: dict[str, str] = {
+    # Atributos base (mesmo vocabulário de STAT_LABELS em patch_notes_diff.py)
+    "Health": "Vida",
+    "Health Growth": "Crescimento de Vida",
+    "Mana": "Mana",
+    "Mana Growth": "Crescimento de Mana",
+    "Move Speed": "Velocidade de Movimento",
+    "Out of Combat Move Speed": "Velocidade de Movimento Fora de Combate",
+    "Armor": "Armadura",
+    "Armor Growth": "Crescimento de Armadura",
+    "Magic Resist": "Resistência Mágica",
+    "Magic Resist Growth": "Crescimento de Resistência Mágica",
+    "Attack Range": "Alcance de Ataque",
+    "Attack Damage": "Dano de Ataque",
+    "Attack Damage Growth": "Crescimento de Dano de Ataque",
+    "Attack Speed": "Velocidade de Ataque",
+    "Attack Speed Ratio": "Proporção de Velocidade de Ataque",
+    "Basic Attack Damage Modifier": "Modificador de Dano do Ataque Básico",
+    "Attack Cast Time": "Tempo de Conjuração do Ataque",
+    "Total Attack Speed": "Velocidade de Ataque Total",
+    "Total Attack Animation": "Animação de Ataque Total",
+    "Model Size": "Tamanho do Modelo",
+    "Size": "Tamanho",
+    "Health Regen": "Regeneração de Vida",
+    "Mana Regen": "Regeneração de Mana",
+    "Crit Chance": "Chance de Crítico",
+    # Recarga/custo/alcance
+    "Cooldown": "Recarga",
+    "Cost": "Custo",
+    "Range": "Alcance",
+    "Cast Time": "Tempo de Conjuração",
+    "Time Between Casts": "Tempo Entre Conjurações",
+    "Post-Cast Lockout": "Bloqueio Pós-Conjuração",
+    # Dano
+    "Damage": "Dano",
+    "Base Damage": "Dano Base",
+    "Bonus Damage": "Dano Bônus",
+    "Total Damage": "Dano Total",
+    "Damage per Strike": "Dano por Golpe",
+    "Explosion Damage": "Dano de Explosão",
+    "Passive True Damage": "Dano Verdadeiro Passivo",
+    "Monster Damage Modifier": "Modificador de Dano contra Monstros",
+    "Minion Damage Modifier": "Modificador de Dano contra Lacaios",
+    "Damage Reduction": "Redução de Dano",
+    "Number of Strikes": "Número de Golpes",
+    # Proporções/escala
+    "Ability Power Ratio": "Proporção de Poder de Habilidade",
+    "Bonus Attack Damage Ratio": "Proporção de Dano de Ataque Bônus",
+    "Attack Damage Ratio": "Proporção de Dano de Ataque",
+    "Attack Speed to Ability Haste Conversion": "Conversão de Velocidade de Ataque em Presteza de Habilidade",
+    # Cura/escudo/roubo de vida
+    "Heal": "Cura",
+    "Healing": "Cura",
+    "Shield": "Escudo",
+    "Lifesteal": "Roubo de Vida",
+    "Lifesteal Scaling": "Escala de Roubo de Vida",
+    # Duração/CC
+    "Duration": "Duração",
+    "Slow": "Lentidão",
+    "Slow Duration": "Duração da Lentidão",
+    "Knockup Duration": "Duração do Lançamento ao Ar",
+    "Stun Duration": "Duração do Atordoamento",
+    "Root Duration": "Duração da Imobilização",
+    "Fear Duration": "Duração do Medo",
+    "Buff Duration": "Duração do Bônus",
+    "Empowered Buff Duration": "Duração do Bônus Potencializado",
+    "Unempowered Buff Duration": "Duração do Bônus Não Potencializado",
+    # Cargas/contadores/alcance bônus
+    "Stacks": "Cargas",
+    "Maximum Epic Monster Stacks": "Cargas Máximas em Monstros Épicos",
+    "Basic Attack Range Bonus": "Bônus de Alcance do Ataque Básico",
+    # Diversos vistos nos patches reais
+    "Stolen Stats": "Atributos Roubados",
+}
+
+
+def translate_field_label(field_label: str) -> str:
+    """Tradução exata (case-sensitive de propósito — a nota oficial
+    sempre capitaliza os rótulos do mesmo jeito) ou o próprio texto em
+    inglês se não tiver entrada no dicionário."""
+    return FIELD_LABEL_TRANSLATIONS.get(field_label, field_label)
+
+
+def translate_spell_names(
+    changes: list[dict], champion_spells_ptbr: dict[str, dict[str, str]]
+) -> list[dict]:
+    """`champion_spells_ptbr` mapeia `champion_id` -> {"Q": nome_pt, "W":
+    nome_pt, ..., "passive": nome_pt, "_en": {"Q": nome_en, ...}} — quem
+    monta isso é `compute_patch_changes.py` (busca a Data Dragon em
+    pt_BR só pros campeões que aparecem em `changes`). Só troca
+    `spell_name` quando o nome em inglês guardado bate com o que veio
+    da nota oficial — protege contra sobrescrever com a tradução errada
+    nos casos de habilidade com mais de um "estado" (ver docstring do
+    módulo)."""
+    translated = []
+    for change in changes:
+        change = dict(change)
+        champion_spells = champion_spells_ptbr.get(change["champion_id"])
+        if champion_spells and change["spell_name"]:
+            key = "passive" if change["category"] == "passive" else change["spell_key"]
+            name_en = champion_spells.get("_en", {}).get(key)
+            name_pt = champion_spells.get(key)
+            if (
+                name_en
+                and name_pt
+                and name_en.lower() == change["spell_name"].strip().lower()
+            ):
+                change["spell_name"] = name_pt
+        change["field_label"] = translate_field_label(change["field_label"])
+        translated.append(change)
+    return translated

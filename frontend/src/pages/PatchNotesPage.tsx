@@ -34,36 +34,73 @@ const LANE_LABELS: Record<string, string> = {
 
 const LANE_ORDER = ['TOP', 'JUNGLE', 'MIDDLE', 'BOTTOM', 'UTILITY']
 
-/** Pedido do usuário: cor por direção real (bom/ruim pro campeão), não
- *  por "antes é sempre vermelho, depois é sempre verde" (o que fazia
- *  Recarga subir aparecer em verde, mesmo sendo pior pro campeão).
- *  `field_label` mapeia 1:1 com o `field` que o backend usa
- *  (`patch_notes_diff.py`) pra esses casos — os únicos que dá pra
- *  classificar com segurança. "Valor de efeito N" (spell genérico) fica
- *  de fora de propósito: o Data Dragon não rotula esses índices
- *  (dano? duração? recarga escondida num efeito?), então colorir seria
- *  chute, não fato — mesma linha de raciocínio já documentada no
- *  próprio backend pra esse campo. */
-const HIGHER_IS_BETTER_LABELS = new Set([
-  'Vida', 'Vida por nível',
-  'Mana', 'Mana por nível',
-  'Velocidade de movimento',
-  'Armadura', 'Armadura por nível',
-  'Resistência mágica', 'Resistência mágica por nível',
-  'Alcance de ataque',
-  'Regeneração de vida', 'Regeneração de vida por nível',
-  'Regeneração de mana', 'Regeneração de mana por nível',
-  'Chance de crítico', 'Chance de crítico por nível',
-  'Dano de ataque', 'Dano de ataque por nível',
-  'Velocidade de ataque', 'Velocidade de ataque por nível',
-  'Alcance',
-])
+/** Pedido do usuário (revisão pós-nota-oficial): reclassificar
+ *  buff/nerf/ajuste — a lista antiga batia por RÓTULO EXATO contra um
+ *  vocabulário fixo de ~20 campos que só existiam vindos direto da
+ *  Data Dragon (`patch_notes_diff.py`). Agora a fonte primária é a
+ *  nota oficial da Riot, que escreve rótulo livre em inglês por
+ *  habilidade ("Base Damage - Nail", "Bonus Attack Damage Ratio"...) —
+ *  o backend traduz uma parte pra português via dicionário próprio
+ *  (`patch_notes_translation.py`), o resto fica em inglês. Ou seja: o
+ *  rótulo que chega aqui pode estar nos dois idiomas dependendo se o
+ *  backend já tinha tradução pronta — por isso a lista de
+ *  palavras-chave cobre as duas línguas pro mesmo conceito, em vez de
+ *  rótulo exato.
+ *
+ *  Raciocínio de cada grupo:
+ *  - "Maior valor é melhor pro campeão": dano, vida/defesa (armadura,
+ *    resistência, escudo), velocidade (movimento/ataque), alcance,
+ *    sustentação (cura, roubo de vida, regeneração), redução de dano,
+ *    proporção/escala/cargas/número de golpes, crescimento por nível.
+ *    Duração entra aqui por padrão — a esmagadora maioria das
+ *    durações rastreadas em nota de patch são de CC ou bônus que o
+ *    PRÓPRIO campeão aplica (atordoamento/lentidão no inimigo, bônus
+ *    em si mesmo), então mais duração favorece quem lança a
+ *    habilidade — não é garantia (uma duração de "debuff em si mesmo"
+ *    inverteria isso, mas não apareceu nenhum caso assim nos patches
+ *    reais verificados).
+ *  - "Menor valor é melhor pro campeão": recarga, custo, tempo de
+ *    conjuração / entre conjurações, bloqueio pós-conjuração — tudo
+ *    que atrasa o campeão de agir de novo.
+ *  - Fora das duas listas: `neutral` — cobre tanto rótulo genuinamente
+ *    ambíguo sem mais contexto (ex: "Size"/"Tamanho" de modelo, pode
+ *    ser bom ou ruim dependendo do que representa) quanto qualquer
+ *    rótulo novo que a nota oficial usar e ainda não esteja mapeado.
+ *    Mesma escolha de antes: sem confiança na direção, não chuta cor. */
+const HIGHER_IS_BETTER_KEYWORDS = [
+  'damage', 'dano',
+  'health', 'vida', 'armor', 'armadura',
+  'resist', 'resistência', 'resistencia', 'shield', 'escudo',
+  'speed', 'velocidade', 'range', 'alcance',
+  'heal', 'cura', 'lifesteal', 'roubo de vida',
+  'regen', 'regeneração', 'regeneracao',
+  'reduction', 'redução', 'reducao',
+  'ratio', 'proporção', 'proporcao',
+  'stacks', 'cargas', 'strikes', 'golpes',
+  'conversion', 'conversão', 'conversao',
+  'duration', 'duração', 'duracao',
+  'growth', 'crescimento',
+  'stolen', 'roubado', 'roubada',
+]
 
-const LOWER_IS_BETTER_LABELS = new Set(['Recarga', 'Custo'])
+const LOWER_IS_BETTER_KEYWORDS = [
+  'cooldown', 'recarga',
+  'cost', 'custo',
+  'cast time', 'tempo de conjuração', 'tempo de conjuracao',
+  'time between casts', 'tempo entre conjurações', 'tempo entre conjuracoes',
+  'lockout', 'bloqueio',
+]
+
+function includesKeyword(haystack: string, keywords: string[]): boolean {
+  return keywords.some((keyword) => haystack.includes(keyword))
+}
 
 /** Campos de escala por rank vêm como string "18/16/14/12/10" — compara
  *  só o primeiro rank (rank 1), suficiente pra saber a direção real da
- *  mudança sem precisar parsear a string inteira. */
+ *  mudança sem precisar parsear a string inteira. Também cobre valor
+ *  puramente textual (ex: "Removed", ou o antes/depois de um efeito
+ *  qualitativo tipo "Passive removed when swapping targets ⇒ ...") —
+ *  `NaN` vira `null`, cai em `neutral` do mesmo jeito que antes. */
 function firstNumber(value: string): number | null {
   const n = parseFloat(value.split('/')[0])
   return Number.isNaN(n) ? null : n
@@ -72,8 +109,9 @@ function firstNumber(value: string): number | null {
 type ChangeDirection = 'pos' | 'neg' | 'neutral'
 
 function classifyChangeDirection(change: PatchChangeRow): ChangeDirection {
-  const higherIsBetter = HIGHER_IS_BETTER_LABELS.has(change.field_label)
-  const lowerIsBetter = LOWER_IS_BETTER_LABELS.has(change.field_label)
+  const label = change.field_label.toLowerCase()
+  const higherIsBetter = includesKeyword(label, HIGHER_IS_BETTER_KEYWORDS)
+  const lowerIsBetter = !higherIsBetter && includesKeyword(label, LOWER_IS_BETTER_KEYWORDS)
   if (!higherIsBetter && !lowerIsBetter) return 'neutral'
   const before = firstNumber(change.before_value)
   const after = firstNumber(change.after_value)
@@ -692,7 +730,15 @@ function ChangeListItem({
         <div className="patch-change-values">
           <span>{change.before_value}</span>
           <span aria-hidden="true"> → </span>
-          <span className={direction === 'pos' ? 'value-pos' : direction === 'neg' ? 'value-neg' : ''}>
+          {/* Pedido do usuário: "ajuste" (direção sem confiança — ver
+              `classifyChangeDirection`) fica em amarelo aqui também,
+              mesma cor já usada pro badge de categoria "Ajuste" —
+              antes ficava sem cor nenhuma, só pos/neg tinham destaque. */}
+          <span
+            className={
+              direction === 'pos' ? 'value-pos' : direction === 'neg' ? 'value-neg' : 'value-warn'
+            }
+          >
             {change.after_value}
           </span>
         </div>

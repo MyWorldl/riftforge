@@ -2083,6 +2083,13 @@
   color: var(--neg);
 }
 
+/* Pedido do usuário: mesma cor do badge de categoria "Ajuste" (--warn),
+   agora também no valor de cada linha de mudança individual quando a
+   direção não tem confiança suficiente pra virar pos/neg. */
+.value-warn {
+  color: var(--warn);
+}
+
 .delta-position {
   font-weight: 600;
   font-size: 13px;

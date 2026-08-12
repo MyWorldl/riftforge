@@ -32,6 +32,7 @@ from app.adapters.data_dragon import DataDragonAdapter
 from app.adapters.riot_patch_notes import RiotPatchNotesAdapter
 from app.core.logging import get_logger, new_correlation_id
 from app.core.patch_notes_diff import diff_champion_detail
+from app.core.patch_notes_translation import translate_spell_names
 from app.core.riot_patch_notes_parser import normalize_slug, parse_champions_section
 from app.db.models import ChampionPatchChange
 from app.db.session import SessionLocal, init_db
@@ -39,6 +40,7 @@ from app.db.session import SessionLocal, init_db
 log = get_logger(__name__)
 
 CONCURRENCY = 10
+SPELL_SLOTS = ["Q", "W", "E", "R"]
 
 
 async def _resolve_versions(
@@ -87,6 +89,50 @@ async def _fetch_all_details(
     return {
         champion_id: detail for champion_id, detail in results if detail is not None
     }
+
+
+async def _fetch_champion_spells_ptbr(
+    data_dragon: DataDragonAdapter, version: str, champion_ids: set[str]
+) -> dict[str, dict[str, str]]:
+    """Nome de habilidade em pt_BR (tradução oficial da Riot, pedido do
+    usuário) + em en_US (só pra comparar e confirmar que bate com o que
+    a nota oficial escreveu antes de trocar — ver `translate_spell_names`).
+    Só pros campeões que tiveram mudança real nesse patch (poucos), não
+    os ~170 inteiros — 2 fetches a mais por campeão (en_US já usado em
+    outro lugar do job não cobre isso, é o resumo `champion.json`, sem
+    nome de spell)."""
+    semaphore = asyncio.Semaphore(CONCURRENCY)
+
+    async def fetch_one(champion_id: str) -> tuple[str, dict[str, str]]:
+        async with semaphore:
+            try:
+                detail_en = await data_dragon.get_champion_detail(
+                    version, champion_id, locale="en_US"
+                )
+                detail_pt = await data_dragon.get_champion_detail(
+                    version, champion_id, locale="pt_BR"
+                )
+            except httpx.HTTPStatusError as exc:
+                log.warning(
+                    "nomes_ptbr_indisponiveis",
+                    champion_id=champion_id,
+                    status_code=exc.response.status_code,
+                )
+                return champion_id, {}
+
+        names_en = {
+            slot: spell["name"] for slot, spell in zip(SPELL_SLOTS, detail_en["spells"])
+        }
+        names_en["passive"] = detail_en["passive"]["name"]
+        names_pt = {
+            slot: spell["name"] for slot, spell in zip(SPELL_SLOTS, detail_pt["spells"])
+        }
+        names_pt["passive"] = detail_pt["passive"]["name"]
+        names_pt["_en"] = names_en
+        return champion_id, names_pt
+
+    results = await asyncio.gather(*(fetch_one(cid) for cid in champion_ids))
+    return {champion_id: names for champion_id, names in results if names}
 
 
 async def _changes_from_official_notes(
@@ -152,6 +198,15 @@ def compute(patch_prefix: str | None = None) -> dict:
     changes_by_champion: dict[str, list[dict]] = {}
     fonte = "nota_oficial"
     if official_changes is not None:
+        # Pedido do usuário: traduzir nome de habilidade (via Data Dragon
+        # pt_BR, só pros campeões que mudaram nesse patch) e rótulo de
+        # atributo/efeito (dicionário próprio) — ver
+        # `app/core/patch_notes_translation.py`.
+        affected_champion_ids = {c["champion_id"] for c in official_changes}
+        spells_ptbr = asyncio.run(
+            _fetch_champion_spells_ptbr(data_dragon, version, affected_champion_ids)
+        )
+        official_changes = translate_spell_names(official_changes, spells_ptbr)
         for change in official_changes:
             changes_by_champion.setdefault(change["champion_id"], []).append(change)
     else:
