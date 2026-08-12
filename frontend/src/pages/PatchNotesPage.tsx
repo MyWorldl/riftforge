@@ -19,11 +19,6 @@ import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { TIER_ORDER } from '../lib/recommendation'
 import { LAST_IDENTITY_STORAGE_KEY } from './PlayerAnalysisPage'
 
-const ELO_TIERS = [
-  'IRON', 'BRONZE', 'SILVER', 'GOLD', 'PLATINUM',
-  'EMERALD', 'DIAMOND', 'MASTER', 'GRANDMASTER', 'CHALLENGER',
-]
-
 const LANE_LABELS: Record<string, string> = {
   TOP: 'Topo',
   JUNGLE: 'Selva',
@@ -936,7 +931,9 @@ function AbilityChangeGroup({
 
 function PatchNotesPage() {
   useDocumentTitle('Patch Notes — RiftForge')
-  const [eloTier, setEloTier] = useState('GOLD')
+  // Pedido do usuário: remove o seletor de Elo — "Impacto no score"
+  // sempre usa GOLD (mesma tier que já era o padrão do seletor).
+  const eloTier = 'GOLD'
   const [result, setResult] = useState<PatchNotesResult | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -1095,20 +1092,10 @@ function PatchNotesPage() {
       {/* Pedido do usuário: "Campeões que mudaram de tier" e "Impacto no
           score" viram duas seções próprias, nessa ordem — antes a lista
           de tier vinha depois das tabelas de altas/quedas, dentro da
-          mesma seção "Impacto no score". O filtro de Elo é compartilhado
-          pelas duas (mesmo fetch, `result`), então fica aqui, antes de
-          ambas, em vez de duplicado ou preso só a uma. */}
-      <div className="filters">
-        <label>
-          Elo
-          <select value={eloTier} onChange={(e) => setEloTier(e.target.value)}>
-            {ELO_TIERS.map((t) => (
-              <option key={t} value={t}>{t}</option>
-            ))}
-          </select>
-        </label>
-        {loading && <span className="filters-loading" role="status">Buscando...</span>}
-      </div>
+          mesma seção "Impacto no score". Ambas usam o mesmo fetch
+          (`result`, sempre elo GOLD — pedido do usuário: removeu o
+          seletor de Elo que ficava aqui). */}
+      {loading && <p className="filters-loading" role="status">Buscando...</p>}
 
       {error && <p className="error" role="alert">Backend indisponível: {error}</p>}
 
