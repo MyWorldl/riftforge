@@ -93,10 +93,12 @@ FIELD_LABEL_TRANSLATIONS: dict[str, str] = {
     "Maximum Damage": "Dano Máximo",
     "Outer Cone Bonus Damage": "Dano Bônus do Cone Externo",
     "First Lash Damage": "Dano do Primeiro Golpe",
-    # Proporções/escala
-    "Ability Power Ratio": "Proporção de Poder de Habilidade",
-    "Bonus Attack Damage Ratio": "Proporção de Dano de Ataque Bônus",
-    "Attack Damage Ratio": "Proporção de Dano de Ataque",
+    # Proporções/escala — "Multiplicador" (não "Proporção"), pedido do
+    # usuário, mesmo motivo do Attack Speed Ratio acima: consistência
+    # de termo pra todo campo "Ratio".
+    "Ability Power Ratio": "Multiplicador de Poder de Habilidade",
+    "Bonus Attack Damage Ratio": "Multiplicador de Dano de Ataque Bônus",
+    "Attack Damage Ratio": "Multiplicador de Dano de Ataque",
     "Attack Speed to Ability Haste Conversion": "Conversão de Velocidade de Ataque em Aceleração de Habilidade",
     # Cura/escudo/roubo de vida
     "Heal": "Cura",

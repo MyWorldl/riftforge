@@ -75,12 +75,16 @@ const HIGHER_IS_BETTER_KEYWORDS = [
   'heal', 'cura', 'lifesteal', 'roubo de vida',
   'regen', 'regeneração', 'regeneracao',
   'reduction', 'redução', 'reducao',
-  'ratio', 'proporção', 'proporcao',
+  'ratio', 'proporção', 'proporcao', 'multiplicador',
   'stacks', 'cargas', 'strikes', 'golpes',
   'conversion', 'conversão', 'conversao',
   'duration', 'duração', 'duracao',
   'growth', 'crescimento',
   'stolen', 'roubado', 'roubada',
+  // Nomes de efeito específicos de campeão que descrevem dano/desgaste
+  // (ex: "Caustic Wounds"/"Feridas Cáusticas" do Kai'Sa) — não têm a
+  // palavra "dano" literal, mas o valor associado é sempre dano.
+  'wounds', 'feridas', 'caustic',
 ]
 
 const LOWER_IS_BETTER_KEYWORDS = [
@@ -110,6 +114,69 @@ function parseNumbers(value: string): number[] {
     .filter((n) => !Number.isNaN(n))
 }
 
+/** Segundo formato de escala visto na nota oficial, sem "/": intervalo
+ *  min-max por nível do campeão, ex: "4 - 24 (Champion Level) (+12%
+ *  Ability Power), +1 - 6 (Champion Level) (+3% Ability Power) per
+ *  prior stack" (Kai'Sa, Feridas Cáusticas). Pega todo par "N - M" do
+ *  texto — cada intervalo contribui seus dois extremos, na ordem em
+ *  que aparecem — e ignora o resto (razão de Poder de Habilidade
+ *  entre parênteses, "per prior stack" etc.), mesma filosofia de
+ *  `parseNumbers` de não tentar entender o texto inteiro, só os
+ *  números que definem a escala. Não confundir com número solto
+ *  dentro de descrição qualitativa (ex: "3 seconds") — como não tem
+ *  "N - M" ali, não entra nessa lista; por isso só é usada quando a
+ *  string NÃO tem "/" (ver `classifyChangeDirection`). */
+const DASH_RANGE_REGEX = /(-?\d+(?:\.\d+)?)\s*-\s*(-?\d+(?:\.\d+)?)/g
+
+function parseDashRangeNumbers(value: string): number[] {
+  const numbers: number[] = []
+  for (const match of value.matchAll(DASH_RANGE_REGEX)) {
+    numbers.push(parseFloat(match[1]), parseFloat(match[2]))
+  }
+  return numbers
+}
+
+/** Compara duas sequências de números já extraídas (rank-array via
+ *  "/" ou intervalo min-max via "-") com a mesma regra em ambos os
+ *  formatos:
+ *  - Tamanho diferente = mudança estrutural (escala↔fixo, ou
+ *    intervalo↔número único) → sempre Ajuste, nunca buff/nerf.
+ *  - Quem decide é o ÚLTIMO valor da sequência (nível/rank máximo, o
+ *    que o jogador de fato tem com a habilidade maxada) — se ele
+ *    mudou, essa mudança sozinha decide buff/nerf.
+ *  - Só quando o último EMPATA (pedido do usuário, caso Volibear Q
+ *    "14/13/12/11/10 → 12/11.5/11/10.5/10": rank máximo ficou igual,
+ *    mas os ranks anteriores todos diminuíram) é que olha o resto da
+ *    sequência: se todo mundo moveu na mesma direção, essa direção
+ *    decide; se teve mistura (alguns melhoraram, outros pioraram) é
+ *    Ajuste de verdade. */
+function compareNumberSequence(
+  beforeNumbers: number[],
+  afterNumbers: number[],
+  higherIsBetter: boolean,
+): ChangeDirection {
+  if (beforeNumbers.length === 0 || afterNumbers.length === 0) return 'neutral'
+  if (beforeNumbers.length !== afterNumbers.length) return 'neutral'
+
+  const direction = (before: number, after: number): ChangeDirection => {
+    if (before === after) return 'neutral'
+    const increased = after > before
+    const better = higherIsBetter ? increased : !increased
+    return better ? 'pos' : 'neg'
+  }
+
+  const lastIndex = beforeNumbers.length - 1
+  const lastDirection = direction(beforeNumbers[lastIndex], afterNumbers[lastIndex])
+  if (lastDirection !== 'neutral' || lastIndex === 0) return lastDirection
+
+  const deltas = beforeNumbers.slice(0, lastIndex).map((before, i) => afterNumbers[i] - before)
+  const signs = new Set(deltas.filter((delta) => delta !== 0).map((delta) => Math.sign(delta)))
+  if (signs.size !== 1) return 'neutral'
+  const increased = signs.has(1)
+  const better = higherIsBetter ? increased : !increased
+  return better ? 'pos' : 'neg'
+}
+
 /** Pedido do usuário (Imagem 2 da revisão): valor composto tipo "6 + 1
  *  per 33% bonus Attack Speed" — a exigência percentual embutida tem
  *  polaridade PRÓPRIA, sempre invertida em relação ao resto do valor
@@ -131,22 +198,19 @@ type ChangeDirection = 'pos' | 'neg' | 'neutral'
 
 /** Pedido do usuário (revisão com capturas de tela): "aumento = Buff |
  *  Diminuição = Nerf | Aumento e Diminuição = Ajuste | Remoção =
- *  Ajuste", mais dois casos estruturais que o simples antes/depois
- *  numérico não cobre:
- *  - Transição escala-por-rank ↔ valor fixo (ex: velocidade que era
- *    "800/850/900/950/1000" virou só "850") é sempre Ajuste, nunca
- *    buff/nerf — não dá pra comparar "ficava mais forte por upgrade"
- *    com "é sempre o mesmo número" numa única direção boa/ruim, mesmo
- *    que o número fixo seja maior ou menor que algum rank específico.
- *  - Array de mesma forma com ranks em direção mista (ex: "Redução de
- *    Dano 35/40/45/50/55% → 20/30/40/50/60%": os primeiros ranks
- *    caíram, mas o valor no nível máximo subiu): o que decide é o
- *    ÚLTIMO rank (o valor no nível máximo da habilidade, o que o
- *    jogador de fato tem ao upar tudo) — se ele é melhor que o último
- *    rank de antes, é Buff, mesmo com ranks intermediários em
- *    direção contrária. Só vira Ajuste quando o último rank empata
- *    entre antes/depois. Pra valor sem rank (só um número) o "último"
- *    é o único elemento — mesma lógica, sem caso especial. */
+ *  Ajuste", com o "último rank decide, empate olha o resto" de
+ *  `compareNumberSequence` cobrindo os casos estruturais (escala↔fixo,
+ *  ranks intermediários em direção mista). Dois formatos de valor
+ *  tentados em ordem — o valor real só usa um deles por vez, nunca os
+ *  dois juntos nos patches verificados:
+ *  1. Rank-array com "/" (`parseNumbers`) — ex: "35/40/45/50/55%".
+ *  2. Intervalo "N - M" sem "/" (`parseDashRangeNumbers`) — ex: "4 - 24
+ *     (Champion Level) ..., +1 - 6 (Champion Level) ... per prior
+ *     stack" (Kai'Sa, Feridas Cáusticas: sem isso, só pegava o "4"
+ *     inicial e nunca via que 24→30 e 6→8 subiram).
+ *  Nenhum dos dois formatos encontrado (nem "/" nem "N - M") cai pro
+ *  número único no início da string (mesmo comportamento de sempre pra
+ *  valor simples tipo "60" → "55"). */
 function classifyChangeDirection(change: PatchChangeRow): ChangeDirection {
   const label = change.field_label.toLowerCase()
   const higherIsBetter = includesKeyword(label, HIGHER_IS_BETTER_KEYWORDS)
@@ -163,17 +227,25 @@ function classifyChangeDirection(change: PatchChangeRow): ChangeDirection {
     return afterRequirement > beforeRequirement ? 'neg' : 'pos'
   }
 
-  const beforeNumbers = parseNumbers(change.before_value)
-  const afterNumbers = parseNumbers(change.after_value)
-  if (beforeNumbers.length === 0 || afterNumbers.length === 0) return 'neutral'
-  if (beforeNumbers.length !== afterNumbers.length) return 'neutral'
+  if (change.before_value.includes('/') || change.after_value.includes('/')) {
+    return compareNumberSequence(
+      parseNumbers(change.before_value),
+      parseNumbers(change.after_value),
+      higherIsBetter,
+    )
+  }
 
-  const before = beforeNumbers[beforeNumbers.length - 1]
-  const after = afterNumbers[afterNumbers.length - 1]
-  if (before === after) return 'neutral'
-  const increased = after > before
-  const better = higherIsBetter ? increased : !increased
-  return better ? 'pos' : 'neg'
+  const beforeRange = parseDashRangeNumbers(change.before_value)
+  const afterRange = parseDashRangeNumbers(change.after_value)
+  if (beforeRange.length > 0 || afterRange.length > 0) {
+    return compareNumberSequence(beforeRange, afterRange, higherIsBetter)
+  }
+
+  return compareNumberSequence(
+    parseNumbers(change.before_value),
+    parseNumbers(change.after_value),
+    higherIsBetter,
+  )
 }
 
 /** Conta a direção de cada mudança do campeão — base tanto da
