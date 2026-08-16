@@ -92,6 +92,20 @@ class PlayerMatchSummary(BaseModel):
     team_damage_percentage: float | None
 
 
+class PlayerRankSnapshotOut(BaseModel):
+    """Sprint 4 (16/08) — um ponto na série "progresso na temporada". Só
+    existe pra fila Solo/Duo hoje (mesma que `elo_tier_comparado` detecta);
+    lista vazia quando o lookup usou `elo_tier` explícito (não roda
+    League-V4) ou o jogador nunca teve entrada ranqueada."""
+
+    tier: str
+    division: str
+    league_points: int
+    wins: int
+    losses: int
+    captured_at: datetime
+
+
 class PlayerLookupResponse(BaseModel):
     """`puuid` removido de propósito (revisão técnica §2.1)."""
 
@@ -105,3 +119,4 @@ class PlayerLookupResponse(BaseModel):
     campeoes: list[PlayerChampionSummary]
     roadmap: PlayerRoadmapSummary
     partidas: list[PlayerMatchSummary]
+    progresso_temporada: list[PlayerRankSnapshotOut]

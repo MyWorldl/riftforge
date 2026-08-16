@@ -786,3 +786,50 @@ class PlayerRoadmapStep(Base):
             "region",
         ),
     )
+
+
+class PlayerRankSnapshot(Base):
+    """Sprint 4 (16/08) — histórico de rank pra "progresso na temporada" na
+    Análise do Jogador. Mesma identidade de `PlayerRoadmapStep` (Riot ID
+    digitado, sem `puuid`), mas SEM mecanismo de exclusão próprio de
+    propósito: diferente do roadmap (que só grava linha quando existe gap,
+    e ganha `roadmap_token` nesse caso), snapshot de rank grava pra
+    QUALQUER jogador buscado — reter indefinidamente sem uma via de
+    exclusão pareada seria pior que o roadmap nesse aspecto. Decisão do
+    usuário (16/08): janela rolante em vez de exclusão manual — cada
+    escrita nova apaga snapshots da mesma identidade mais velhos que
+    `player_rank_snapshot_retention_days` (ver
+    `PlayerRankSnapshotRepository.create_if_new_day`), sem cron dedicado.
+
+    Uma linha por dia civil (UTC) por identidade+fila é o teto — não por
+    partida nem por lookup (o mesmo jogador pode ser buscado várias vezes
+    no mesmo dia sem gerar ruído na série temporal)."""
+
+    __tablename__ = "player_rank_snapshots"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    game_name_key: Mapped[str]
+    tag_line_key: Mapped[str]
+    region: Mapped[str]
+    queue_type: Mapped[str]
+
+    tier: Mapped[str]
+    division: Mapped[str]
+    league_points: Mapped[int]
+    wins: Mapped[int]
+    losses: Mapped[int]
+
+    captured_at: Mapped[datetime] = mapped_column(
+        default=lambda: datetime.now(timezone.utc)
+    )
+
+    __table_args__ = (
+        Index(
+            "ix_player_rank_snapshots_identity",
+            "game_name_key",
+            "tag_line_key",
+            "region",
+            "queue_type",
+            "captured_at",
+        ),
+    )

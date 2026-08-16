@@ -181,6 +181,14 @@ class Settings(BaseSettings):
     # `delta_pct` já tem, sem margem extra inventada sem dado real.
     roadmap_completion_threshold_pct: float = 0.0
 
+    # Snapshot de rank por temporada (Sprint 4, 16/08): diferente do
+    # roadmap acima (que só grava linha com gap, e ganha token de exclusão
+    # nesse caso), grava pra QUALQUER jogador buscado — decisão do usuário
+    # foi janela rolante em vez de exclusão manual pareada. ~400 dias
+    # cobre 1 temporada de LoL (splits somados) com folga; sem endpoint de
+    # temporada exposto pela Riot pra recortar com precisão.
+    player_rank_snapshot_retention_days: int = 400
+
 
 @lru_cache
 def get_settings() -> Settings:

@@ -12,6 +12,9 @@ from app.core.logging import get_logger
 from app.jobs.ingest_matches import _extract_match_stats
 from app.repositories.baseline_repository import BaselineRepository
 from app.repositories.champion_score_repository import ChampionScoreRepository
+from app.repositories.player_rank_snapshot_repository import (
+    PlayerRankSnapshotRepository,
+)
 from app.services.player_roadmap_service import (
     normalize_region,
     resolve_identity,
@@ -69,27 +72,34 @@ def _compute_match_badges(
     return badges
 
 
-def _detect_elo_tier(puuid: str, platform_region: str | None) -> tuple[str, bool]:
+def _detect_elo_tier(
+    puuid: str, platform_region: str | None
+) -> tuple[str, bool, dict | None]:
     """Revisão técnica §5.3: antes disso, `elo_tier_comparado` vinha sempre
     fixo em GOLD quando o chamador não passava um filtro — mesmo pra um
     jogador Platina ou Ferro de verdade, o que tornava a comparação de
     score enganosa. Tenta League-V4 por PUUID primeiro; sem entrada
     ranqueada em Solo/Duo (jogador não ranqueado, ou erro da API), cai pro
     default documentado em vez de propagar a falha — "Análise do Jogador"
-    não deve quebrar só porque a detecção de elo não deu certo."""
+    não deve quebrar só porque a detecção de elo não deu certo.
+
+    Sprint 4 (16/08): terceiro valor devolve a entrada bruta de League-V4
+    (`None` se não achou), reaproveitada pelo chamador pra gravar o
+    snapshot de rank sem uma segunda chamada à Riot — mesma cota, dois
+    usos."""
     try:
         entries = riot_api.get_league_entries_by_puuid(
             puuid, platform_region=platform_region
         )
     except ApiError:
-        return _DEFAULT_ELO_TIER, False
+        return _DEFAULT_ELO_TIER, False, None
 
     solo_entry = next(
         (e for e in entries if e.get("queueType") == _RANKED_SOLO_QUEUE), None
     )
     if solo_entry is None:
-        return _DEFAULT_ELO_TIER, False
-    return solo_entry["tier"], True
+        return _DEFAULT_ELO_TIER, False, None
+    return solo_entry["tier"], True, solo_entry
 
 
 async def _fetch_matches_tolerant(
@@ -181,13 +191,14 @@ async def lookup_player(
     puuid = account["puuid"]
 
     elo_tier_detectado = False
+    solo_entry = None
     if elo_tier is None:
         # Revisão técnica §1.8: usava `region` cru aqui enquanto a
         # comparação de score (linha acima) já usava `score_region`
         # normalizado — mesma classe de bug que `normalize_region()` foi
         # criada pra eliminar. Hoje inofensivo (frontend só emite
         # minúsculas), mas os dois precisam concordar sempre.
-        elo_tier, elo_tier_detectado = await asyncio.to_thread(
+        elo_tier, elo_tier_detectado, solo_entry = await asyncio.to_thread(
             _detect_elo_tier, puuid, platform_region=score_region
         )
 
@@ -310,6 +321,44 @@ async def lookup_player(
     )
     roadmap = sync_roadmap_steps(db, identity, campeoes, settings)
 
+    # Snapshot de rank por temporada (Sprint 4, 16/08): só quando a
+    # detecção de elo rodou e achou entrada ranqueada — reaproveita a
+    # MESMA chamada League-V4 de cima, sem cota extra. `solo_entry["rank"]`
+    # é a divisão (I-IV); Riot chama de "rank", nosso modelo chama de
+    # `division` pra não colidir com o sentido de "rank" já usado alhures
+    # no projeto (posição no ranking).
+    snapshot_repo = PlayerRankSnapshotRepository(db)
+    if solo_entry is not None:
+        snapshot_repo.create_if_new_day(
+            identity.game_name_key,
+            identity.tag_line_key,
+            identity.region,
+            _RANKED_SOLO_QUEUE,
+            solo_entry["tier"],
+            solo_entry.get("rank", ""),
+            solo_entry.get("leaguePoints", 0),
+            solo_entry.get("wins", 0),
+            solo_entry.get("losses", 0),
+            settings.player_rank_snapshot_retention_days,
+        )
+        db.commit()
+    progresso_temporada = [
+        {
+            "tier": s.tier,
+            "division": s.division,
+            "league_points": s.league_points,
+            "wins": s.wins,
+            "losses": s.losses,
+            "captured_at": s.captured_at,
+        }
+        for s in snapshot_repo.list_for_identity(
+            identity.game_name_key,
+            identity.tag_line_key,
+            identity.region,
+            _RANKED_SOLO_QUEUE,
+        )
+    ]
+
     return {
         "game_name": account.get("gameName", game_name),
         "tag_line": account.get("tagLine", tag_line),
@@ -319,4 +368,5 @@ async def lookup_player(
         "campeoes": campeoes,
         "roadmap": roadmap,
         "partidas": partidas,
+        "progresso_temporada": progresso_temporada,
     }
