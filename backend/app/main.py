@@ -3,13 +3,29 @@ negócio e acesso a banco agora vivem em `app/api/routers/`, `app/services/`
 e `app/repositories/` respectivamente (antes, tudo neste arquivo, ~700
 linhas). Este arquivo só monta o app: middlewares + registro dos routers."""
 
+import time
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
-from app.api.routers import builds, catalog, health, kit, matchups, meta, patch_notes, player, rankings, riot_proxy, scores, stats
+from app.api.routers import (
+    builds,
+    catalog,
+    health,
+    kit,
+    matchups,
+    meta,
+    patch_notes,
+    player,
+    rankings,
+    riot_proxy,
+    scores,
+    stats,
+)
 from app.core.config import get_settings
 from app.core.limiter import limiter
 from app.core.logging import get_logger, new_correlation_id
@@ -28,6 +44,45 @@ async def add_correlation_id(request: Request, call_next):
     return response
 
 
+# Auditoria 16/08 (Sprint 2): antes disso, um 500 em produção só aparecia
+# nos logs da Vercel (texto solto, sem correlation_id, sem duração) — não
+# dava pra cruzar "esse request lento" com "essa exceção" sem log
+# estruturado igual ao que os jobs já têm desde a Revisão técnica §3.
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    start = time.perf_counter()
+    response = await call_next(request)
+    duration_ms = round((time.perf_counter() - start) * 1000, 1)
+    log.info(
+        "request",
+        method=request.method,
+        path=request.url.path,
+        status_code=response.status_code,
+        duration_ms=duration_ms,
+    )
+    return response
+
+
+# Handler genérico: sem ele, uma exceção não tratada (bug real, não erro de
+# validação — esses já viram 4xx pelo FastAPI antes de chegar aqui) vazava
+# o traceback bruto pra resposta HTTP em produção. `Exception` aqui não
+# intercepta `HTTPException`/`StarletteHTTPException` — o Starlette resolve
+# o handler mais específico primeiro, então rota de erro conhecido (404,
+# 429, etc.) continua com o comportamento de sempre.
+@app.exception_handler(Exception)
+async def handle_unexpected_exception(request: Request, exc: Exception):
+    log.error(
+        "unhandled_exception",
+        method=request.method,
+        path=request.url.path,
+        erro=str(exc),
+        tipo=type(exc).__name__,
+    )
+    return JSONResponse(
+        status_code=500, content={"detail": "Erro interno do servidor."}
+    )
+
+
 # Revisão técnica §2.4: API pura (nenhuma rota devolve HTML), então o CSP
 # aqui só precisa negar tudo — não existe um `default-src 'self'` útil
 # quando não há página pra carregar recursos.
@@ -36,8 +91,11 @@ async def add_security_headers(request: Request, call_next):
     response = await call_next(request)
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-    response.headers["Content-Security-Policy"] = "default-src 'none'; frame-ancestors 'none'"
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'none'; frame-ancestors 'none'"
+    )
     return response
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -62,7 +120,15 @@ app.add_middleware(SlowAPIMiddleware)
 # `Cache-Control`, então o CDN nunca guardava nada. `/player/lookup` e
 # `/riot/*` ficam de fora de propósito: são específicos por request.
 _CACHEABLE_PREFIXES = (
-    "/champions", "/items", "/runes", "/scores", "/stats", "/matchups", "/builds", "/rankings", "/patch-notes",
+    "/champions",
+    "/items",
+    "/runes",
+    "/scores",
+    "/stats",
+    "/matchups",
+    "/builds",
+    "/rankings",
+    "/patch-notes",
     "/meta",
 )
 
@@ -72,7 +138,10 @@ def _is_cacheable_path(path: str) -> bool:
     # não segmento de rota (`/champions` também casava `/champions-x`).
     # Sem rota assim hoje, mas é regra de segurança escrita de um jeito
     # que uma rota nova pode ativar sem querer.
-    return any(path == prefix or path.startswith(prefix + "/") for prefix in _CACHEABLE_PREFIXES)
+    return any(
+        path == prefix or path.startswith(prefix + "/")
+        for prefix in _CACHEABLE_PREFIXES
+    )
 
 
 @app.middleware("http")
@@ -82,8 +151,14 @@ async def add_cache_control(request: Request, call_next):
     # (banco caindo, cold start estourando) virava `public, max-age=300`
     # e o CDN da Vercel servia esse erro pra todo mundo pelos 5 minutos
     # seguintes, mesmo depois do banco voltar.
-    if request.method == "GET" and response.status_code == 200 and _is_cacheable_path(request.url.path):
-        response.headers["Cache-Control"] = "public, max-age=300, stale-while-revalidate=600"
+    if (
+        request.method == "GET"
+        and response.status_code == 200
+        and _is_cacheable_path(request.url.path)
+    ):
+        response.headers["Cache-Control"] = (
+            "public, max-age=300, stale-while-revalidate=600"
+        )
     return response
 
 

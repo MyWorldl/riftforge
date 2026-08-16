@@ -105,7 +105,9 @@ class Settings(BaseSettings):
     # Parâmetros de calibração do modelo de score (Core/Estrutura_roadmap/
     # 02_MODELO_SCORE_TIERS.md, 16_BASELINES_CALIBRACAO.md) — nunca hardcoded
     # no código de cálculo, conforme 05_BOAS_PRATICAS_CODIGO.md §7.
-    wilson_z: float = 1.96  # 95% de confiança — padrão estatístico, baixa prioridade de recalibração
+    wilson_z: float = (
+        1.96  # 95% de confiança — padrão estatístico, baixa prioridade de recalibração
+    )
     # EM ABERTO em 16_BASELINES_CALIBRACAO.md §2/§8: percentual de corte da
     # média/desvio aparados ainda não validado contra dados reais. 0.10 =
     # remove 5% de cada ponta antes de calcular média/desvio do baseline.
@@ -162,13 +164,6 @@ class Settings(BaseSettings):
     # (20 req/1s) tem que sobrar margem mesmo se várias threads disparem a
     # primeira chamada antes de qualquer resposta atualizar o limitador.
     ingest_concurrency: int = 5
-
-    # Revisão técnica §3 (Nível 2, fora de escopo por ora — sem conta
-    # Datadog disponível): presença desta chave é o único gate de
-    # `app/core/metrics.py`. Ausente, as funções de métrica viram no-op —
-    # não é um TODO, é a escolha deliberada de deixar o código pronto pra
-    # conectar depois sem fingir que já está conectado agora.
-    datadog_api_key: str | None = None
 
     # Roadmap de Progressão do Jogador (rodada 28). Mesmo espírito de
     # `matchup_min_games`/`build_recommendation_min_games`: piso de

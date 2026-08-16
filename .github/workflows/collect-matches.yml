@@ -123,6 +123,7 @@ jobs:
       # já coletou com sucesso — a Camada 2 fica com o Kit do dia anterior
       # (não com dado nenhum), o resto do pipeline não fica pra trás.
       - name: Recalcular Camada 2 (Kit) do patch corrente
+        id: kit
         continue-on-error: true
         run: python -m app.jobs.compute_kit
 
@@ -131,6 +132,7 @@ jobs:
       # Kit acima pro continue-on-error — não bloqueia o resto do
       # pipeline se o Data Dragon estiver instável.
       - name: Detectar mudanças reais do patch (Data Dragon diff)
+        id: patch_changes
         continue-on-error: true
         run: python -m app.jobs.compute_patch_changes
 
@@ -142,14 +144,17 @@ jobs:
       # independentes: uma falha aqui não pode travar o reprocessamento
       # do resto do pipeline.
       - name: Calcular matchups (campeão vs. campeão)
+        id: matchups
         continue-on-error: true
         run: python -m app.jobs.compute_matchups
 
       - name: Calcular build/runa recomendados
+        id: build_recommendation
         continue-on-error: true
         run: python -m app.jobs.compute_build_recommendation
 
       - name: Calcular Skill Expression (floor/ceiling)
+        id: skill_expression
         continue-on-error: true
         run: python -m app.jobs.compute_skill_expression
 
@@ -168,6 +173,7 @@ jobs:
       # 18): zera o vínculo com o jogador passada a janela de coleta ativa.
       # Roda por último e não bloqueia o pipeline acima em caso de falha.
       - name: Expurgar PUUID fora da janela de retenção
+        id: purge_puuid
         continue-on-error: true
         run: python -m app.jobs.purge_puuid
 
@@ -177,5 +183,38 @@ jobs:
       # RiotWatcher (150 chamadas Account-V1 pro top 50 de cada tier),
       # por isso demora minutos, não segundos.
       - name: Coletar ranking das ligas apex
+        id: rankings
         continue-on-error: true
         run: python -m app.jobs.collect_rankings
+
+      # Auditoria 16/08 §5 (achado #5): os 7 estágios acima usam
+      # `continue-on-error: true` de propósito (nenhum deve travar o
+      # reprocessamento dos outros), mas sem checar o resultado depois
+      # isso também significa que o job inteiro fica verde mesmo se todos
+      # os 7 tiverem falhado — silencioso, não tolerante. Este step roda
+      # sempre (`if: always()`) e falha o job de verdade se qualquer um
+      # deles falhou, listando quais, sem impedir que os estágios
+      # seguintes já tenham rodado.
+      - name: Verificar resultado dos estágios tolerantes a falha
+        if: always()
+        run: |
+          failed=""
+          for step_id in kit patch_changes matchups build_recommendation skill_expression purge_puuid rankings; do
+            outcome_var="STEP_OUTCOME_${step_id}"
+            if [ "${!outcome_var}" = "failure" ]; then
+              failed="$failed $step_id"
+            fi
+          done
+          if [ -n "$failed" ]; then
+            echo "Estágios que falharam:$failed"
+            exit 1
+          fi
+          echo "Todos os estágios tolerantes a falha rodaram com sucesso."
+        env:
+          STEP_OUTCOME_kit: ${{ steps.kit.outcome }}
+          STEP_OUTCOME_patch_changes: ${{ steps.patch_changes.outcome }}
+          STEP_OUTCOME_matchups: ${{ steps.matchups.outcome }}
+          STEP_OUTCOME_build_recommendation: ${{ steps.build_recommendation.outcome }}
+          STEP_OUTCOME_skill_expression: ${{ steps.skill_expression.outcome }}
+          STEP_OUTCOME_purge_puuid: ${{ steps.purge_puuid.outcome }}
+          STEP_OUTCOME_rankings: ${{ steps.rankings.outcome }}
