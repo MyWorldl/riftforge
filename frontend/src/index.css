@@ -104,13 +104,25 @@
   --ring-win: #8b5cf6;
   --ring-loss: #f4306b;
   --layer-kit: #6366f1;
-  --layer-build: #0ea5e9;
-  --layer-meta: #10b981;
-  /* Pódio do Rankings — usados só como borda/texto de acento, não texto
-     branco sobre a cor, então não precisam do mesmo tratamento AA acima. */
-  --podium-gold: #c9a227;
-  --podium-silver: #9aa0a6;
-  --podium-bronze: #b5651d;
+  /* Auditoria 16/08 (Sprint 3): ao contrário do comentário original destes
+     dois, --layer-build/--layer-meta SÃO texto/preenchimento decorativo
+     mas contam pra WCAG 1.4.11 (contraste não-textual, ≥3:1) porque a
+     barrinha de contribuição é informação, não decoração — o tom vívido
+     original (#0ea5e9/#10b981) dava só ~2,0-2,2:1 contra --border claro.
+     Escurecidos aqui pro claro (mesma família de matiz); o tom vívido
+     original volta como override só no escuro, onde já passava (~4,7:1
+     contra --border escuro). */
+  --layer-build: #0369a1;
+  --layer-meta: #047857;
+  /* Pódio do Rankings — `.podium-rank` usa estas como COR DE TEXTO (20-24px
+     bold, "texto grande" WCAG, piso 3:1) sobre --code-bg, não só borda como
+     o comentário original assumia: dourado/prata originais davam ~2,17/
+     2,37:1 no claro. Escurecidos aqui (dourado reaproveita o mesmo tom já
+     verificado de --tier-god/--rank-challenger); tons vívidos originais
+     voltam só no escuro, onde já passavam. */
+  --podium-gold: #8a6608;
+  --podium-silver: #71717a;
+  --podium-bronze: #92400e;
   /* Tiers apex do Rankings (Desafiante/Grão-Mestre/Mestre) — cores
      inspiradas nos emblemas oficiais da Riot (dourado/vermelho/roxo),
      mas com variáveis próprias em vez de reaproveitar --tier-god/-s/-a
@@ -201,6 +213,15 @@
        (ambos bem acima do fundo sólido que substituem). */
     --glass-bg: rgba(255, 255, 255, 0.06);
     --glass-border: rgba(255, 255, 255, 0.12);
+    /* Tons vívidos originais (Sprint 3, auditoria 16/08): já passavam
+       WCAG 1.4.11/texto-grande contra fundo escuro (--border/--code-bg
+       escuros), só o claro precisava escurecer — ver comentário na
+       declaração base em :root. */
+    --layer-build: #0ea5e9;
+    --layer-meta: #10b981;
+    --podium-gold: #c9a227;
+    --podium-silver: #9aa0a6;
+    --podium-bronze: #b5651d;
   }
 
   #social .button-icon {
@@ -238,6 +259,11 @@
     rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
   --glass-bg: rgba(255, 255, 255, 0.06);
   --glass-border: rgba(255, 255, 255, 0.12);
+  --layer-build: #0ea5e9;
+  --layer-meta: #10b981;
+  --podium-gold: #c9a227;
+  --podium-silver: #9aa0a6;
+  --podium-bronze: #b5651d;
 }
 
 :root[data-theme='light'] {
@@ -263,6 +289,11 @@
   --warn-border: rgba(180, 83, 9, 0.4);
   --shadow:
     rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+  --layer-build: #0369a1;
+  --layer-meta: #047857;
+  --podium-gold: #8a6608;
+  --podium-silver: #71717a;
+  --podium-bronze: #92400e;
 }
 
 /* Era limitado a 1126px com borda lateral (efeito "cartão centralizado") —
