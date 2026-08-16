@@ -92,6 +92,16 @@ def aggregate() -> dict:
                             Match.patch_id == patch.id,
                             Match.platform_region == region,
                             MatchParticipant.elo_tier == tier,
+                            # Auditoria 16/08 (achado verificado direto no
+                            # código): `game_duration_s` é gravado desde a
+                            # Fase 0, mas nenhum job de agregação filtrava
+                            # por ele — uma partida encerrada aos 3 minutos
+                            # (AFK, desconexão no carregamento) contava
+                            # vitória/derrota real de 10 campeões. 300s é o
+                            # limiar padrão do nicho pra "remake"; bans
+                            # herdam o filtro de graça (via `match_ids`
+                            # abaixo, derivado destes `participants`).
+                            Match.game_duration_s > 300,
                         )
                         .all()
                     )

@@ -8,6 +8,7 @@ from app.core.adapters import data_dragon, riot_api
 from app.core.cache import cached
 from app.core.champions import resolve_champion_id
 from app.core.config import Settings, get_settings
+from app.core.logging import get_logger
 from app.repositories.baseline_repository import BaselineRepository
 from app.repositories.champion_score_repository import ChampionScoreRepository
 from app.services.player_roadmap_service import (
@@ -15,6 +16,8 @@ from app.services.player_roadmap_service import (
     resolve_identity,
     sync_roadmap_steps,
 )
+
+log = get_logger(__name__)
 
 _DEFAULT_ELO_TIER = "GOLD"
 _RANKED_SOLO_QUEUE = "RANKED_SOLO_5x5"
@@ -41,6 +44,38 @@ def _detect_elo_tier(puuid: str, platform_region: str | None) -> tuple[str, bool
     if solo_entry is None:
         return _DEFAULT_ELO_TIER, False
     return solo_entry["tier"], True
+
+
+async def _fetch_matches_tolerant(
+    match_ids: list[str], riot_api_adapter, continent: str | None
+) -> list[dict]:
+    """Auditoria 16/08 (achado verificado direto no código): antes,
+    `asyncio.gather` sem `return_exceptions=True` deixava uma única
+    partida indisponível na Riot (404 — já saiu do cache deles; 429/503
+    — instabilidade transitória) derrubar `lookup_player` inteiro com
+    uma exceção não tratada, em vez de simplesmente analisar com uma
+    partida a menos. `ApiError` é engolido (com log); qualquer outra
+    exceção é genuinamente inesperada e continua propagando — extraído
+    numa função própria pra ser testável sem mockar o pipeline inteiro
+    de `lookup_player`."""
+    results = await asyncio.gather(
+        *[
+            asyncio.to_thread(
+                riot_api_adapter.get_match, match_id, continent_region=continent
+            )
+            for match_id in match_ids
+        ],
+        return_exceptions=True,
+    )
+    matches = []
+    for match_id, result in zip(match_ids, results):
+        if isinstance(result, ApiError):
+            log.warning("partida_indisponivel", match_id=match_id, erro=str(result))
+            continue
+        if isinstance(result, BaseException):
+            raise result
+        matches.append(result)
+    return matches
 
 
 async def lookup_player(
@@ -78,8 +113,9 @@ async def lookup_player(
     por vários segundos a cada lookup — nenhum outro request (nem
     `/health`) era atendido enquanto isso. As chamadas bloqueantes agora
     rodam em `asyncio.to_thread`, e as `player_lookup_recent_matches`
-    partidas são buscadas em paralelo via `asyncio.gather` em vez de um
-    loop serial.
+    partidas são buscadas em paralelo via `_fetch_matches_tolerant`
+    (auditoria 16/08: uma partida indisponível não derruba mais as
+    outras) em vez de um loop serial.
 
     Revisão técnica §4.2 (Sprint A item 1): `settings` opcional, injetado
     pelo router via `Depends(get_settings)` — omitido, cai no singleton de
@@ -115,12 +151,7 @@ async def lookup_player(
         count=settings.player_lookup_recent_matches,
         continent_region=continent,
     )
-    matches = await asyncio.gather(
-        *[
-            asyncio.to_thread(riot_api.get_match, match_id, continent_region=continent)
-            for match_id in match_ids
-        ]
-    )
+    matches = await _fetch_matches_tolerant(match_ids, riot_api, continent)
 
     version = await cached("ddragon:version", data_dragon.get_latest_version)
     name_by_riot_id = await cached(
@@ -204,7 +235,9 @@ async def lookup_player(
         )
 
     identity = resolve_identity(
-        account.get("gameName", game_name), account.get("tagLine", tag_line), score_region
+        account.get("gameName", game_name),
+        account.get("tagLine", tag_line),
+        score_region,
     )
     roadmap = sync_roadmap_steps(db, identity, campeoes, settings)
 

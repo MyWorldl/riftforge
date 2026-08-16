@@ -30,7 +30,7 @@ async def get_player_lookup(
     db: Session = Depends(get_db),
     settings: Settings = Depends(get_settings),
 ) -> dict:
-    """"Análise do Jogador" — busca sob demanda de um jogador por Riot ID
+    """ "Análise do Jogador" — busca sob demanda de um jogador por Riot ID
     (`Nome#Tag`). Diferente do resto do backend, ESTA rota faz chamadas
     reais à Riot API por requisição (Account-V1 → Match-V5), por isso
     reaproveita o mesmo gate de `ensure_riot_proxy_enabled()` dos endpoints
@@ -48,9 +48,13 @@ async def get_player_lookup(
     rate limit) nunca alcançaria."""
     ensure_riot_proxy_enabled()
     try:
-        return await player_service.lookup_player(db, game_name, tag_line, region, elo_tier, settings)
+        return await player_service.lookup_player(
+            db, game_name, tag_line, region, elo_tier, settings
+        )
     except ApiError as exc:
-        raise HTTPException(status_code=exc.response.status_code, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=exc.response.status_code, detail=str(exc)
+        ) from exc
 
 
 @router.delete("/roadmap", response_model=PlayerRoadmapDeleteResponse)
@@ -59,8 +63,8 @@ def delete_player_roadmap(
     request: Request,
     game_name: str,
     tag_line: str,
+    roadmap_token: str,
     region: str | None = None,
-    roadmap_token: str | None = None,
     db: Session = Depends(get_db),
 ) -> dict:
     """Mecanismo de exclusão manual obrigatório do Roadmap de Progressão
@@ -78,7 +82,13 @@ def delete_player_roadmap(
     Revisão técnica 09/08 §2.3: `roadmap_token` opaco (devolvido em
     `PlayerRoadmapSummary.roadmap_token`, guardado no `localStorage` do
     frontend) reduz o risco de graça — quem não souber o token de alguém
-    não apaga o roadmap dela. Omitido, apaga sem checar (compatível com
-    quem já tinha um roadmap salvo antes deste campo existir)."""
-    deleted = player_roadmap_service.delete_roadmap(db, game_name, tag_line, region, roadmap_token)
+    não apaga o roadmap dela. Auditoria 16/08 (achado verificado direto
+    no código, reaberto com severidade maior de 09/08): o parâmetro era
+    opcional, e omitido apagava sem checar — Riot ID é público, então
+    bastava saber o nome#tag pra apagar o roadmap de qualquer um. Agora
+    é obrigatório: sem `roadmap_token` na query string, o FastAPI recusa
+    a requisição com 422 antes mesmo de chegar aqui."""
+    deleted = player_roadmap_service.delete_roadmap(
+        db, game_name, tag_line, region, roadmap_token
+    )
     return {"deleted": deleted}

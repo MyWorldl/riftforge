@@ -481,6 +481,10 @@ class ChampionScore(Base):
         # `elo_tier` (sem `patch`), o que varria a tabela inteira sem um
         # índice próprio nessa ordem.
         Index("ix_champion_scores_champion_elo", "champion_id", "elo_tier"),
+        # Auditoria 16/08: `/health` (`ORDER BY computed_at DESC LIMIT 1`)
+        # varria a tabela inteira pra achar a linha mais recente — nenhum
+        # índice cobria essa coluna sozinha.
+        Index("ix_champion_scores_computed_at", "computed_at"),
     )
 
 

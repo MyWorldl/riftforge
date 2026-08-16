@@ -94,7 +94,9 @@ def sync_roadmap_steps(
     # Revisão técnica 09/08 §2.3: token opaco, igual em toda linha da
     # identidade — reaproveita o de uma linha já existente, ou gera um
     # novo na primeira vez que esta identidade ganha um passo.
-    roadmap_token = existing_rows[0].roadmap_token if existing_rows else uuid.uuid4().hex
+    roadmap_token = (
+        existing_rows[0].roadmap_token if existing_rows else uuid.uuid4().hex
+    )
 
     for c in campeoes:
         partidas = c["partidas"]
@@ -171,19 +173,27 @@ def sync_roadmap_steps(
     return {
         "ativos": [_serialize(s) for s in ativos],
         "concluidos": [_serialize(s) for s in concluidos],
-        "roadmap_token": (ativos[0].roadmap_token if ativos else concluidos[0].roadmap_token)
+        "roadmap_token": (
+            ativos[0].roadmap_token if ativos else concluidos[0].roadmap_token
+        )
         if (ativos or concluidos)
         else None,
     }
 
 
 def delete_roadmap(
-    db: Session, game_name: str, tag_line: str, region: str | None, roadmap_token: str | None = None
+    db: Session, game_name: str, tag_line: str, region: str | None, roadmap_token: str
 ) -> int:
     """`DELETE /player/roadmap` — mecanismo de exclusão manual obrigatório
     (retenção sem prazo fixo, ver emenda ao doc de privacidade §7).
-    `roadmap_token` omitido apaga sem checar (compatibilidade com quem já
-    tinha um roadmap salvo antes deste campo existir)."""
+
+    Auditoria 16/08: `roadmap_token` era opcional aqui — omitido, o
+    repository apagava sem checar. Como Riot ID é público, isso permitia
+    qualquer um apagar o roadmap de qualquer jogador. Agora é obrigatório;
+    o router (`app/api/routers/player.py`) já rejeita a requisição com
+    422 antes de chegar aqui se `roadmap_token` não vier na query string
+    — este parâmetro sem valor padrão é a segunda camada da mesma defesa,
+    não só o router."""
     identity = resolve_identity(game_name, tag_line, region)
     repo = PlayerRoadmapRepository(db)
     deleted = repo.delete_all_for_player(

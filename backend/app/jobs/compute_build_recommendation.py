@@ -76,7 +76,12 @@ def compute() -> int:
             session.query(MatchParticipant, Patch.version_label, Match.platform_region)
             .join(Match, Match.match_id == MatchParticipant.match_id)
             .join(Patch, Patch.id == Match.patch_id)
-            .filter(Match.platform_region.in_(regioes))
+            .filter(
+                Match.platform_region.in_(regioes),
+                # Auditoria 16/08 — mesmo motivo de `aggregate_stats.py`:
+                # build de remake não representa uma escolha de jogo real.
+                Match.game_duration_s > 300,
+            )
             .all()
         )
 

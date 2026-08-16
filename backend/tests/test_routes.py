@@ -107,7 +107,9 @@ def test_scores_champions_limit_offset(client, db_session):
     _seed_champion_score(db_session, champion_id="Ahri", lane="MIDDLE")
     _seed_champion_score(db_session, champion_id="Jinx", lane="BOTTOM")
 
-    response = client.get("/scores/champions?elo_tier=GOLD&patch=16.14&limit=1&offset=1")
+    response = client.get(
+        "/scores/champions?elo_tier=GOLD&patch=16.14&limit=1&offset=1"
+    )
     assert response.status_code == 200
     rows = response.json()
     assert len(rows) == 1
@@ -483,7 +485,9 @@ def test_patch_notes_changes_affecting_me_filters_by_roadmap(client, db_session)
     roadmap de "Fulano" — precisa sumir do resultado filtrado."""
     _seed_patch(db_session, "16.15", 16015)
     _seed_patch_change(db_session, champion_id="Ahri")
-    _seed_patch_change(db_session, champion_id="Zed", field="attackrange", field_label="Alcance")
+    _seed_patch_change(
+        db_session, champion_id="Zed", field="attackrange", field_label="Alcance"
+    )
     _seed_roadmap_step(db_session, champion_id="Ahri")  # roadmap de "fulano"/"br1"
 
     unfiltered = client.get("/patch-notes/changes")
@@ -547,10 +551,13 @@ def test_catalog_champions_proxies_data_dragon(client, monkeypatch):
     assert "Ahri" in body["champions"]
 
 
-def test_catalog_champion_detail_404_for_unknown_id_without_calling_ddragon(client, monkeypatch):
+def test_catalog_champion_detail_404_for_unknown_id_without_calling_ddragon(
+    client, monkeypatch
+):
     """Sprint 2 item 9/10 (revisão técnica §2.1/§1.6): `champion_id`
     desconhecido nunca deve virar chamada ao Data Dragon nem entrada de
     cache — `get_champion_detail` do adapter nem é chamado."""
+
     async def fake_version():
         return "16.15.1"
 
@@ -664,7 +671,9 @@ def test_delete_roadmap_removes_rows_for_identity(client, db_session):
     _seed_roadmap_step(db_session, champion_id="Zed", lane="TOP")
     _seed_roadmap_step(db_session, game_name_key="outrojogador", tag_line_key="br1")
 
-    response = client.delete("/player/roadmap?game_name=Fulano&tag_line=BR1&region=br1")
+    response = client.delete(
+        "/player/roadmap?game_name=Fulano&tag_line=BR1&region=br1&roadmap_token=test-token-fulano"
+    )
     assert response.status_code == 200
     assert response.json() == {"deleted": 2}
 
@@ -675,15 +684,37 @@ def test_delete_roadmap_removes_rows_for_identity(client, db_session):
     )
     assert remaining == 0
     other_remaining = (
-        db_session.query(PlayerRoadmapStep).filter_by(game_name_key="outrojogador").count()
+        db_session.query(PlayerRoadmapStep)
+        .filter_by(game_name_key="outrojogador")
+        .count()
     )
     assert other_remaining == 1
 
 
 def test_delete_roadmap_empty_returns_zero(client):
-    response = client.delete("/player/roadmap?game_name=Ninguem&tag_line=BR1")
+    response = client.delete(
+        "/player/roadmap?game_name=Ninguem&tag_line=BR1&roadmap_token=qualquer-coisa"
+    )
     assert response.status_code == 200
     assert response.json() == {"deleted": 0}
+
+
+def test_delete_roadmap_requires_token(client, db_session):
+    # Auditoria 16/08 (achado verificado direto no código, reaberto com
+    # severidade maior de 09/08): `roadmap_token` era opcional — omitido,
+    # apagava sem checar (Riot ID é público, então bastava saber o
+    # nome#tag pra apagar o roadmap de qualquer jogador). Agora é
+    # obrigatório na query string: sem ele, o FastAPI recusa com 422
+    # antes de qualquer linha ser tocada.
+    _seed_roadmap_step(db_session)
+
+    response = client.delete("/player/roadmap?game_name=Fulano&tag_line=BR1&region=br1")
+    assert response.status_code == 422
+
+    remaining = (
+        db_session.query(PlayerRoadmapStep).filter_by(game_name_key="fulano").count()
+    )
+    assert remaining == 1
 
 
 def test_delete_roadmap_works_without_real_riot_key(client, db_session, monkeypatch):
@@ -693,7 +724,9 @@ def test_delete_roadmap_works_without_real_riot_key(client, db_session, monkeypa
     monkeypatch.setattr(get_settings(), "riot_api_key", "changeme")
     _seed_roadmap_step(db_session)
 
-    response = client.delete("/player/roadmap?game_name=Fulano&tag_line=BR1&region=br1")
+    response = client.delete(
+        "/player/roadmap?game_name=Fulano&tag_line=BR1&region=br1&roadmap_token=test-token-fulano"
+    )
     assert response.status_code == 200
     assert response.json() == {"deleted": 1}
 

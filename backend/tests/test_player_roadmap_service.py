@@ -3,6 +3,8 @@ só na camada de serviço, sem mockar Riot/Data Dragon: `sync_roadmap_steps`
 recebe `campeoes` já pronto, mesmo formato que `player_service.lookup_player`
 monta antes de chamá-lo."""
 
+import pytest
+
 from app.services.player_roadmap_service import (
     delete_roadmap,
     resolve_identity,
@@ -157,7 +159,7 @@ def test_replaced_step_can_reactivate(db_session):
 
 
 def test_delete_roadmap_removes_all_rows_for_identity(db_session):
-    sync_roadmap_steps(
+    r1 = sync_roadmap_steps(
         db_session,
         IDENTITY,
         [
@@ -165,22 +167,38 @@ def test_delete_roadmap_removes_all_rows_for_identity(db_session):
             _champ("Zed", "MIDDLE", 5, -15.0),
         ],
     )
-    deleted = delete_roadmap(db_session, "Fulano", "BR1", "br1")
+    deleted = delete_roadmap(
+        db_session, "Fulano", "BR1", "br1", roadmap_token=r1["roadmap_token"]
+    )
     assert deleted == 2
     roadmap = sync_roadmap_steps(db_session, IDENTITY, [])
     assert roadmap == {"ativos": [], "concluidos": [], "roadmap_token": None}
 
 
 def test_delete_roadmap_scoped_to_identity(db_session):
-    sync_roadmap_steps(db_session, IDENTITY, [_champ("Ahri", "MIDDLE", 5, -12.0)])
+    r1 = sync_roadmap_steps(db_session, IDENTITY, [_champ("Ahri", "MIDDLE", 5, -12.0)])
     other_identity = resolve_identity("Outro", "NA1", "br1")
     sync_roadmap_steps(db_session, other_identity, [_champ("Zed", "MIDDLE", 5, -15.0)])
 
-    deleted = delete_roadmap(db_session, "Fulano", "BR1", "br1")
+    deleted = delete_roadmap(
+        db_session, "Fulano", "BR1", "br1", roadmap_token=r1["roadmap_token"]
+    )
     assert deleted == 1
 
     roadmap_outro = sync_roadmap_steps(db_session, other_identity, [])
     assert len(roadmap_outro["ativos"]) == 1
+
+
+def test_delete_roadmap_requires_token(db_session):
+    # Auditoria 16/08 (achado verificado direto no código, reaberto com
+    # severidade maior de 09/08): `roadmap_token` era opcional aqui, e
+    # omitido apagava sem checar — Riot ID é público, então bastava saber
+    # o nome#tag pra apagar o roadmap de qualquer jogador. Agora é
+    # obrigatório de verdade: chamar sem o argumento é erro de programação
+    # (`TypeError`), não mais "apaga tudo silenciosamente".
+    sync_roadmap_steps(db_session, IDENTITY, [_champ("Ahri", "MIDDLE", 5, -12.0)])
+    with pytest.raises(TypeError):
+        delete_roadmap(db_session, "Fulano", "BR1", "br1")
 
 
 def test_roadmap_token_stable_across_syncs(db_session):
@@ -196,7 +214,9 @@ def test_delete_roadmap_wrong_token_deletes_nothing(db_session):
     r1 = sync_roadmap_steps(db_session, IDENTITY, [_champ("Ahri", "MIDDLE", 5, -12.0)])
     token = r1["roadmap_token"]
 
-    deleted = delete_roadmap(db_session, "Fulano", "BR1", "br1", roadmap_token="token-errado")
+    deleted = delete_roadmap(
+        db_session, "Fulano", "BR1", "br1", roadmap_token="token-errado"
+    )
     assert deleted == 0
 
     roadmap = sync_roadmap_steps(db_session, IDENTITY, [])

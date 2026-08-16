@@ -23,7 +23,7 @@ class PlayerRoadmapRepository:
     def get_least_bad_active(
         self, game_name_key: str, tag_line_key: str, region: str
     ) -> PlayerRoadmapStep | None:
-        """"Menos ruim" = maior `delta_pct_atual` entre os ativos (mais
+        """ "Menos ruim" = maior `delta_pct_atual` entre os ativos (mais
         perto de zero, ou já acima) — é esse que sai quando o teto de
         passos ativos está cheio e um gap pior aparece."""
         return (
@@ -98,16 +98,24 @@ class PlayerRoadmapRepository:
         game_name_key: str,
         tag_line_key: str,
         region: str,
-        roadmap_token: str | None = None,
+        roadmap_token: str,
     ) -> int:
-        """`roadmap_token` omitido apaga sem checar (compatível com quem
-        já tinha um roadmap salvo antes deste campo existir); enviado,
-        só apaga linhas cujo token bate — token errado apaga 0 linhas em
-        vez de levantar erro, mesmo espírito de "não é autenticação de
-        verdade" já documentado no modelo."""
-        query = self.db.query(PlayerRoadmapStep).filter_by(
-            game_name_key=game_name_key, tag_line_key=tag_line_key, region=region
+        """Auditoria 16/08 (achado verificado direto no código, reaberto
+        com severidade maior de 09/08): `roadmap_token` era opcional e,
+        omitido, apagava sem checar — Riot ID é público, então qualquer
+        um apagava o roadmap de qualquer jogador só sabendo o nome#tag.
+        Agora é obrigatório e sempre filtra — token errado (ou de um
+        jogador que nunca teve roadmap) apaga 0 linhas em vez de levantar
+        erro, mesmo espírito de "não é autenticação de verdade" já
+        documentado no modelo, mas sem o desvio que permitia apagar sem
+        token nenhum."""
+        return (
+            self.db.query(PlayerRoadmapStep)
+            .filter_by(
+                game_name_key=game_name_key,
+                tag_line_key=tag_line_key,
+                region=region,
+                roadmap_token=roadmap_token,
+            )
+            .delete()
         )
-        if roadmap_token is not None:
-            query = query.filter_by(roadmap_token=roadmap_token)
-        return query.delete()
