@@ -24,10 +24,15 @@ Confiança: `min(100, (n_partidas/n_referencia_confianca)*100)`. Trava de
 segurança (§11): confiança abaixo do piso configurado -> tier provisório,
 teto A (nenhum campeão vira God/S sem amostra que sustente a afirmação).
 
-Selo "Trap" (item 1.7, paralelo ao score): `nota_presenca > 70 E z_wr <
--0.5`. Usa `nota_presenca` diretamente como "percentil de Presença" — ela
-já é uma combinação de percentis (60% ban + 40% pick), então já vive numa
-escala 0-100 comparável a um percentil.
+Selo "Trap" (item 1.7, paralelo ao score) — dois padrões independentes,
+qualquer um dos dois marca o selo:
+1. **Popular mas ruim**: `nota_presenca > 70 E z_wr < -0.5`. Usa
+   `nota_presenca` diretamente como "percentil de Presença" — ela já é
+   uma combinação de percentis (60% ban + 40% pick), então já vive numa
+   escala 0-100 comparável a um percentil.
+2. **Viés de amostra** (auditoria 16/08 §3.7): `win_rate_raw > 0.53 E
+   win_rate_adjusted < 0.50` — win rate bruto parece forte, mas o piso
+   de Wilson (que só cai tanto com amostra pequena) já nem bate 50%.
 
 Uso: python -m app.jobs.compute_scores
 """
@@ -65,6 +70,16 @@ def _assign_tier(score: float) -> str:
         if score >= threshold:
             return name
     return "E"
+
+
+def _trap_flag(
+    nota_presenca: float, z_wr: float, win_rate_raw: float, win_rate_adjusted: float
+) -> bool:
+    """Dois padrões independentes (item 1.7); qualquer um dos dois marca
+    o selo — ver docstring do módulo pro raciocínio de cada um."""
+    trap_presenca = nota_presenca > 70 and z_wr < -0.5
+    trap_amostra = win_rate_raw > 0.53 and win_rate_adjusted < 0.50
+    return trap_presenca or trap_amostra
 
 
 def compute() -> dict:
@@ -147,7 +162,9 @@ def compute() -> dict:
             if tier_provisorio and score_tier in ("GOD", "S"):
                 score_tier = "A"
 
-            trap_flag = perf.nota_presenca > 70 and perf.z_wr < -0.5
+            trap_flag = _trap_flag(
+                perf.nota_presenca, perf.z_wr, perf.win_rate_raw, perf.win_rate_adjusted
+            )
 
             session.add(
                 ChampionScore(

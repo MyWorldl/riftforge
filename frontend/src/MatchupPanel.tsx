@@ -57,7 +57,17 @@ export default function MatchupPanel({
                   style={{ width: `${row.win_rate * 100}%` }}
                 />
               </span>
-              <span className="matchup-value">{(row.win_rate * 100).toFixed(1)}%</span>
+              <span className="matchup-value">
+                {(row.win_rate * 100).toFixed(1)}%
+                {/* Auditoria 16/08 §3.5: piso de confiança de Wilson (mesmo
+                    cálculo da Camada 1 do score) ao lado do valor bruto —
+                    com o piso de amostra baixo daqui (matchup_min_games=5),
+                    o intervalo real costuma ser bem mais largo do que o
+                    número sozinho sugere. */}
+                <span className="explain-sub" title="Piso de confiança (intervalo de Wilson, 95%)">
+                  {' '}(piso: {(row.win_rate_wilson * 100).toFixed(1)}%)
+                </span>
+              </span>
               <span className="matchup-games">
                 {row.games} {row.games === 1 ? 'jogo' : 'jogos'}
                 {row.amostra_insuficiente && (

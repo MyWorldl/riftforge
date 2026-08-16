@@ -79,6 +79,12 @@ export default function BuildRecommendationPanel({
         <span className="build-section-label">
           Itens · {build.item_build_games} {build.item_build_games === 1 ? 'jogo' : 'jogos'} ·{' '}
           {(build.item_build_win_rate * 100).toFixed(1)}% vitórias
+          {/* Auditoria 16/08 §3.5: piso de confiança de Wilson ao lado do
+              bruto — build_recommendation_min_games=5 é bem mais baixo que
+              os 500 do blueprint externo. */}
+          <span className="explain-sub" title="Piso de confiança (intervalo de Wilson, 95%)">
+            {' '}(piso: {(build.item_build_win_rate_wilson * 100).toFixed(1)}%)
+          </span>
         </span>
         <div className="build-item-row">
           {build.item_build.length === 0 && <span className="explain-sub">Sem itens registrados</span>}
@@ -105,6 +111,9 @@ export default function BuildRecommendationPanel({
         <span className="build-section-label">
           Runas · {build.rune_games} {build.rune_games === 1 ? 'jogo' : 'jogos'} ·{' '}
           {(build.rune_win_rate * 100).toFixed(1)}% vitórias
+          <span className="explain-sub" title="Piso de confiança (intervalo de Wilson, 95%)">
+            {' '}(piso: {(build.rune_win_rate_wilson * 100).toFixed(1)}%)
+          </span>
         </span>
         {keystone ? (
           <div className="build-rune-row">

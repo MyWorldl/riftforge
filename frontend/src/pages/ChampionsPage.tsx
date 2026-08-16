@@ -65,16 +65,21 @@ const ELO_TIERS = [
   'EMERALD', 'DIAMOND', 'MASTER', 'GRANDMASTER', 'CHALLENGER',
 ]
 
-/** Item novo (revisão técnica §6, Tier 3): hoje o CI só coleta partidas em
- *  GOLD (`collect-matches.yml`) — os outros elos sempre caem no estado
- *  vazio. Mesmo tratamento que `COUNTRY_SELECT_OPTIONS` já dá pra região:
- *  desabilita no dropdown em vez de deixar escolher e mostrar uma
- *  mensagem de operador ("rode o pipeline..."). */
+/** Item novo (revisão técnica §6, Tier 3; auditoria 16/08 §3.2): o CI só
+ *  coleta partidas nos elos abaixo (`collect-matches.yml`) — os outros
+ *  sempre caem no estado vazio. Ouro era o único até 16/08; Platina
+ *  entra como o segundo balde real (não os 5 do blueprint externo — o
+ *  volume do projeto ainda não sustenta isso, ver nota em
+ *  `collect-matches.yml`). Mesmo tratamento que `COUNTRY_SELECT_OPTIONS`
+ *  já dá pra região: desabilita no dropdown em vez de deixar escolher e
+ *  mostrar uma mensagem de operador ("rode o pipeline..."). */
+const ENABLED_ELO_TIERS = ['GOLD', 'PLATINUM']
+
 const TIER_SELECT_OPTIONS = ELO_TIERS.map((t) => ({
   value: t,
   label: t,
   flag: TIER_ICONS[t],
-  disabled: t !== 'GOLD',
+  disabled: !ENABLED_ELO_TIERS.includes(t),
 }))
 
 const LANES = [
@@ -327,6 +332,10 @@ function ChampionsPage() {
     <main className="center center-wide">
       <h1>Campeões</h1>
       <p>Poder dos campeões de League of Legends por elo, rota e patch — score em camadas com tier God-E.</p>
+      {/* Pedido da auditoria de 16/08 (§3.2): enquanto a coleta não cobrir
+          todo elo, a UI deveria dizer isso — sem esse aviso, o filtro de
+          elo existe sem dado atrás dele pra quase toda opção. */}
+      <p className="table-caption">Amostra: Ouro e Platina (BR1, EUW1) — outros elos ainda não têm coleta.</p>
 
       <div className="filters">
         <label>
@@ -458,7 +467,7 @@ function ChampionsPage() {
                         />
                       )}
                       <span>{meta?.name ?? row.champion_id}</span>
-                      {row.trap_flag && <span className="trap-badge" title="Alta presença (pick/ban) com win rate abaixo do esperado">Trap</span>}
+                      {row.trap_flag && <span className="trap-badge" title="Alta presença (pick/ban) com win rate abaixo do esperado, ou win rate aparentemente forte com amostra pequena demais pra confiar">Trap</span>}
                     </Link>
                   </td>
                   <td>

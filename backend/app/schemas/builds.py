@@ -6,9 +6,11 @@ class BuildRecommendationResponse(BaseModel):
     item_build: list[int]
     item_build_games: int
     item_build_win_rate: float
+    item_build_win_rate_wilson: float
     keystone_id: int | None
     primary_style_id: int | None
     sub_style_id: int | None
     rune_games: int
     rune_win_rate: float
+    rune_win_rate_wilson: float
     amostra_insuficiente: bool

@@ -57,15 +57,31 @@ jobs:
         run: pip install -r requirements.txt
 
       # Divisões separadas porque o endpoint de League-V4 exige divisão
-      # explícita. Todas gravam elo_tier="GOLD" — o balde é o mesmo, o que
-      # a divisão faz é tornar a amostra representativa do ouro inteiro em
-      # vez de só a divisão mais alta.
+      # explícita. Ouro é o balde original; Platina entra na rodada de
+      # 16/08 como o segundo balde (auditoria: até aqui, 100% de
+      # `champion_scores` tinha `elo_tier="GOLD"` — a tier list era, na
+      # prática, só do Ouro, mesmo com o filtro de elo existindo na UI
+      # sem dado por trás). Um segundo balde de cada vez, não os 5 do
+      # blueprint externo — volume real do projeto (~10 mil partidas) não
+      # sustenta 5 baldes anêmicos ainda. Platina escolhida em vez de
+      # Ferro/Diamante por ser o público que mais consulta tier list pra
+      # evoluir de elo, mantendo população de amostra saudável.
       - name: Coletar partidas BR1 (Gold I-IV)
         run: |
           for DIV in I II III IV; do
             echo "::group::BR1 Gold $DIV"
             python -m app.jobs.ingest_matches \
               --region br1 --tier GOLD --division "$DIV" \
+              --puuid-limit "$PUUID_LIMIT" --matches-per-summoner 20
+            echo "::endgroup::"
+          done
+
+      - name: Coletar partidas BR1 (Platinum I-IV)
+        run: |
+          for DIV in I II III IV; do
+            echo "::group::BR1 Platinum $DIV"
+            python -m app.jobs.ingest_matches \
+              --region br1 --tier PLATINUM --division "$DIV" \
               --puuid-limit "$PUUID_LIMIT" --matches-per-summoner 20
             echo "::endgroup::"
           done
@@ -82,6 +98,16 @@ jobs:
             echo "::group::EUW1 Gold $DIV"
             python -m app.jobs.ingest_matches \
               --region euw1 --tier GOLD --division "$DIV" \
+              --puuid-limit "$PUUID_LIMIT" --matches-per-summoner 20
+            echo "::endgroup::"
+          done
+
+      - name: Coletar partidas EUW1 (Platinum I-IV)
+        run: |
+          for DIV in I II III IV; do
+            echo "::group::EUW1 Platinum $DIV"
+            python -m app.jobs.ingest_matches \
+              --region euw1 --tier PLATINUM --division "$DIV" \
               --puuid-limit "$PUUID_LIMIT" --matches-per-summoner 20
             echo "::endgroup::"
           done

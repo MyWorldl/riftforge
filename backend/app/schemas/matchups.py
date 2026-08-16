@@ -6,6 +6,7 @@ class MatchupRow(BaseModel):
     games: int
     wins: int
     win_rate: float
+    win_rate_wilson: float
     amostra_insuficiente: bool
 
 

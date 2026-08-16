@@ -463,6 +463,7 @@ export interface MatchupRow {
   games: number
   wins: number
   win_rate: number
+  win_rate_wilson: number
   amostra_insuficiente: boolean
 }
 
@@ -540,11 +541,13 @@ export interface BuildRecommendation {
   item_build: number[]
   item_build_games: number
   item_build_win_rate: number
+  item_build_win_rate_wilson: number
   keystone_id: number | null
   primary_style_id: number | null
   sub_style_id: number | null
   rune_games: number
   rune_win_rate: number
+  rune_win_rate_wilson: number
   amostra_insuficiente: boolean
 }
 

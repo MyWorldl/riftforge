@@ -45,10 +45,12 @@ const TIER_ICONS: Record<string, string> = {
   CHALLENGER: '/tiers/challenger.png',
 }
 
+// Auditoria 16/08 §3.2: Platina entra como o segundo elo com coleta real,
+// ao lado de Ouro (mesma lista de `ChampionsPage.tsx`).
 const ELO_SELECT_OPTIONS = [
   'IRON', 'BRONZE', 'SILVER', 'GOLD', 'PLATINUM',
   'EMERALD', 'DIAMOND', 'MASTER', 'GRANDMASTER', 'CHALLENGER',
-].map((t) => ({ value: t, label: t, flag: TIER_ICONS[t], disabled: t !== 'GOLD' }))
+].map((t) => ({ value: t, label: t, flag: TIER_ICONS[t], disabled: t !== 'GOLD' && t !== 'PLATINUM' }))
 
 const REGION_SELECT_OPTIONS = CHAMPIONS_COUNTRY_OPTIONS.map((c) => ({
   ...c,

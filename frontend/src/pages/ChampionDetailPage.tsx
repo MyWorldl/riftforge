@@ -291,7 +291,7 @@ function ChampionDetailPage() {
                   {row.score_tier}
                 </span>
                 {row.trap_flag && (
-                  <span className="trap-badge" title="Alta presença (pick/ban) com win rate abaixo do esperado">
+                  <span className="trap-badge" title="Alta presença (pick/ban) com win rate abaixo do esperado, ou win rate aparentemente forte com amostra pequena demais pra confiar">
                     Trap
                   </span>
                 )}
