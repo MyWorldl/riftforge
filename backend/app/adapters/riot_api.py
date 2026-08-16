@@ -60,7 +60,9 @@ class RiotApiAdapter:
         region = continent_region or self._continent_region
         return self._riot_client.account.by_riot_id(region, game_name, tag_line)
 
-    def get_account_by_puuid(self, puuid: str, continent_region: str | None = None) -> dict:
+    def get_account_by_puuid(
+        self, puuid: str, continent_region: str | None = None
+    ) -> dict:
         """Account-V1, direção inversa: PUUID → Riot ID. Usado por
         `app/jobs/collect_rankings.py` pra resolver o nome de exibição dos
         jogadores das ligas apex (League-V4 só devolve PUUID, não nome)."""
@@ -87,7 +89,9 @@ class RiotApiAdapter:
         region = continent_region or self._continent_region
         return self._client.match.by_id(region, match_id)
 
-    def get_challenger_league(self, queue: str = "RANKED_SOLO_5x5", platform_region: str | None = None) -> dict:
+    def get_challenger_league(
+        self, queue: str = "RANKED_SOLO_5x5", platform_region: str | None = None
+    ) -> dict:
         """League-V4 apex league — todos os jogadores Desafiante da fila,
         num único payload (LeagueListDTO). Diferente de `get_league_entries`
         (paginado por tier+divisão), aqui a Riot já devolve a liga inteira.
@@ -97,22 +101,43 @@ class RiotApiAdapter:
         region = platform_region or self._platform_region
         return self._client.league.challenger_by_queue(region, queue)
 
-    def get_grandmaster_league(self, queue: str = "RANKED_SOLO_5x5", platform_region: str | None = None) -> dict:
+    def get_grandmaster_league(
+        self, queue: str = "RANKED_SOLO_5x5", platform_region: str | None = None
+    ) -> dict:
         region = platform_region or self._platform_region
         return self._client.league.grandmaster_by_queue(region, queue)
 
-    def get_master_league(self, queue: str = "RANKED_SOLO_5x5", platform_region: str | None = None) -> dict:
+    def get_master_league(
+        self, queue: str = "RANKED_SOLO_5x5", platform_region: str | None = None
+    ) -> dict:
         region = platform_region or self._platform_region
         return self._client.league.masters_by_queue(region, queue)
 
-    def get_summoner_by_puuid(self, puuid: str, platform_region: str | None = None) -> dict:
+    def get_summoner_by_puuid(
+        self, puuid: str, platform_region: str | None = None
+    ) -> dict:
         """Summoner-V4 — nível e ícone de invocador (`summonerLevel`,
         `profileIconId`). Roteado por plataforma (br1/na1/...), igual
         League-V4 — diferente do continente usado por Account-V1/Match-V5."""
         region = platform_region or self._platform_region
         return self._client.summoner.by_puuid(region, puuid)
 
-    def get_league_entries_by_puuid(self, puuid: str, platform_region: str | None = None) -> list[dict]:
+    def get_champion_mastery_top_by_puuid(
+        self, puuid: str, platform_region: str | None = None, count: int | None = None
+    ) -> list[dict]:
+        """Champion Mastery V4 — top N campeões por maestria (nível +
+        pontos), já ordenado pela Riot. Roteado por plataforma
+        (br1/na1/...), igual League-V4/Summoner-V4 — diferente do
+        continente usado por Account-V1/Match-V5. Sprint 4 bloco 3
+        (16/08): estrutura base da aba Maestria, endpoint próprio (`/player/
+        mastery`) sob demanda — não embutido em `/player/lookup`, pra não
+        gastar a chamada em quem nunca abre essa aba."""
+        region = platform_region or self._platform_region
+        return self._client.champion_mastery.top_by_puuid(region, puuid, count=count)
+
+    def get_league_entries_by_puuid(
+        self, puuid: str, platform_region: str | None = None
+    ) -> list[dict]:
         """League-V4 `by-puuid` — todas as filas ranqueadas em que o
         jogador está (uma entrada por fila: solo/duo, flex...). Revisão
         técnica §5.3: usado por "Análise do Jogador" pra detectar o elo

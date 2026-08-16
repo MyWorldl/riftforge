@@ -189,6 +189,11 @@ class Settings(BaseSettings):
     # temporada exposto pela Riot pra recortar com precisão.
     player_rank_snapshot_retention_days: int = 400
 
+    # Maestria (Sprint 4 bloco 3, 16/08) — estrutura base, prioridade
+    # baixa: só top N por maestria, o bastante pra um resumo compacto na
+    # aba, não a lista completa (~170 campeões) que a Riot também expõe.
+    player_mastery_top_n: int = 5
+
 
 @lru_cache
 def get_settings() -> Settings:

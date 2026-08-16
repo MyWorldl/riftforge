@@ -532,6 +532,14 @@ def test_player_lookup_returns_501_without_real_key(client, monkeypatch):
     assert response.status_code == 501
 
 
+def test_player_mastery_returns_501_without_real_key(client, monkeypatch):
+    """Sprint 4 bloco 3: mesmo gate de `/player/lookup` — também chama a
+    Riot por request, então fica atrás de `ensure_riot_proxy_enabled()`."""
+    monkeypatch.setattr(get_settings(), "riot_api_key", "changeme")
+    response = client.get("/player/mastery?game_name=Foo&tag_line=BR1")
+    assert response.status_code == 501
+
+
 def test_catalog_champions_proxies_data_dragon(client, monkeypatch):
     async def fake_version():
         return "16.15.1"

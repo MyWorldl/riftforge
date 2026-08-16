@@ -6,8 +6,9 @@ from app.api.deps import get_db
 from app.core.config import Settings, get_settings
 from app.core.limiter import limiter
 from app.core.riot_gate import ensure_riot_proxy_enabled
+from app.schemas.mastery import ChampionMasterySummary
 from app.schemas.player import PlayerLookupResponse, PlayerRoadmapDeleteResponse
-from app.services import player_service
+from app.services import player_mastery_service, player_service
 from app.services import player_roadmap_service
 
 router = APIRouter(prefix="/player", tags=["player"])
@@ -50,6 +51,31 @@ async def get_player_lookup(
     try:
         return await player_service.lookup_player(
             db, game_name, tag_line, region, elo_tier, settings
+        )
+    except ApiError as exc:
+        raise HTTPException(
+            status_code=exc.response.status_code, detail=str(exc)
+        ) from exc
+
+
+@router.get("/mastery", response_model=list[ChampionMasterySummary])
+@limiter.limit(settings.rate_limit_player_lookup)
+async def get_player_mastery(
+    request: Request,
+    game_name: str,
+    tag_line: str,
+    region: str | None = None,
+    settings: Settings = Depends(get_settings),
+) -> list[dict]:
+    """Aba Maestria (Sprint 4 bloco 3, 16/08) — estrutura base, prioridade
+    baixa. Endpoint próprio em vez de embutido em `/player/lookup`: quem
+    nunca abre essa aba não gasta a chamada extra de Champion Mastery V4.
+    Mesmo gate e mesmo nível de rate limit de `/player/lookup` — também
+    chama a Riot por request."""
+    ensure_riot_proxy_enabled()
+    try:
+        return await player_mastery_service.get_top_mastery(
+            game_name, tag_line, region, settings
         )
     except ApiError as exc:
         raise HTTPException(
