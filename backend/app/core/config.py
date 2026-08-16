@@ -75,8 +75,10 @@ class Settings(BaseSettings):
     rate_limit_player_lookup: str = "5/minute"
     # Quantas partidas recentes o lookup de "Análise do Jogador" busca por
     # clique — sob demanda, ao contrário do resto do pipeline (batch), então
-    # precisa ficar pequeno pra não estourar cota por usuário.
-    player_lookup_recent_matches: int = 10
+    # precisa ficar pequeno pra não estourar cota por usuário. Subido de 10
+    # pra 20 no Sprint 4 (16/08): a nova aba Partidas precisa de histórico
+    # suficiente pra não parecer vazia com só 1-2 jogos do dia.
+    player_lookup_recent_matches: int = 20
 
     # Quantos jogadores por tier por região (Desafiante/Grão-Mestre/Mestre)
     # o job de ranking resolve nome/nível/ícone via Account-V1 + Summoner-V4

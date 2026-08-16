@@ -9,6 +9,7 @@ from app.core.cache import cached
 from app.core.champions import resolve_champion_id
 from app.core.config import Settings, get_settings
 from app.core.logging import get_logger
+from app.jobs.ingest_matches import _extract_match_stats
 from app.repositories.baseline_repository import BaselineRepository
 from app.repositories.champion_score_repository import ChampionScoreRepository
 from app.services.player_roadmap_service import (
@@ -21,6 +22,51 @@ log = get_logger(__name__)
 
 _DEFAULT_ELO_TIER = "GOLD"
 _RANKED_SOLO_QUEUE = "RANKED_SOLO_5x5"
+# Mesmo piso de remake de `game_duration_s > 300` usado nos jobs de
+# agregação (Sprint 0, auditoria 16/08) — abaixo disso, kills/assists/dano
+# de uma partida de 3 minutos não significam nada como "impacto", então
+# nem MVP nem ACE são atribuídos.
+_REMAKE_MAX_DURATION_S = 300
+
+
+def _match_impact(participant: dict) -> float:
+    """Score de impacto por participante, usado só pra ranquear dentro da
+    MESMA partida (não é comparável entre partidas nem substitui o score
+    de campeão da Camada 1). Peso maior pra `kill_participation` e
+    `team_damage_percentage` — a própria Riot já calcula os dois
+    relativos ao time (`participant["challenges"]`), então carregam mais
+    sinal de "quão decisivo" do que K/D/A cru. Fórmula nova (Sprint 4,
+    16/08): sem precedente no projeto pra calibrar contra, registrada
+    como heurística — não um score validado estatisticamente como os das
+    4 camadas do tier list."""
+    challenges = participant.get("challenges") or {}
+    return (
+        participant.get("kills", 0) * 1.0
+        + participant.get("assists", 0) * 0.5
+        - participant.get("deaths", 0) * 1.0
+        + (challenges.get("killParticipation") or 0) * 3.0
+        + (challenges.get("teamDamagePercentage") or 0) * 3.0
+    )
+
+
+def _compute_match_badges(
+    participants: list[dict], game_duration_s: int
+) -> dict[str, str]:
+    """MVP = maior impacto no time vencedor; ACE = maior impacto no time
+    perdedor (convenção OP.GG/u.gg) — mapeados por `puuid` pra o chamador
+    marcar só o jogador buscado. `None` pra ambos numa partida sem os dois
+    lados representados (não deveria acontecer numa 5x5 normal, mas o
+    payload trimado da Riot não garante)."""
+    if game_duration_s <= _REMAKE_MAX_DURATION_S:
+        return {}
+    winners = [p for p in participants if p.get("win")]
+    losers = [p for p in participants if not p.get("win")]
+    badges: dict[str, str] = {}
+    if winners:
+        badges[max(winners, key=_match_impact)["puuid"]] = "mvp"
+    if losers:
+        badges[max(losers, key=_match_impact)["puuid"]] = "ace"
+    return badges
 
 
 def _detect_elo_tier(puuid: str, platform_region: str | None) -> tuple[str, bool]:
@@ -160,6 +206,7 @@ async def lookup_player(
     )
 
     tally: dict[tuple[str, str], dict] = {}
+    partidas: list[dict] = []
     for match in matches:
         participant = next(
             (p for p in match["info"]["participants"] if p["puuid"] == puuid), None
@@ -179,6 +226,28 @@ async def lookup_player(
         entry["kills"] += participant.get("kills", 0)
         entry["deaths"] += participant.get("deaths", 0)
         entry["assists"] += participant.get("assists", 0)
+
+        # Base da aba Partidas/Resumo (Sprint 4, item novo 16/08): mesma
+        # extração de stats que `ingest_matches.py` já usa no pipeline em
+        # lote (`_extract_match_stats`), reaproveitada aqui em vez de
+        # duplicada — o payload ao vivo do Match-V5 já traz tudo que o
+        # backfill de `match_participants` também extrai.
+        game_duration_s = match["info"].get("gameDuration", 0)
+        badges = _compute_match_badges(match["info"]["participants"], game_duration_s)
+        partidas.append(
+            {
+                "match_id": match["metadata"]["matchId"],
+                "champion_id": champion_id,
+                "lane": lane,
+                "win": bool(participant.get("win")),
+                "kills": participant.get("kills", 0),
+                "deaths": participant.get("deaths", 0),
+                "assists": participant.get("assists", 0),
+                "badge": badges.get(puuid),
+                "game_duration_s": game_duration_s,
+                **_extract_match_stats(participant),
+            }
+        )
 
     score_by_key = ChampionScoreRepository(db).list_latest_by_champion_lane_keys(
         set(tally.keys()), elo_tier, score_region
@@ -249,4 +318,5 @@ async def lookup_player(
         "partidas_analisadas": len(matches),
         "campeoes": campeoes,
         "roadmap": roadmap,
+        "partidas": partidas,
     }

@@ -59,6 +59,39 @@ class PlayerRoadmapDeleteResponse(BaseModel):
     deleted: int
 
 
+class PlayerMatchSummary(BaseModel):
+    """Sprint 4 (16/08) — base das abas Resumo/Partidas. `match_id` sai daqui
+    de propósito (não de `Match.match_id` do banco): esta rota nunca grava
+    no pipeline em lote, é busca ao vivo por request.
+
+    `badge`: "mvp" (maior impacto no time vencedor), "ace" (maior impacto no
+    perdedor) ou `None` — ver `player_service._compute_match_badges`. Os
+    demais campos (`total_cs` em diante) vêm de `_extract_match_stats`,
+    reaproveitada de `app/jobs/ingest_matches.py`; podem ser `None` em
+    partidas antigas sem `challenges` no payload da Riot."""
+
+    match_id: str
+    champion_id: str
+    lane: str
+    win: bool
+    kills: int
+    deaths: int
+    assists: int
+    badge: str | None
+    game_duration_s: int
+    total_cs: int | None
+    gold_earned: int | None
+    damage_to_champions: int | None
+    damage_taken: int | None
+    vision_score: int | None
+    double_kills: int | None
+    triple_kills: int | None
+    quadra_kills: int | None
+    penta_kills: int | None
+    kill_participation: float | None
+    team_damage_percentage: float | None
+
+
 class PlayerLookupResponse(BaseModel):
     """`puuid` removido de propósito (revisão técnica §2.1)."""
 
@@ -71,3 +104,4 @@ class PlayerLookupResponse(BaseModel):
     partidas_analisadas: int
     campeoes: list[PlayerChampionSummary]
     roadmap: PlayerRoadmapSummary
+    partidas: list[PlayerMatchSummary]
