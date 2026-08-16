@@ -321,6 +321,45 @@ export interface PlayerRoadmapSummary {
   roadmap_token: string | null
 }
 
+/** Sprint 4 bloco 1 (16/08) — base das abas Resumo/Partidas. `badge`:
+ *  "mvp" (maior impacto no time vencedor), "ace" (maior impacto no
+ *  perdedor) ou null. Campos de `total_cs` em diante podem vir null em
+ *  partidas antigas sem `challenges` no payload da Riot. */
+export interface PlayerMatchSummary {
+  match_id: string
+  champion_id: string
+  lane: string
+  win: boolean
+  kills: number
+  deaths: number
+  assists: number
+  badge: 'mvp' | 'ace' | null
+  game_duration_s: number
+  total_cs: number | null
+  gold_earned: number | null
+  damage_to_champions: number | null
+  damage_taken: number | null
+  vision_score: number | null
+  double_kills: number | null
+  triple_kills: number | null
+  quadra_kills: number | null
+  penta_kills: number | null
+  kill_participation: number | null
+  team_damage_percentage: number | null
+}
+
+/** Sprint 4 bloco 2 (16/08) — um ponto na série "progresso na temporada".
+ *  Lista vazia quando o lookup usou elo_tier explícito (não roda
+ *  League-V4) ou o jogador nunca teve entrada ranqueada em solo/duo. */
+export interface PlayerRankSnapshot {
+  tier: string
+  division: string
+  league_points: number
+  wins: number
+  losses: number
+  captured_at: string
+}
+
 export interface PlayerLookupResult {
   game_name: string
   tag_line: string
@@ -329,6 +368,17 @@ export interface PlayerLookupResult {
   partidas_analisadas: number
   campeoes: PlayerChampionSummary[]
   roadmap: PlayerRoadmapSummary
+  partidas: PlayerMatchSummary[]
+  progresso_temporada: PlayerRankSnapshot[]
+}
+
+/** Sprint 4 bloco 3 (16/08) — estrutura base da aba Maestria, endpoint
+ *  próprio (`GET /player/mastery`, sob demanda, não embutido no lookup). */
+export interface ChampionMasterySummary {
+  champion_id: string
+  champion_level: number
+  champion_points: number
+  last_play_time: number
 }
 
 export interface PlayerLookupFilters {
@@ -582,6 +632,17 @@ export async function fetchPlayerLookup(filters: PlayerLookupFilters): Promise<P
   if (filters.eloTier) params.set('elo_tier', filters.eloTier)
 
   return request(`/player/lookup?${params}`, 'Falha ao buscar jogador')
+}
+
+export async function fetchPlayerMastery(
+  filters: PlayerLookupFilters,
+): Promise<ChampionMasterySummary[]> {
+  const params = new URLSearchParams({
+    region: filters.region,
+    game_name: filters.gameName,
+    tag_line: filters.tagLine,
+  })
+  return request(`/player/mastery?${params}`, 'Falha ao buscar maestria')
 }
 
 export async function deletePlayerRoadmap(

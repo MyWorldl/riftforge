@@ -2842,3 +2842,140 @@
   font-size: 12px;
   color: var(--text);
 }
+
+/* Sprint 4 bloco 4 (16/08): abas Resumo/Campeões/Maestria/Estilo/Partidas
+   em Análise do Jogador — reaproveita `.detail-tabs`/`.detail-tab`/
+   `.detail-tab-active`/`.detail-tab-panel` já usados em
+   `ChampionDetailPage.tsx` (mesma linguagem visual, sem CSS novo pra
+   barra de abas em si). */
+.player-summary-card {
+  padding: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--code-bg);
+  margin-bottom: var(--space-4);
+}
+
+.player-summary-card h2 {
+  margin-bottom: 4px;
+}
+
+.champion-portrait {
+  border-radius: 4px;
+  vertical-align: middle;
+}
+
+/* MVP (verde, "bom" — reaproveita --pos) e ACE (ciano, distinto mas não
+   negativo — reaproveita --accent): ACE é o melhor do time PERDEDOR,
+   então não faz sentido usar a mesma cor negativa de --neg aqui. */
+.match-badge {
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  cursor: help;
+}
+
+.match-badge-mvp {
+  color: var(--pos);
+  background: var(--pos-bg);
+  border: 1px solid var(--pos-border);
+}
+
+.match-badge-ace {
+  color: var(--accent);
+  background: var(--accent-bg);
+  border: 1px solid var(--accent-border);
+}
+
+.player-comparator-pickers {
+  display: flex;
+  gap: var(--space-3);
+  margin: var(--space-3) 0;
+}
+
+.mastery-list,
+.match-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mastery-item,
+.match-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--code-bg);
+}
+
+.match-item-win {
+  border-left: 3px solid var(--pos);
+}
+
+.match-item-loss {
+  border-left: 3px solid var(--neg);
+}
+
+.mastery-item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.match-item-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.match-item-champion {
+  font-weight: 700;
+  color: var(--text-h);
+}
+
+.match-item-kda {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.match-item-stats {
+  white-space: nowrap;
+}
+
+.style-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--space-3);
+}
+
+.style-stat-grid .champion-detail-stat {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--code-bg);
+}
+
+.style-stat-caption {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 767px) {
+  .match-item-stats {
+    display: none;
+  }
+}
