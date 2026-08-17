@@ -33,7 +33,9 @@ class DataDragonAdapter:
 
     async def _get_json(self, url: str) -> dict | list:
         last_error: Exception | None = None
-        async with httpx.AsyncClient(base_url=self._base_url, timeout=_TIMEOUT) as client:
+        async with httpx.AsyncClient(
+            base_url=self._base_url, timeout=_TIMEOUT
+        ) as client:
             for attempt in range(_RETRIES):
                 try:
                     response = await client.get(url)
@@ -47,6 +49,12 @@ class DataDragonAdapter:
                     last_error = exc
                 if attempt < _RETRIES - 1:
                     await asyncio.sleep(_RETRY_BACKOFF_S * (attempt + 1))
+        # Sprint 6 (mypy): inalcançável com `last_error` ainda `None` — o
+        # loop só termina sem `return` se todas as `_RETRIES` iterações
+        # passaram por um `except` que atribui `last_error`. `assert` só
+        # pra provar isso ao type checker, não é uma checagem de verdade
+        # nova.
+        assert last_error is not None
         raise last_error
 
     async def get_versions(self) -> list[str]:
@@ -66,7 +74,9 @@ class DataDragonAdapter:
         data = await self._get_json(f"/cdn/{version}/data/{locale}/champion.json")
         return data["data"]
 
-    async def get_champion_detail(self, version: str, champion_id: str, locale: str = "en_US") -> dict:
+    async def get_champion_detail(
+        self, version: str, champion_id: str, locale: str = "en_US"
+    ) -> dict:
         """Per-champion endpoint — the only one with full `spells[].range` and
         `info` (Riot's own 0-10 attack/defense/magic rating). The summary
         endpoint (`get_champions`) omits some of this detail.
@@ -77,10 +87,14 @@ class DataDragonAdapter:
         ou similar escapar do segmento `champion_id` da URL mesmo se essa
         validação mudar no futuro."""
         safe_champion_id = quote(champion_id, safe="")
-        data = await self._get_json(f"/cdn/{version}/data/{locale}/champion/{safe_champion_id}.json")
+        data = await self._get_json(
+            f"/cdn/{version}/data/{locale}/champion/{safe_champion_id}.json"
+        )
         return data["data"][champion_id]
 
-    async def get_champion_name_by_riot_id(self, version: str, locale: str = "en_US") -> dict[int, str]:
+    async def get_champion_name_by_riot_id(
+        self, version: str, locale: str = "en_US"
+    ) -> dict[int, str]:
         """Maps Match-V5's numeric `championId` to Data Dragon's stable `id`
         string — needed because `championName` in match payloads sometimes
         diverges from ddragon's `id` (e.g. "Kai'Sa" vs "Kaisa")."""

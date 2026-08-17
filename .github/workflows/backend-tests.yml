@@ -24,10 +24,7 @@ permissions:
 
 jobs:
   # Revisão técnica §4.4: `ruff` nunca rodava em CI, só quem lembrasse de
-  # rodar localmente pegava um erro de lint antes do merge. `mypy` fica de
-  # fora de propósito — o backend não tem anotação de tipo suficiente pra
-  # isso não virar uma lista enorme de erros pré-existentes; registrado como
-  # item futuro, não fingido como "feito" aqui.
+  # rodar localmente pegava um erro de lint antes do merge.
   lint:
     runs-on: ubuntu-latest
     defaults:
@@ -52,6 +49,18 @@ jobs:
       # com feedback imediato a cada push.
       - name: Audit de dependências (pip-audit)
         run: pip-audit -r requirements.txt
+
+      # Sprint 6 (16/08): item que a revisão técnica §4.4 já tinha
+      # registrado como "futuro, não fingido como feito" — 29 erros
+      # pré-existentes espalhados em 15 arquivos (Row do SQLAlchemy,
+      # Optional não tratado) não bloqueiam por decisão do usuário
+      # (corrigir os 29 seria escopo bem maior que "adicionar ao CI",
+      # tocando código de agregação já em produção sem necessidade). Roda
+      # e reporta sempre — código novo que piorar o baseline aparece no
+      # log, mesmo sem quebrar o build.
+      - name: Checar tipos (mypy, não bloqueia)
+        continue-on-error: true
+        run: mypy app
 
   # Revisão técnica §1.5/§2.7: os testes de rede real (Riot API/Data
   # Dragon, marcados `integration`) saíram do job de todo push — deixavam o

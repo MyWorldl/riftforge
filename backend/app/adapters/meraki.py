@@ -57,4 +57,6 @@ class MerakiAdapter:
                     last_error = exc
                 if attempt < _RETRIES - 1:
                     await asyncio.sleep(_RETRY_BACKOFF_S * (attempt + 1))
+        # Sprint 6 (mypy): mesma prova de inalcançável de DataDragonAdapter.
+        assert last_error is not None
         raise last_error
