@@ -1,3 +1,10 @@
+/* ANCORA-TEMA-CLARO (Revisão 16/08 §7.4): valores claros, fonte 1 de 2 —
+   `:root[data-theme='light']` abaixo repete os mesmos ~22 tokens pra
+   quando o usuário escolhe o tema explicitamente em vez de seguir o
+   sistema. `@import`/nesting não funcionam pra combinar os dois seletores
+   num só sem pré-processador (fora de escopo agora) — ao mudar um valor
+   aqui, mude o par lá embaixo também, ou os dois caminhos (automático vs.
+   escolhido) divergem silenciosamente. */
 :root {
   --text: #6b6375;
   --text-h: #08060d;
@@ -181,6 +188,10 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* ANCORA-TEMA-ESCURO (Revisão 16/08 §7.4): valores escuros, fonte 1 de 2 —
+   `:root[data-theme='dark']` mais abaixo repete os mesmos ~22 tokens pra
+   quando o usuário escolhe o tema explicitamente. Mesma dívida do par
+   claro acima (ANCORA-TEMA-CLARO): mude os dois blocos juntos. */
 @media (prefers-color-scheme: dark) {
   :root {
     --text: #9ca3af;
@@ -233,7 +244,11 @@
    define um dos dois atributos antes da primeira pintura, então estas
    regras (seletor com atributo, mais específico que o `:root` sozinho
    acima) vencem o `prefers-color-scheme` sempre que o usuário escolheu
-   um tema explicitamente, em vez de só seguir o sistema. */
+   um tema explicitamente, em vez de só seguir o sistema.
+
+   ANCORA-TEMA-ESCURO, fonte 2 de 2 (Revisão 16/08 §7.4) — repete os
+   mesmos tokens do bloco `@media (prefers-color-scheme: dark)` acima.
+   Mude os dois juntos. */
 :root[data-theme='dark'] {
   --text: #9ca3af;
   --text-h: #f3f4f6;
@@ -266,6 +281,9 @@
   --podium-bronze: #b5651d;
 }
 
+/* ANCORA-TEMA-CLARO, fonte 2 de 2 (Revisão 16/08 §7.4) — repete os
+   mesmos tokens do bloco `:root` base no topo do arquivo. Mude os dois
+   juntos. */
 :root[data-theme='light'] {
   --text: #6b6375;
   --text-h: #08060d;
