@@ -122,18 +122,24 @@ class RiotApiAdapter:
         region = platform_region or self._platform_region
         return self._client.summoner.by_puuid(region, puuid)
 
-    def get_champion_mastery_top_by_puuid(
-        self, puuid: str, platform_region: str | None = None, count: int | None = None
+    def get_champion_mastery_all_by_puuid(
+        self, puuid: str, platform_region: str | None = None
     ) -> list[dict]:
-        """Champion Mastery V4 — top N campeões por maestria (nível +
-        pontos), já ordenado pela Riot. Roteado por plataforma
-        (br1/na1/...), igual League-V4/Summoner-V4 — diferente do
-        continente usado por Account-V1/Match-V5. Sprint 4 bloco 3
-        (16/08): estrutura base da aba Maestria, endpoint próprio (`/player/
-        mastery`) sob demanda — não embutido em `/player/lookup`, pra não
-        gastar a chamada em quem nunca abre essa aba."""
+        """Champion Mastery V4 — TODOS os campeões com maestria (nível +
+        pontos), já ordenado pela Riot (maior pontuação primeiro). Roteado
+        por plataforma (br1/na1/...), igual League-V4/Summoner-V4 —
+        diferente do continente usado por Account-V1/Match-V5.
+
+        Sprint 4 bloco 3 (16/08): estrutura base da aba Maestria, endpoint
+        próprio (`/player/mastery`) sob demanda — não embutido em
+        `/player/lookup`, pra não gastar a chamada em quem nunca abre essa
+        aba. Trocado de `top_by_puuid` (só top N) pra este método completo
+        no Sprint do selo Monochampion (16/08): o selo precisa do total de
+        pontos em TODOS os campeões (denominador da concentração), não só
+        dos primeiros N — o top N pra exibição na aba continua vindo do
+        mesmo payload, fatiado no serviço, sem chamada extra à Riot."""
         region = platform_region or self._platform_region
-        return self._client.champion_mastery.top_by_puuid(region, puuid, count=count)
+        return self._client.champion_mastery.by_puuid(region, puuid)
 
     def get_league_entries_by_puuid(
         self, puuid: str, platform_region: str | None = None

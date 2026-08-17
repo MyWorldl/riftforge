@@ -414,6 +414,23 @@ export interface ChampionMasterySummary {
   last_play_time: number
 }
 
+/** Selo "Monochampion" (16/08) — calculado sobre histórico retido (até 30
+ *  dias, chaveado por PUUID no backend, nunca exposto aqui). `ativo` exige
+ *  amostra mínima E concentração média acima do limiar; os números vêm
+ *  preenchidos mesmo com `ativo=false` — mesmo espírito do `tier_provisorio`
+ *  do tier list, não esconde o dado, só avisa que ainda não é confiável. */
+export interface MonochampionInfo {
+  champion_id: string
+  concentracao_media: number
+  amostras: number
+  ativo: boolean
+}
+
+export interface PlayerMasteryResult {
+  maestrias: ChampionMasterySummary[]
+  monochampion: MonochampionInfo | null
+}
+
 export interface PlayerLookupFilters {
   region: string
   gameName: string
@@ -669,7 +686,7 @@ export async function fetchPlayerLookup(filters: PlayerLookupFilters): Promise<P
 
 export async function fetchPlayerMastery(
   filters: PlayerLookupFilters,
-): Promise<ChampionMasterySummary[]> {
+): Promise<PlayerMasteryResult> {
   const params = new URLSearchParams({
     region: filters.region,
     game_name: filters.gameName,

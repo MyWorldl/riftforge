@@ -194,6 +194,23 @@ class Settings(BaseSettings):
     # aba, não a lista completa (~170 campeões) que a Riot também expõe.
     player_mastery_top_n: int = 5
 
+    # Selo "Monochampion" (16/08): diferente de tudo mais no projeto, o
+    # histórico é chaveado por PUUID (não Riot ID) — precisa sobreviver a
+    # troca de nome#tag. Decisão do usuário: retenção própria de 30 dias
+    # pra esse vínculo (mais curta que os 42 dias de `puuid_retention_days`,
+    # propósito diferente — ver emenda em `06_SEGURANCA_PRIVACIDADE.md` §7).
+    monochampion_puuid_retention_days: int = 30
+    # EM ABERTO, sem calibração contra dado real ainda: fração da maestria
+    # total num único campeão pra considerar "concentração alta". 0.5 =
+    # metade de toda a maestria acumulada (todos os campeões já jogados)
+    # num campeão só — julgamento inicial, não validado.
+    monochampion_concentration_threshold: float = 0.5
+    # Mesmo espírito de `baseline_min_champions`/`roadmap_min_matches`:
+    # piso de amostra antes de acender o selo — sem isso, a primeira busca
+    # de um jogador (1 snapshot só) já poderia mostrar o selo com base
+    # num dia só, exatamente o problema que a retenção existe pra evitar.
+    monochampion_min_snapshots: int = 3
+
 
 @lru_cache
 def get_settings() -> Settings:

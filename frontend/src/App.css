@@ -2932,6 +2932,28 @@
   flex: 1;
 }
 
+/* Selo Monochampion: "ativo" reaproveita --pos (mesmo verde de MVP,
+   sinal positivo); "acumulando" fica neutro (--border/--code-bg, mesmo
+   visual do .mastery-item comum) pra não parecer um alerta. */
+.monochampion-badge {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  border-radius: var(--radius-sm);
+}
+
+.monochampion-badge-ativo {
+  border: 1px solid var(--pos-border);
+  background: var(--pos-bg);
+}
+
+.monochampion-badge-acumulando {
+  border: 1px dashed var(--border);
+  background: var(--code-bg);
+}
+
 .match-item-main {
   display: flex;
   flex-direction: column;

@@ -6,7 +6,7 @@ from app.api.deps import get_db
 from app.core.config import Settings, get_settings
 from app.core.limiter import limiter
 from app.core.riot_gate import ensure_riot_proxy_enabled
-from app.schemas.mastery import ChampionMasterySummary
+from app.schemas.mastery import PlayerMasteryResponse
 from app.schemas.player import PlayerLookupResponse, PlayerRoadmapDeleteResponse
 from app.services import player_mastery_service, player_service
 from app.services import player_roadmap_service
@@ -58,24 +58,30 @@ async def get_player_lookup(
         ) from exc
 
 
-@router.get("/mastery", response_model=list[ChampionMasterySummary])
+@router.get("/mastery", response_model=PlayerMasteryResponse)
 @limiter.limit(settings.rate_limit_player_lookup)
 async def get_player_mastery(
     request: Request,
     game_name: str,
     tag_line: str,
     region: str | None = None,
+    db: Session = Depends(get_db),
     settings: Settings = Depends(get_settings),
-) -> list[dict]:
+) -> dict:
     """Aba Maestria (Sprint 4 bloco 3, 16/08) — estrutura base, prioridade
     baixa. Endpoint próprio em vez de embutido em `/player/lookup`: quem
     nunca abre essa aba não gasta a chamada extra de Champion Mastery V4.
     Mesmo gate e mesmo nível de rate limit de `/player/lookup` — também
-    chama a Riot por request."""
+    chama a Riot por request.
+
+    Sprint do selo Monochampion (16/08): ganhou `db` — grava/lê o
+    histórico de concentração de maestria (`PlayerChampionMasterySnapshot`,
+    chaveado por PUUID, retenção própria de 30 dias — ver emenda em
+    `06_SEGURANCA_PRIVACIDADE.md` §7)."""
     ensure_riot_proxy_enabled()
     try:
         return await player_mastery_service.get_top_mastery(
-            game_name, tag_line, region, settings
+            db, game_name, tag_line, region, settings
         )
     except ApiError as exc:
         raise HTTPException(

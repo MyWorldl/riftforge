@@ -7,10 +7,10 @@ import {
   fetchPlayerLookup,
   fetchPlayerMastery,
   HttpError,
-  type ChampionMasterySummary,
   type ChampionMeta,
   type PlayerChampionSummary,
   type PlayerLookupResult,
+  type PlayerMasteryResult,
   type PlayerMatchSummary,
   type PlayerRoadmapStep,
 } from '../api/client'
@@ -453,7 +453,7 @@ function MaestriaTab({
   championsMeta: Record<string, ChampionMeta> | null
   ddragonPatch: string
 }) {
-  const [mastery, setMastery] = useState<ChampionMasterySummary[] | null>(null)
+  const [mastery, setMastery] = useState<PlayerMasteryResult | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -464,21 +464,60 @@ function MaestriaTab({
 
   if (error) return <p className="error">Não foi possível buscar maestria: {error}</p>
   if (!mastery) return <p className="filters-loading">Buscando maestria...</p>
-  if (mastery.length === 0) return <p className="empty-state">Sem dado de maestria pra esse jogador.</p>
+  if (mastery.maestrias.length === 0) return <p className="empty-state">Sem dado de maestria pra esse jogador.</p>
 
   return (
-    <ul className="mastery-list">
-      {mastery.map((m) => (
-        <li className="mastery-item" key={m.champion_id}>
-          <ChampionPortrait championId={m.champion_id} championsMeta={championsMeta} ddragonPatch={ddragonPatch} size={40} />
-          <div className="mastery-item-info">
-            <strong>{championName(m.champion_id, championsMeta)}</strong>
-            <span className="explain-sub">Nível {m.champion_level} · {m.champion_points.toLocaleString('pt-BR')} pts</span>
-          </div>
-          <span className="explain-sub">Última partida: {formatEpochMs(m.last_play_time)}</span>
-        </li>
-      ))}
-    </ul>
+    <>
+      <MonochampionBadge info={mastery.monochampion} championsMeta={championsMeta} ddragonPatch={ddragonPatch} />
+      <ul className="mastery-list">
+        {mastery.maestrias.map((m) => (
+          <li className="mastery-item" key={m.champion_id}>
+            <ChampionPortrait championId={m.champion_id} championsMeta={championsMeta} ddragonPatch={ddragonPatch} size={40} />
+            <div className="mastery-item-info">
+              <strong>{championName(m.champion_id, championsMeta)}</strong>
+              <span className="explain-sub">Nível {m.champion_level} · {m.champion_points.toLocaleString('pt-BR')} pts</span>
+            </div>
+            <span className="explain-sub">Última partida: {formatEpochMs(m.last_play_time)}</span>
+          </li>
+        ))}
+      </ul>
+    </>
+  )
+}
+
+/** Selo "Monochampion" (16/08): calculado sobre histórico retido (até 30
+ *  dias, ver `_determine_monochampion`). `ativo` exige amostra mínima E
+ *  concentração média acima do limiar — antes disso mostra estado
+ *  "acumulando" em vez de esconder o dado (mesmo espírito do
+ *  `tier_provisorio` em Campeões). `null` só na primeiríssima busca desse
+ *  jogador, quando ainda não existe snapshot nenhum. */
+function MonochampionBadge({
+  info,
+  championsMeta,
+  ddragonPatch,
+}: {
+  info: PlayerMasteryResult['monochampion']
+  championsMeta: Record<string, ChampionMeta> | null
+  ddragonPatch: string
+}) {
+  if (!info) return null
+  const pct = Math.round(info.concentracao_media * 100)
+
+  return (
+    <div className={`monochampion-badge ${info.ativo ? 'monochampion-badge-ativo' : 'monochampion-badge-acumulando'}`}>
+      <ChampionPortrait championId={info.champion_id} championsMeta={championsMeta} ddragonPatch={ddragonPatch} size={32} />
+      <div className="mastery-item-info">
+        <strong>
+          {info.ativo ? 'Monochampion' : 'Monochampion (acumulando histórico)'}
+          {': '}
+          {championName(info.champion_id, championsMeta)}
+        </strong>
+        <span className="explain-sub">
+          {pct}% de concentração média · {info.amostras} {info.amostras === 1 ? 'dia retido' : 'dias retidos'}
+          {!info.ativo && ' · selo acende com histórico suficiente'}
+        </span>
+      </div>
+    </div>
   )
 }
 

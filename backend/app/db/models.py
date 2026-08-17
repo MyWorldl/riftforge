@@ -833,3 +833,50 @@ class PlayerRankSnapshot(Base):
             "captured_at",
         ),
     )
+
+
+class PlayerChampionMasterySnapshot(Base):
+    """Selo "Monochampion" (16/08) — histórico de concentração de maestria
+    num único campeão, base do selo mostrado na aba Maestria da Análise do
+    Jogador. Decisão do usuário: usa histórico persistido, não só o
+    cálculo do momento — um dia isolado (sessão ruim, pico de partidas de
+    um campeão fora do padrão) não pode fazer o selo aparecer/sumir sozinho.
+
+    ÚNICA tabela do projeto chaveada por `puuid`, não por Riot ID — todo
+    o resto (`player_roadmap_steps`, `player_rank_snapshots`) chaveia por
+    `game_name_key`/`tag_line_key`/`region` de propósito, pra não reter
+    PUUID. Aqui é o contrário por necessidade: o selo precisa sobreviver a
+    uma troca de nome#tag (Riot ID é mutável; PUUID é o identificador
+    estável), então chavear por Riot ID perderia o histórico exatamente no
+    caso que mais importa rastrear. Decisão do usuário (2026-08-16):
+    retenção própria de 30 dias pra esse vínculo — mais curta que os 42
+    dias de `puuid_retention_days` (propósito diferente: aquele existe pra
+    viabilizar a expansão "bola de neve" da ingestão, não pra um selo de
+    perfil). Ver emenda em `06_SEGURANCA_PRIVACIDADE.md` §7. Janela
+    rolante, mesmo padrão de `PlayerRankSnapshot` — sem exclusão manual
+    própria, o prazo curto e automático já cobre o caso de uso.
+
+    `concentracao` = pontos de maestria do campeão líder / soma de pontos
+    de maestria de TODOS os campeões do jogador (0-1). Uma linha por dia
+    civil (UTC) por PUUID é o teto."""
+
+    __tablename__ = "player_champion_mastery_snapshots"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    puuid: Mapped[str]
+    champion_id: Mapped[str]
+    concentracao: Mapped[float]
+    pontos_campeao_lider: Mapped[int]
+    pontos_totais: Mapped[int]
+
+    captured_at: Mapped[datetime] = mapped_column(
+        default=lambda: datetime.now(timezone.utc)
+    )
+
+    __table_args__ = (
+        Index(
+            "ix_player_champion_mastery_snapshots_puuid",
+            "puuid",
+            "captured_at",
+        ),
+    )
