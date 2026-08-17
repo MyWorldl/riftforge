@@ -1,0 +1,21 @@
+# Sprint 6 (auditoria 16/08, item de dívida estrutural): sem isso, 39
+# arquivos de texto já tinham CRLF gravado direto no blob do git (não só
+# no working tree — Windows + core.autocrlf sem normalização de repo).
+# Ruído de line-ending mistura com mudança de conteúdo real no diff,
+# escondendo alteração de verdade em arquivo sensível (ex: PUUID, chave)
+# atrás de "todo o arquivo mudou". `text=auto eol=lf` normaliza todo
+# texto pra LF no repositório, independente do sistema operacional de
+# quem commita — o working tree de quem usa Windows continua recebendo
+# CRLF ao fazer checkout, se o `core.autocrlf` local pedir isso.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+*.svg binary

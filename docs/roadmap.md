@@ -208,8 +208,8 @@ incidente da rodada anterior).
 **Rubrica manual de Kit** (backlog 5.1): lote piloto de 10 campeões
 tagueados nos eixos CC e Mobilidade (os dois que a v1 automática do Kit
 deixa `None` — Data Dragon não expõe esse sinal, ver
-`Core/13_ESTRATEGIA_DADOS_KIT.md`), seguindo a rúbrica de âncoras 0-10 de
-`Core/14_RUBRICA_KIT_CAMPEOES.md`. Notas fundamentadas nas descrições
+`Core/Estrutura_roadmap/13_ESTRATEGIA_DADOS_KIT.md`), seguindo a rúbrica de âncoras 0-10 de
+`Core/Estrutura_roadmap/14_RUBRICA_KIT_CAMPEOES.md`. Notas fundamentadas nas descrições
 reais de habilidade do Data Dragon (não só conhecimento prévio — o jogo
 já teve patches depois do corte de conhecimento do modelo). Dados em
 `backend/data/kit_manual_tags.json` (versionado em texto, não numa
@@ -239,7 +239,7 @@ Suite de testes: 71 → 72.
 ## Execução da revisão técnica externa (2026-08-02)
 
 Pedido do usuário: plano de ação para **todos** os pontos das seções 0-5
-de `Core/Revisao_2026-08-02_RiftForge.md` (documento de auditoria
+de `Core/Revisao do projeto/Revisao_2026-08-02_RiftForge.md` (documento de auditoria
 automática, baseline de 61 testes) e execução de todos — seções 6
 (gaps de feature nova) e 7 (design/acessibilidade) ficaram fora de
 escopo por instrução explícita dele. ~25 achados, divididos em 7 lotes
@@ -331,7 +331,7 @@ completo — citado junto no pedido original como item de backlog — é uma
 migração de arquitetura (nenhuma das 9 tabelas do pipeline de score tem
 coluna de região), não um ajuste de UI; ficou de fora deste lote, a
 decidir como plano próprio depois. O resto das seções 6-7 do documento
-de revisão (`Core/Revisao_2026-08-02_RiftForge.md`) foi entregue em 5
+de revisão (`Core/Revisao do projeto/Revisao_2026-08-02_RiftForge.md`) foi entregue em 5
 lotes pequenos e independentes, cada um verificado e pushado em
 separado — detalhe completo em `17_ESTADO_IMPLEMENTADO.md` §rodada 25:
 
@@ -402,7 +402,7 @@ confirmação explícita do usuário antes de cada push.
 
 ## Recomendação de Campeão v0+v1 (2026-08-09)
 
-`Core/Revisao_2026-08-02_RiftForge.md` §6 (Tier 2) listava "recomendação
+`Core/Revisao do projeto/Revisao_2026-08-02_RiftForge.md` §6 (Tier 2) listava "recomendação
 de campeão" como item de alto valor nunca construído, com um caminho
 v0→v1→v2. **v2 (contrapick) já tinha saído de escopo antes deste plano
 começar** — já existe desde a rodada 21 como a aba Matchups da página de
@@ -476,3 +476,26 @@ exercitando criação → conclusão → exclusão direto no Postgres (não só 
 SQLite dos testes) e uma chamada HTTP real ao `/player/lookup`. Fluxo
 completo de exclusão testado também no navegador, ponta a ponta,
 confirmando remoção real no banco depois.
+
+## Rodadas 29-30 (2026-08-10 a 2026-08-16)
+
+33 commits: Sprints A/B/C da revisão de 09/08 (os 3 itens 🔴 fechados,
+incluindo as 11 CVEs), repaginação visual "Hextech Violeta", e Patch Notes
+como maior feature do frontend (19 dos 33 commits; `PatchNotesPage.tsx` com
+1.153 linhas). Onze colunas novas em `match_participants` (CS, ouro, dano,
+visão, multikills, KP) via backfill sobre `raw_payload`, ainda sem tela.
+Suíte em 151 testes. Detalhe em
+`Core/Estrutura_roadmap/17_ESTADO_IMPLEMENTADO.md` §rodada 29-30.
+
+**Dois documentos novos, e a diferença entre eles importa:**
+
+- `Core/Revisao do projeto/Revisao_2026-08-16_RiftForge.md` — auditoria do
+  código. O que está quebrado hoje, com arquivo e linha.
+- `Core/Analise unificada/Analise_2026-08-16_Blueprint_x_Revisao.md` —
+  análise cruzada de um blueprint externo contra o código. Contém os três
+  problemas de **qualidade do dado** que auditoria de código não pega:
+  a coleta cobre só o elo Ouro, remakes entram no win rate, e a Camada Kit
+  cobre 10 de ~170 campeões.
+
+⚠️ **Nenhum dos dois é decisão.** As recomendações só viram plano quando
+promovidas para um documento numerado de `Core/Estrutura_roadmap/`.
