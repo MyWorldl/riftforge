@@ -27,22 +27,13 @@ const BEST_PLAYERS_REGION = 'br1'
 /** Sprint C item C3 (repaginação, pesquisa de design §2): mesmo estilo de
  *  ícone (stroke 16x16) já usado em `AppLayout.tsx` — duplicado aqui em
  *  vez de exportado de lá, mesmo padrão de duplicação local que
- *  `RecommendPage.tsx`/`ChampionsPage.tsx` já seguem pra ícones/constantes
- *  pequenas. `IconSwords` é novo: Matchups não tem ícone próprio ainda
- *  porque não fica na sidebar principal (só acessível via campeão). */
+ *  `ChampionsPage.tsx` já segue pra ícones/constantes pequenas.
+ *  `IconSwords` é novo: Matchups não tem ícone próprio ainda porque não
+ *  fica na sidebar principal (só acessível via campeão). */
 function IconShield() {
   return (
     <svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true">
       <path d="M8 1.5 13 3.5v4c0 3.5-2.2 5.8-5 7-2.8-1.2-5-3.5-5-7v-4L8 1.5Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" fill="none" />
-    </svg>
-  )
-}
-
-function IconWand() {
-  return (
-    <svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true">
-      <path d="M2 14 10.5 5.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-      <path d="M12.5 1.5v2M15 3h-2M11.5 6.5v1.5M14 8h-1.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
     </svg>
   )
 }
@@ -77,7 +68,6 @@ function IconUser() {
 
 const SHORTCUTS = [
   { to: '/campeoes', label: 'Campeões', description: 'Placar de força por elo, rota e patch.', icon: <IconShield /> },
-  { to: '/recomendacao', label: 'Recomendação', description: 'Diz sua rota e elo, a gente ranqueia.', icon: <IconWand /> },
   { to: '/classificacoes', label: 'Classificações', description: 'Top jogadores por região e tier apex.', icon: <IconTrophy /> },
   { to: '/matchups', label: 'Matchups', description: 'Confrontos favoráveis e desfavoráveis por campeão.', icon: <IconSwords /> },
   { to: '/jogador', label: 'Análise do Jogador', description: 'Seu histórico recente e roadmap de progressão.', icon: <IconUser /> },

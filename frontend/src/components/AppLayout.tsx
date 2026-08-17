@@ -30,15 +30,6 @@ function IconTrophy() {
   )
 }
 
-function IconWand() {
-  return (
-    <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
-      <path d="M2 14 10.5 5.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-      <path d="M12.5 1.5v2M15 3h-2M11.5 6.5v1.5M14 8h-1.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-    </svg>
-  )
-}
-
 function IconUser() {
   return (
     <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
@@ -60,7 +51,6 @@ function IconFileText() {
 const NAV_ITEMS: { to: string; label: string; icon: ReactNode; end?: boolean }[] = [
   { to: '/', label: 'Home', icon: <IconHome />, end: true },
   { to: '/campeoes', label: 'Campeões', icon: <IconShield /> },
-  { to: '/recomendacao', label: 'Recomendação', icon: <IconWand /> },
   { to: '/classificacoes', label: 'Classificações', icon: <IconTrophy /> },
   { to: '/jogador', label: 'Análise do Jogador', icon: <IconUser /> },
   { to: '/patch-notes', label: 'Patch Notes', icon: <IconFileText /> },

@@ -1,7 +1,7 @@
 import { useSearchParams } from 'react-router-dom'
 
 /** Sprint 4 item 18 (revisão técnica): filtros persistidos na URL —
- *  ChampionsPage/RankingsPage/RecommendPage passam a ler/escrever
+ *  ChampionsPage/RankingsPage passam a ler/escrever
  *  região/elo/rota/patch/busca via `useSearchParams`, mesmo padrão já
  *  usado em `ChampionDetailPage.tsx`. Sem isso, não dava pra compartilhar
  *  um link filtrado nem usar o botão voltar do navegador pra desfazer um
