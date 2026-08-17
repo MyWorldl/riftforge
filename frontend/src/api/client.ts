@@ -38,6 +38,27 @@ const REQUEST_TIMEOUT_MS = 10_000
  *  rejeitada é removida do cache), pra uma falha transitória não grudar. */
 const _getCache = new Map<string, Promise<unknown>>()
 
+/** Sprint 6 (16/08, dívida estrutural): dedupe de request em voo — sem
+ *  isso, chamar a mesma URL duas vezes antes da primeira resposta voltar
+ *  (visto ao vivo: React StrictMode roda o `useEffect` de novo antes da
+ *  primeira resposta chegar) disparava duas requisições HTTP idênticas.
+ *  Diferente de `_getCache` acima: NUNCA persiste — a entrada some assim
+ *  que a promise resolve ou rejeita (sucesso ou falha), então a próxima
+ *  chamada sempre busca de novo. Não é cache de dado (que precisaria
+ *  invalidar por filtro/TTL), é só evitar duas chamadas simultâneas pro
+ *  mesmo request.
+ *
+ *  Escopo deliberadamente restrito, pra não arriscar as 5 chamadas que já
+ *  usam `signal` próprio (`fetchChampionScores`/`fetchRankings`/
+ *  `fetchPatchNotes`/`fetchMetaCoverage`/`fetchKitProfile` — telas com
+ *  filtro, onde cancelar a chamada anterior ao trocar filtro rápido já é
+ *  o comportamento certo e testado): só entra em dedupe request GET SEM
+ *  `signal` externo — nesses casos, um caller cancelando não pode
+ *  derrubar a resposta que outro caller ainda espera, e a forma mais
+ *  simples de garantir isso é nem oferecer dedupe onde existe essa
+ *  possibilidade. */
+const _inFlightGet = new Map<string, Promise<unknown>>()
+
 interface RequestOptions {
   signal?: AbortSignal
   cacheKey?: string
@@ -50,6 +71,14 @@ async function request<T>(path: string, errorLabel: string, options: RequestOpti
   if (cacheKey) {
     const cached = _getCache.get(cacheKey)
     if (cached) return cached as Promise<T>
+  }
+
+  // Dedupe só quando não há `signal` externo — ver comentário de
+  // `_inFlightGet` acima pro porquê disso ser condição, não detalhe.
+  const dedupeKey = !signal && method === 'GET' ? `GET ${path}` : null
+  if (dedupeKey) {
+    const inFlight = _inFlightGet.get(dedupeKey)
+    if (inFlight) return inFlight as Promise<T>
   }
 
   const timeoutSignal = AbortSignal.timeout(REQUEST_TIMEOUT_MS)
@@ -67,6 +96,10 @@ async function request<T>(path: string, errorLabel: string, options: RequestOpti
   if (cacheKey) {
     _getCache.set(cacheKey, promise)
     promise.catch(() => _getCache.delete(cacheKey))
+  }
+  if (dedupeKey) {
+    _inFlightGet.set(dedupeKey, promise)
+    promise.catch(() => {}).finally(() => _inFlightGet.delete(dedupeKey))
   }
 
   return promise
