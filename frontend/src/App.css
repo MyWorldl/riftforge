@@ -2853,18 +2853,20 @@
   fill-opacity: 0.28;
 }
 
-/* Stops do gradiente por faixa de tier — mesmos tokens `--tier-*` já
-   usados em `.history-dot.tier-*`/`.tier-badge.tier-*`, pedido
-   explícito do usuário pra reaproveitar a paleta existente em vez de
-   cores novas. Classe em vez de atributo `stop-color` direto porque
-   atributos SVG não resolvem `var()`. */
-.history-tier-stop-GOD { stop-color: var(--tier-god); }
-.history-tier-stop-S { stop-color: var(--tier-s); }
-.history-tier-stop-A { stop-color: var(--tier-a); }
-.history-tier-stop-B { stop-color: var(--tier-b); }
-.history-tier-stop-C { stop-color: var(--tier-c); }
-.history-tier-stop-D { stop-color: var(--tier-d); }
-.history-tier-stop-E { stop-color: var(--tier-e); }
+/* Stops do gradiente por faixa de tier — ajuste 21/08 (2ª rodada,
+   pedido do usuário: "cores mais vívidas"): trocado de `--tier-*` (os
+   badges, escurecidos de propósito pra passar contraste com texto
+   branco fixo por cima) pros `--tier-*-vivid` (mesma família de matiz,
+   sem essa restrição — aqui não tem texto sobre a cor). Classe em vez
+   de atributo `stop-color` direto porque atributos SVG não resolvem
+   `var()`. */
+.history-tier-stop-GOD { stop-color: var(--tier-god-vivid); }
+.history-tier-stop-S { stop-color: var(--tier-s-vivid); }
+.history-tier-stop-A { stop-color: var(--tier-a-vivid); }
+.history-tier-stop-B { stop-color: var(--tier-b-vivid); }
+.history-tier-stop-C { stop-color: var(--tier-c-vivid); }
+.history-tier-stop-D { stop-color: var(--tier-d-vivid); }
+.history-tier-stop-E { stop-color: var(--tier-e-vivid); }
 
 .history-dot {
   stroke: var(--code-bg);

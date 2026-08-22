@@ -103,6 +103,22 @@
      piso AA (5.09:1 / 10.87:1 contra branco). */
   --tier-d: #6e6e6e;
   --tier-e: #3d3d3d;
+  /* Ajuste 21/08 (pedido do usuário: "cores mais vívidas" no gráfico de
+     Evolução): os --tier-* acima foram deliberadamente ESCURECIDOS a
+     partir de tons vívidos originais pra passar AA como texto branco
+     fixo sobre badge sólido (ver comentários acima) — essa restrição
+     não existe numa linha/área de gráfico (sem texto por cima), então
+     usar --tier-* ali direto fica mais apagado do que precisa. Estes
+     "-vivid" são a mesma família de matiz (mesmo "qual cor pra qual
+     tier"), só mais saturados/claros — só pro gráfico, não mudam
+     nenhum badge. */
+  --tier-god-vivid: #f2a900;
+  --tier-s-vivid: #ff4d5e;
+  --tier-a-vivid: #ec4899;
+  --tier-b-vivid: #3b82f6;
+  --tier-c-vivid: #22c55e;
+  --tier-d-vivid: #9ca3af;
+  --tier-e-vivid: #6b7280;
   /* Item novo (revisão técnica §7.3): cores fixas do anel de vitória/
      derrota (Rankings) e dos segmentos Kit/Build/Meta da mini-barra de
      contribuição (Campeões) — escolhidas pelo usuário sem variar por

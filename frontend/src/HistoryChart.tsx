@@ -66,24 +66,35 @@ function xFor(index: number, total: number): number {
   return PADDING_LEFT + (usable * index) / (total - 1)
 }
 
-/** Ajuste 21/08 (pedido do usuário, referência visual própria): curva
- *  suave em vez de segmentos retos entre os pontos — deixa o gráfico
- *  menos "quebrado"/anguloso. Técnica de curva quadrática pelos pontos
- *  médios (sem biblioteca externa): cada ponto intermediário vira o
- *  controle de uma curva até o meio do caminho pro próximo ponto, só a
- *  última curva termina no ponto real — passa perto de cada ponto sem
- *  precisar de Catmull-Rom completo. */
+/** Ajuste 21/08 (2ª rodada — pedido do usuário: "ajuste a posição das
+ *  bolinhas"): a suavização por bezier quadrática nos pontos médios
+ *  (versão anterior) NÃO passa exatamente pelos pontos internos — só
+ *  perto deles — então os pontinhos (posicionados no dado real, `cx`/
+ *  `cy` = `xFor`/`yFor` exatos) apareciam "flutuando" fora da curva nos
+ *  picos/vales. Troca pra Catmull-Rom convertida em bezier cúbica
+ *  (fórmula padrão, tensão uniforme 1/6): a curva passa exatamente por
+ *  cada ponto e continua suave entre eles — sem essa troca não dá pra
+ *  ter as duas coisas (suave E fiel ao dado) ao mesmo tempo. Pontas
+ *  duplicam o ponto vizinho que não existe (`i-1`/`i+2` clampados),
+ *  técnica padrão pra não precisar de caso especial no primeiro/último
+ *  segmento. */
 function smoothPath(points: { x: number; y: number }[]): string {
   if (points.length < 2) return ''
-  let d = `M ${points[0].x.toFixed(1)} ${points[0].y.toFixed(1)}`
-  for (let i = 1; i < points.length - 1; i++) {
-    const midX = (points[i].x + points[i + 1].x) / 2
-    const midY = (points[i].y + points[i + 1].y) / 2
-    d += ` Q ${points[i].x.toFixed(1)} ${points[i].y.toFixed(1)} ${midX.toFixed(1)} ${midY.toFixed(1)}`
+  if (points.length === 2) {
+    return `M ${points[0].x.toFixed(1)} ${points[0].y.toFixed(1)} L ${points[1].x.toFixed(1)} ${points[1].y.toFixed(1)}`
   }
-  const last = points[points.length - 1]
-  const secondLast = points[points.length - 2]
-  d += ` Q ${secondLast.x.toFixed(1)} ${secondLast.y.toFixed(1)} ${last.x.toFixed(1)} ${last.y.toFixed(1)}`
+  let d = `M ${points[0].x.toFixed(1)} ${points[0].y.toFixed(1)}`
+  for (let i = 0; i < points.length - 1; i++) {
+    const p0 = points[Math.max(i - 1, 0)]
+    const p1 = points[i]
+    const p2 = points[i + 1]
+    const p3 = points[Math.min(i + 2, points.length - 1)]
+    const cp1x = p1.x + (p2.x - p0.x) / 6
+    const cp1y = p1.y + (p2.y - p0.y) / 6
+    const cp2x = p2.x - (p3.x - p1.x) / 6
+    const cp2y = p2.y - (p3.y - p1.y) / 6
+    d += ` C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)} ${cp2x.toFixed(1)} ${cp2y.toFixed(1)} ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`
+  }
   return d
 }
 
