@@ -176,7 +176,7 @@ function PatchHighlights() {
                   {row.game_name ?? '—'}
                   {row.tag_line ? `#${row.tag_line}` : ''}
                 </span>
-                <span className="explain-sub">{row.league_points} LP</span>
+                <span className="explain-sub">{row.league_points} PDL</span>
               </li>
             ))}
           </ul>

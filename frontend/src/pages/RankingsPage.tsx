@@ -165,7 +165,7 @@ function RankingsPage() {
                 <span className="podium-name">
                   {row.game_name && row.tag_line ? `${row.game_name}#${row.tag_line}` : '—'}
                 </span>
-                <span className="podium-meta">{row.league_points} LP · {winRatePct(row)}%</span>
+                <span className="podium-meta">{row.league_points} PDL · {winRatePct(row)}%</span>
               </div>
             )
           })}
@@ -181,7 +181,7 @@ function RankingsPage() {
                 <th>Invocador</th>
                 {showTierColumn && <th>Tier</th>}
                 <th>Nível</th>
-                <th>LP</th>
+                <th>PDL</th>
                 <th>Taxa de Vitória</th>
               </tr>
             </thead>

@@ -2524,30 +2524,42 @@
   font-size: 15px;
 }
 
+/* Ajuste 22/08 (pedido do usuário, opção "B" de 3 mockups apresentados):
+   faixa mais grossa (3px → 4px) com um brilho leve vazando pra dentro
+   da linha/opção — mesma linguagem do brilho pulsante já usado no
+   pódio de Classificações. rgba() hardcoded (não dá pra derivar alpha
+   de uma var() hex sem color-mix) — se a cor de algum tier mudar, ajustar
+   o rgba correspondente junto. */
 .tier-stripe-CHALLENGER td:first-child {
-  border-left: 3px solid var(--rank-challenger);
+  border-left: 4px solid var(--rank-challenger);
+  box-shadow: inset 12px 0 16px -12px rgba(245, 197, 24, 0.55);
 }
 
 .tier-stripe-GRANDMASTER td:first-child {
-  border-left: 3px solid var(--rank-grandmaster);
+  border-left: 4px solid var(--rank-grandmaster);
+  box-shadow: inset 12px 0 16px -12px rgba(239, 68, 68, 0.5);
 }
 
 .tier-stripe-MASTER td:first-child {
-  border-left: 3px solid var(--rank-master);
+  border-left: 4px solid var(--rank-master);
+  box-shadow: inset 12px 0 16px -12px rgba(168, 85, 247, 0.5);
 }
 
 /* `PlayerSearchInput`: a opção inteira é um `<button>`, não uma linha
    de tabela — a borda vai direto nele. */
 .player-search-option.tier-stripe-CHALLENGER {
-  border-left: 3px solid var(--rank-challenger);
+  border-left: 4px solid var(--rank-challenger);
+  box-shadow: inset 12px 0 16px -12px rgba(245, 197, 24, 0.55);
 }
 
 .player-search-option.tier-stripe-GRANDMASTER {
-  border-left: 3px solid var(--rank-grandmaster);
+  border-left: 4px solid var(--rank-grandmaster);
+  box-shadow: inset 12px 0 16px -12px rgba(239, 68, 68, 0.5);
 }
 
 .player-search-option.tier-stripe-MASTER {
-  border-left: 3px solid var(--rank-master);
+  border-left: 4px solid var(--rank-master);
+  box-shadow: inset 12px 0 16px -12px rgba(168, 85, 247, 0.5);
 }
 
 .win-rate-cell {

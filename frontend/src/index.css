@@ -149,10 +149,13 @@
   /* Tiers apex do Rankings (Desafiante/Grão-Mestre/Mestre) — cores
      inspiradas nos emblemas oficiais da Riot (dourado/vermelho/roxo),
      mas com variáveis próprias em vez de reaproveitar --tier-god/-s/-a
-     do sistema de tier de campeão (conceitos diferentes). Texto branco
-     fixo por cima, então checado contra AA como os outros tiers acima:
-     dourado e vermelho reaproveitam valores já verificados (5.27:1 e
-     4.84:1); o roxo (#9333ea) foi calculado agora e passa em ~5.55:1. */
+     do sistema de tier de campeão (conceitos diferentes). Valores aqui
+     calculados pra texto branco fixo por cima (5.27:1/4.84:1/5.55:1) —
+     uso que não existe mais desde que o badge preenchido virou faixa
+     colorida (Ajuste 21/08, 3ª rodada); mantidos como o valor do tema
+     CLARO (ainda visíveis o bastante como borda sobre fundo claro). O
+     escuro ganhou par vívido próprio (ver overrides mais abaixo),
+     mesma dualidade de --podium-* e --tier-*. */
   --rank-challenger: #8a6608;
   --rank-grandmaster: #8c1f24;
   --rank-master: #9333ea;
@@ -249,6 +252,22 @@
     --podium-gold: #c9a227;
     --podium-silver: #9aa0a6;
     --podium-bronze: #b5651d;
+    /* Ajuste 22/08 (pedido do usuário): --rank-challenger/-grandmaster/-master
+       nasceram pra texto branco POR CIMA de um badge preenchido (comentário
+       na declaração base) — esse badge foi removido no Ajuste 21/08 (3ª
+       rodada) e virou uma faixa colorida fina (`.tier-stripe-*`), mas o tom
+       escurecido pro claro ficou sem par vívido pro escuro (diferente de
+       --podium-* e --tier-* logo acima, que já tinham os dois). Sem isso, a
+       faixa usava o MESMO tom escuro em cima do fundo do card já escuro
+       (--code-bg), quase sem contraste — "muito apagada".
+
+       Ajuste 22/08 (2ª rodada): dourado do Desafiante pedido "mais
+       vívido" que o --podium-gold reaproveitado na 1ª tentativa —
+       ganhou tom próprio, mais amarelo/saturado, em vez de dividir
+       valor com o pódio. */
+    --rank-challenger: #f5c518;
+    --rank-grandmaster: #ef4444;
+    --rank-master: #a855f7;
   }
 
   #social .button-icon {
@@ -295,6 +314,9 @@
   --podium-gold: #c9a227;
   --podium-silver: #9aa0a6;
   --podium-bronze: #b5651d;
+  --rank-challenger: #f5c518;
+  --rank-grandmaster: #ef4444;
+  --rank-master: #a855f7;
 }
 
 /* ANCORA-TEMA-CLARO, fonte 2 de 2 (Revisão 16/08 §7.4) — repete os
@@ -328,6 +350,9 @@
   --podium-gold: #8a6608;
   --podium-silver: #71717a;
   --podium-bronze: #92400e;
+  --rank-challenger: #8a6608;
+  --rank-grandmaster: #8c1f24;
+  --rank-master: #9333ea;
 }
 
 /* Era limitado a 1126px com borda lateral (efeito "cartão centralizado") —
