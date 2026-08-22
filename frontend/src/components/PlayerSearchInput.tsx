@@ -154,7 +154,7 @@ function PlayerSearchInput({
                   id={`${listboxId}-option-${index}`}
                   role="option"
                   aria-selected={index === activeIndex}
-                  className={`player-search-option ${index === activeIndex ? 'player-search-option-focus' : ''}`}
+                  className={`player-search-option tier-stripe-${row.tier} ${index === activeIndex ? 'player-search-option-focus' : ''}`}
                   onMouseEnter={() => setActiveIndex(index)}
                   onClick={() => commit(row)}
                 >
@@ -170,9 +170,9 @@ function PlayerSearchInput({
                   <span className="player-search-option-name">
                     {row.game_name}#{row.tag_line}
                   </span>
-                  <span className={`rank-tier-badge tier-${row.tier}`}>
+                  <span className="tier-indicator">
                     {TIER_ICONS[row.tier] && (
-                      <img className="rank-tier-badge-icon" src={TIER_ICONS[row.tier]} alt="" width={14} height={14} />
+                      <img className="tier-indicator-icon" src={TIER_ICONS[row.tier]} alt="" width={14} height={14} />
                     )}
                     {TIER_LABELS[row.tier] ?? row.tier}
                   </span>

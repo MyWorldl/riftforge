@@ -460,7 +460,7 @@
   gap: 16px;
   align-items: end;
   width: 100%;
-  max-width: 620px;
+  max-width: 760px;
   padding: 16px;
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -475,6 +475,22 @@
   color: var(--text);
   flex: 1;
   min-width: 140px;
+}
+
+/* Ajuste 21/08 (3ª rodada): pedido do usuário — Região menor, Buscar
+   maior. Tamanho fixo pequeno pra Região (não precisa crescer, o nome
+   do país já cabe) e mais peso de crescimento pra Buscar (mais espaço
+   pra ler o "Nome#Tag" digitado e as sugestões). Precisa do seletor
+   `label.` (não só a classe) pra especificidade bater `.player-search-
+   form label` acima, que também define `flex`/`min-width`. */
+.player-search-form label.player-search-form-region {
+  flex: 0 0 160px;
+  min-width: 160px;
+}
+
+.player-search-form label.player-search-form-query {
+  flex: 2 1 320px;
+  min-width: 260px;
 }
 
 .player-search-form select,
@@ -2426,56 +2442,51 @@
   font-weight: 400;
 }
 
-.rank-tier-badge {
+/* Ajuste 21/08 (3ª rodada): pedido do usuário — trocou o preenchimento
+   sólido do badge (`.rank-tier-badge`, removido) por um indicador
+   neutro (ícone + texto na cor padrão do tema) + uma barra lateral
+   colorida na linha/opção inteira (`.tier-stripe-*` abaixo), em vez de
+   destacar só um pedaço pequeno da UI. Usado em Classificações (linha
+   da tabela) e na busca da Home (opção da lista de sugestões) — mesmo
+   componente visual, dois lugares. */
+.tier-indicator {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 2px 8px;
-  border-radius: 4px;
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 600;
+  color: var(--text);
   white-space: nowrap;
-  color: #fff;
 }
 
-/* Ajuste 21/08: ícone real do tier (mesmo `TIER_ICONS` de Campeões/
-   Matchups) ao lado do texto — pedido do usuário por um destaque mais
-   reconhecível que só a cor do badge. */
-.rank-tier-badge-icon {
+.tier-indicator-icon {
   flex-shrink: 0;
 }
 
-.rank-tier-badge.tier-GRANDMASTER { background: var(--rank-grandmaster); }
-.rank-tier-badge.tier-MASTER { background: var(--rank-master); }
-
-/* Desafiante ganha um tratamento especial — é o tier mais alto do jogo.
-   O degradê e o brilho variam só entre tons escuros o bastante pra
-   manter o texto branco em contraste AA (a mesma cor sólida de antes,
-   --rank-challenger, já passava em 5.27:1); o brilho de verdade vem do
-   feixe translúcido que desliza por cima via ::after, não da cor de
-   fundo em si — assim a legibilidade nunca fica comprometida. */
-.rank-tier-badge.tier-CHALLENGER {
-  position: relative;
-  overflow: hidden;
-  background: linear-gradient(135deg, #6b4d06, var(--rank-challenger), #6b4d06);
-  box-shadow: 0 0 6px rgba(212, 175, 55, 0.5);
+.tier-stripe-CHALLENGER td:first-child {
+  border-left: 3px solid var(--rank-challenger);
 }
 
-.rank-tier-badge.tier-CHALLENGER::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -150%;
-  width: 60%;
-  height: 100%;
-  background: linear-gradient(120deg, transparent, rgba(255, 255, 255, 0.6), transparent);
-  animation: challenger-shine 2.5s ease-in-out infinite;
+.tier-stripe-GRANDMASTER td:first-child {
+  border-left: 3px solid var(--rank-grandmaster);
 }
 
-@keyframes challenger-shine {
-  0% { left: -150%; }
-  55% { left: 150%; }
-  100% { left: 150%; }
+.tier-stripe-MASTER td:first-child {
+  border-left: 3px solid var(--rank-master);
+}
+
+/* `PlayerSearchInput`: a opção inteira é um `<button>`, não uma linha
+   de tabela — a borda vai direto nele. */
+.player-search-option.tier-stripe-CHALLENGER {
+  border-left: 3px solid var(--rank-challenger);
+}
+
+.player-search-option.tier-stripe-GRANDMASTER {
+  border-left: 3px solid var(--rank-grandmaster);
+}
+
+.player-search-option.tier-stripe-MASTER {
+  border-left: 3px solid var(--rank-master);
 }
 
 .win-rate-cell {

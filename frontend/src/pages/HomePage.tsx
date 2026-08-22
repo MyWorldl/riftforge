@@ -263,11 +263,11 @@ function HomePage() {
       </nav>
 
       <div className="player-search-form">
-        <label>
+        <label className="player-search-form-region">
           Região
           <FlagSelect options={REGIONS} value={region} onChange={setRegion} />
         </label>
-        <label>
+        <label className="player-search-form-query">
           Buscar
           <PlayerSearchInput
             region={region}

@@ -203,7 +203,7 @@ function RankingsPage() {
               {tableRows.map((row) => {
                 const winRate = winRatePct(row)
                 return (
-                  <tr key={`${row.tier}-${row.region}-${row.rank_position}`}>
+                  <tr key={`${row.tier}-${row.region}-${row.rank_position}`} className={`tier-stripe-${row.tier}`}>
                     <td>{row.rank_position}</td>
                     <td>
                       <div className="champion-cell">
@@ -221,9 +221,9 @@ function RankingsPage() {
                     </td>
                     {showTierColumn && (
                       <td>
-                        <span className={`rank-tier-badge tier-${row.tier}`}>
+                        <span className="tier-indicator">
                           {TIER_ICONS[row.tier] && (
-                            <img className="rank-tier-badge-icon" src={TIER_ICONS[row.tier]} alt="" width={16} height={16} />
+                            <img className="tier-indicator-icon" src={TIER_ICONS[row.tier]} alt="" width={16} height={16} />
                           )}
                           {TIER_LABELS[row.tier] ?? row.tier}
                         </span>
