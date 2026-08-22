@@ -170,6 +170,16 @@ export async function fetchChampionStats(filters: ChampionStatsFilters): Promise
   return request(`/stats/champions?${params}`, 'Falha ao buscar estatísticas')
 }
 
+export interface CollectionSummaryRow {
+  region: string
+  tier: string
+  total_matches: number
+}
+
+export async function fetchCollectionSummary(): Promise<CollectionSummaryRow[]> {
+  return request('/stats/collection-summary', 'Falha ao buscar resumo da coleta')
+}
+
 export interface ChampionHistoryPoint {
   patch: string
   lane: string

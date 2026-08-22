@@ -13,6 +13,7 @@ from app.db.models import (
     Patch,
     PlayerRanking,
     PlayerRoadmapStep,
+    SegmentTotal,
 )
 
 
@@ -570,6 +571,34 @@ def test_stats_champions_empty(client):
     response = client.get("/stats/champions?tier=GOLD")
     assert response.status_code == 200
     assert response.json() == []
+
+
+def test_stats_collection_summary_sums_across_patches(client, db_session):
+    """Duas linhas de patches diferentes pro mesmo região+tier devem
+    somar num único total — é isso que alimenta o aviso "Amostra: ..."
+    da página Campeões com um número real."""
+    db_session.add_all(
+        [
+            SegmentTotal(
+                id=1, patch="16.14", tier="GOLD", region="br1", total_matches=1000
+            ),
+            SegmentTotal(
+                id=2, patch="16.15", tier="GOLD", region="br1", total_matches=1500
+            ),
+            SegmentTotal(
+                id=3, patch="16.15", tier="PLATINUM", region="euw1", total_matches=300
+            ),
+        ]
+    )
+    db_session.commit()
+
+    response = client.get("/stats/collection-summary")
+    assert response.status_code == 200
+    rows = {
+        (row["region"], row["tier"]): row["total_matches"] for row in response.json()
+    }
+    assert rows[("br1", "GOLD")] == 2500
+    assert rows[("euw1", "PLATINUM")] == 300
 
 
 def test_riot_proxy_returns_501_without_real_key(client, monkeypatch):

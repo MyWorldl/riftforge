@@ -3,10 +3,18 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_db
 from app.api.query_types import EloTier, Lane
-from app.schemas.stats import ChampionStatRow
+from app.schemas.stats import ChampionStatRow, CollectionSummaryRow
 from app.services import stats_service
 
 router = APIRouter(tags=["stats"])
+
+
+@router.get("/stats/collection-summary", response_model=list[CollectionSummaryRow])
+def get_collection_summary(db: Session = Depends(get_db)) -> list[dict]:
+    """Ajuste 21/08: total de partidas coletadas por (região, tier) —
+    alimenta o aviso "Amostra: ..." da página Campeões com um número
+    real. Nenhuma chamada Riot, só soma `segment_totals` já calculado."""
+    return stats_service.get_collection_summary(db)
 
 
 @router.get("/stats/champions", response_model=list[ChampionStatRow])

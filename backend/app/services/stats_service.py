@@ -36,8 +36,20 @@ def get_champion_stats(
             "games": row.games,
             "win_rate": row.wins / row.games if row.games else 0,
             "pick_rate": row.games / segment_total if segment_total else 0,
-            "ban_rate": bans.get(row.champion_id, 0) / segment_total if segment_total else 0,
+            "ban_rate": bans.get(row.champion_id, 0) / segment_total
+            if segment_total
+            else 0,
             "kda": (row.kills + row.assists) / max(row.deaths, 1),
         }
         for row in repo.list_lane_stats(patch, tier, lane, limit, offset)
+    ]
+
+
+def get_collection_summary(db: Session) -> list[dict]:
+    """Ajuste 21/08: total de partidas coletadas por (região, tier) —
+    ver docstring de `LaneStatRepository.list_totals_by_region_tier`."""
+    repo = LaneStatRepository(db)
+    return [
+        {"region": region, "tier": tier, "total_matches": total}
+        for region, tier, total in repo.list_totals_by_region_tier()
     ]

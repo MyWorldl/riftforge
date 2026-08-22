@@ -752,6 +752,17 @@
   outline-offset: 1px;
 }
 
+/* Ajuste 21/08 (pedido do usuário): filtro "Campeão" ~30% mais largo que
+   os outros campos de texto de `.filters` — busca por nome se beneficia
+   de mais espaço pra digitar, os demais (Região/Tier/Patch) não. Só em
+   telas largas: no breakpoint mobile abaixo, `.filters label` já vira
+   100% de largura, e uma largura fixa aqui quebraria isso. */
+@media (min-width: 768px) {
+  .filters-champion-search input {
+    width: 213px;
+  }
+}
+
 /* Item novo (revisão técnica §7.1): `flex-wrap` já evitava overflow
    horizontal, mas quebrar no meio de uma linha de filtros (2-3 por
    linha, larguras desencontradas) fica desalinhado — em coluna cada

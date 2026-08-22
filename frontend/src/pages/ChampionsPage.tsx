@@ -5,9 +5,11 @@ import {
   fetchAvailablePatches,
   fetchChampionScores,
   fetchChampions,
+  fetchCollectionSummary,
   fetchPatchNotes,
   type ChampionMeta,
   type ChampionScoreRow,
+  type CollectionSummaryRow,
   type PatchDeltaRow,
   type PatchNotesResult,
 } from '../api/client'
@@ -123,6 +125,34 @@ function buildDeltaIndex(patchNotes: PatchNotesResult | null): Map<string, Patch
   return index
 }
 
+const COLLECTION_SAMPLE_TIERS = ['GOLD', 'PLATINUM']
+const COLLECTION_REGION_LABELS: Record<string, string> = { br1: 'BR1', euw1: 'EUW1' }
+
+/** Ajuste 21/08: pedido do usuário — mostrar a quantidade de partidas
+ *  coletadas, não só dizer "tem coleta". Soma Ouro+Platina por região a
+ *  partir de `/stats/collection-summary`; enquanto a resposta não chega
+ *  (ou falha), cai pro texto qualitativo antigo em vez de mostrar "0". */
+function buildCollectionCaption(summary: CollectionSummaryRow[] | null): string {
+  if (!summary) return 'Amostra: Ouro e Platina (BR1, EUW1) — outros elos ainda não têm coleta.'
+
+  const totalsByRegion = new Map<string, number>()
+  for (const row of summary) {
+    if (!COLLECTION_SAMPLE_TIERS.includes(row.tier)) continue
+    totalsByRegion.set(row.region, (totalsByRegion.get(row.region) ?? 0) + row.total_matches)
+  }
+
+  const parts = Object.entries(COLLECTION_REGION_LABELS)
+    .map(([region, label]) => {
+      const total = totalsByRegion.get(region)
+      return total ? `${label}: ${total.toLocaleString('pt-BR')} partidas` : null
+    })
+    .filter((part): part is string => !!part)
+
+  if (parts.length === 0) return 'Amostra: Ouro e Platina (BR1, EUW1) — outros elos ainda não têm coleta.'
+
+  return `Amostra: Ouro e Platina (${parts.join(' · ')}) — outros elos ainda não têm coleta.`
+}
+
 /** Pedido do usuário (segunda rodada): não é troca de tier, é a mesma
  *  coisa que `DeltaPositionBadge` de `RankingsPage.tsx` mostra pra
  *  jogador — posição no ranking por score. Calculada pelo backend
@@ -234,6 +264,7 @@ function SortableHeader({
 function ChampionsPage() {
   useDocumentTitle('Campeões — RiftForge')
 
+  const [collectionSummary, setCollectionSummary] = useState<CollectionSummaryRow[] | null>(null)
   const [championsMeta, setChampionsMeta] = useState<Record<string, ChampionMeta> | null>(null)
   const [ddragonPatch, setDdragonPatch] = useState<string>('')
   const [metaError, setMetaError] = useState<string | null>(null)
@@ -287,6 +318,15 @@ function ChampionsPage() {
         setDdragonPatch(data.patch)
       })
       .catch((err: Error) => setMetaError(err.message))
+  }, [])
+
+  // Ajuste 21/08: mostrar a quantidade de partidas coletadas de verdade,
+  // não só dizer "tem coleta" — total independe do filtro da página
+  // (soma histórica de todos os patches), então busca uma vez só.
+  useEffect(() => {
+    fetchCollectionSummary()
+      .then(setCollectionSummary)
+      .catch(() => setCollectionSummary(null))
   }, [])
 
   // Patches disponíveis dependem do elo (nem todo patch tem dado
@@ -350,14 +390,17 @@ function ChampionsPage() {
 
   const deltaIndex = buildDeltaIndex(patchNotes)
 
+  const collectionCaption = buildCollectionCaption(collectionSummary)
+
   return (
     <main className="center center-wide">
       <h1>Campeões</h1>
       <p>Poder dos campeões de League of Legends por elo, rota e patch — score em camadas com tier God-E.</p>
       {/* Pedido da auditoria de 16/08 (§3.2): enquanto a coleta não cobrir
           todo elo, a UI deveria dizer isso — sem esse aviso, o filtro de
-          elo existe sem dado atrás dele pra quase toda opção. */}
-      <p className="table-caption">Amostra: Ouro e Platina (BR1, EUW1) — outros elos ainda não têm coleta.</p>
+          elo existe sem dado atrás dele pra quase toda opção. Ajuste
+          21/08: mostrar a quantidade real coletada, não só o texto. */}
+      <p className="table-caption">{collectionCaption}</p>
 
       <div className="filters">
         <label>
@@ -365,7 +408,7 @@ function ChampionsPage() {
           <FlagSelect options={COUNTRY_SELECT_OPTIONS} value={country} onChange={setCountry} />
         </label>
 
-        <label>
+        <label className="filters-champion-search">
           Campeão
           <input
             type="text"
