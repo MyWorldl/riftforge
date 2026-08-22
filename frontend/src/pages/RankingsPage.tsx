@@ -4,6 +4,7 @@ import FlagSelect from '../components/FlagSelect'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { useFilterParam } from '../hooks/useFilterParam'
 import { RANKINGS_REGIONS } from '../constants/regions'
+import { TIER_ICONS } from '../constants/tiers'
 
 const TIERS = [
   { value: '', label: 'Todos os tiers' },
@@ -120,15 +121,6 @@ function RankingsPage() {
 
       <div className="filters">
         <label>
-          Tier
-          <select value={tier} onChange={(e) => setTier(e.target.value)}>
-            {TIERS.map((t) => (
-              <option key={t.value} value={t.value}>{t.label}</option>
-            ))}
-          </select>
-        </label>
-
-        <label>
           Região
           <FlagSelect options={RANKINGS_REGIONS} value={region} onChange={setRegion} />
         </label>
@@ -141,6 +133,15 @@ function RankingsPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
+        </label>
+
+        <label>
+          Tier
+          <select value={tier} onChange={(e) => setTier(e.target.value)}>
+            {TIERS.map((t) => (
+              <option key={t.value} value={t.value}>{t.label}</option>
+            ))}
+          </select>
         </label>
 
         {loading && <span className="filters-loading" role="status">Buscando...</span>}
@@ -225,7 +226,14 @@ function RankingsPage() {
                       </div>
                     </td>
                     {showTierColumn && (
-                      <td><span className={`rank-tier-badge tier-${row.tier}`}>{TIER_LABELS[row.tier] ?? row.tier}</span></td>
+                      <td>
+                        <span className={`rank-tier-badge tier-${row.tier}`}>
+                          {TIER_ICONS[row.tier] && (
+                            <img className="rank-tier-badge-icon" src={TIER_ICONS[row.tier]} alt="" width={16} height={16} />
+                          )}
+                          {TIER_LABELS[row.tier] ?? row.tier}
+                        </span>
+                      </td>
                     )}
                     <td>{row.summoner_level ?? '—'}</td>
                     <td>{row.league_points}</td>

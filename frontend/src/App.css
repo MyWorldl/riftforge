@@ -2368,13 +2368,22 @@
 }
 
 .rank-tier-badge {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   padding: 2px 8px;
   border-radius: 4px;
   font-size: 12px;
   font-weight: 700;
   white-space: nowrap;
   color: #fff;
+}
+
+/* Ajuste 21/08: ícone real do tier (mesmo `TIER_ICONS` de Campeões/
+   Matchups) ao lado do texto — pedido do usuário por um destaque mais
+   reconhecível que só a cor do badge. */
+.rank-tier-badge-icon {
+  flex-shrink: 0;
 }
 
 .rank-tier-badge.tier-GRANDMASTER { background: var(--rank-grandmaster); }
