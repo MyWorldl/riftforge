@@ -17,3 +17,13 @@ export const TIER_ICONS: Record<string, string> = {
   GRANDMASTER: '/tiers/grandmaster.png',
   CHALLENGER: '/tiers/challenger.png',
 }
+
+/** Extraído de `RankingsPage.tsx` (ajuste 21/08, 2ª rodada) — segundo
+ *  consumidor é `PlayerSearchInput` (sugestões da busca "conforme
+ *  digita" mostram o tier por extenso, mesmo rótulo de Classificações).
+ *  Só as 3 ligas apex — hoje é tudo que `player_rankings` coleta. */
+export const TIER_LABELS: Record<string, string> = {
+  CHALLENGER: 'Desafiante',
+  GRANDMASTER: 'Grão-Mestre',
+  MASTER: 'Mestre',
+}

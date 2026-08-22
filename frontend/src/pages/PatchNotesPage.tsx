@@ -218,8 +218,14 @@ function PatchNotesPage() {
             Comparando patch <strong>{result.patch_anterior}</strong> → <strong>{result.patch_atual}</strong> ·{' '}
             {result.comparados} campeões comparados
           </p>
-          <DeltaTable title="Maiores altas" rows={result.altas} championsMeta={championsMeta} ddragonPatch={ddragonPatch} />
-          <DeltaTable title="Maiores quedas" rows={result.quedas} championsMeta={championsMeta} ddragonPatch={ddragonPatch} />
+          {/* Ajuste 21/08 (2ª rodada): as duas listas ficam lado a lado
+              (pedido do usuário), não empilhadas — `.delta-card-columns`
+              volta pra coluna única em telas estreitas, mesmo padrão de
+              breakpoint já usado em `.filters`. */}
+          <div className="delta-card-columns">
+            <DeltaTable title="Maiores altas" rows={result.altas} championsMeta={championsMeta} ddragonPatch={ddragonPatch} />
+            <DeltaTable title="Maiores quedas" rows={result.quedas} championsMeta={championsMeta} ddragonPatch={ddragonPatch} />
+          </div>
         </>
       )}
 

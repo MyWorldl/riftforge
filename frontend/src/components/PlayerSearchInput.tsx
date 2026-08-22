@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react'
 import { fetchPlayerSearch, profileIconUrl, type PlayerSearchRow } from '../api/client'
+import { TIER_ICONS, TIER_LABELS } from '../constants/tiers'
 import { parseRiotId } from '../lib/riotId'
 
 interface PlayerSearchInputProps {
@@ -169,7 +170,12 @@ function PlayerSearchInput({
                   <span className="player-search-option-name">
                     {row.game_name}#{row.tag_line}
                   </span>
-                  <span className="player-search-option-tier">{row.tier}</span>
+                  <span className={`rank-tier-badge tier-${row.tier}`}>
+                    {TIER_ICONS[row.tier] && (
+                      <img className="rank-tier-badge-icon" src={TIER_ICONS[row.tier]} alt="" width={14} height={14} />
+                    )}
+                    {TIER_LABELS[row.tier] ?? row.tier}
+                  </span>
                 </button>
               </li>
             ))}

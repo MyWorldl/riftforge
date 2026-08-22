@@ -18,15 +18,6 @@ function DesktopPage() {
   return (
     <main className="center">
       <h1>Desktop</h1>
-      {/* Ajuste 21/08: introdução reescrita pra tom mais convidativo —
-          antes era só uma frase técnica ("roda como aplicativo de
-          desktop, empacotado com Tauri"), sem dizer o benefício real
-          pra quem não sabe o que é Tauri. */}
-      <p>
-        Leve o RiftForge pra área de trabalho: a mesma análise de campeões, patch notes e
-        classificações do site, num app leve que abre com um clique — sem precisar de aba de
-        navegador aberta.
-      </p>
 
       <img src={desktopHero} alt="" className="desktop-hero-image" width={260} height={180} />
 
@@ -43,6 +34,15 @@ function DesktopPage() {
         Windows 64-bit. Os dois instalam a mesma versão (v0.1.0) — use o .exe se não tiver
         preferência, ou o .msi se seu ambiente exigir esse formato (ex: instalação via política de
         grupo).
+      </p>
+
+      {/* Ajuste 21/08 (2ª rodada): descida pra baixo dos instaladores,
+          pedido do usuário — a página abre direto no CTA de download, a
+          explicação fica pra quem rolar a página. */}
+      <p>
+        Leve o RiftForge pra área de trabalho: a mesma análise de campeões, patch notes e
+        classificações do site, num app leve que abre com um clique — sem precisar de aba de
+        navegador aberta.
       </p>
     </main>
   )

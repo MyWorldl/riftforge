@@ -214,6 +214,18 @@ function HomePage() {
   const navigate = useNavigate()
   const [region, setRegion] = useState('br1')
   const [formError, setFormError] = useState<string | null>(null)
+  const [ddragonPatch, setDdragonPatch] = useState('')
+
+  // Ajuste 21/08 (2ª rodada): só pro ícone de invocador nas sugestões
+  // de `PlayerSearchInput` — `PatchHighlights` abaixo já busca isso
+  // também, mas é local àquele componente; mais barato duplicar 1
+  // chamada (cacheada pelo navegador) do que replumbar o estado entre
+  // os dois.
+  useEffect(() => {
+    fetchChampions()
+      .then((data) => setDdragonPatch(data.patch))
+      .catch(() => {})
+  }, [])
 
   // Ajuste 21/08: busca "conforme digita" (`PlayerSearchInput`) — leva
   // pro Invocador (perfil geral de qualquer jogador), não mais direto
@@ -259,6 +271,7 @@ function HomePage() {
           Buscar
           <PlayerSearchInput
             region={region}
+            ddragonPatch={ddragonPatch}
             showSubmitButton
             onSelect={(row) => goToPlayer(row.region, row.game_name, row.tag_line)}
             onSubmitFreeText={(parsed) => {

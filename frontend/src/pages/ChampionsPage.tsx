@@ -135,7 +135,13 @@ function buildDeltaIndex(patchNotes: PatchNotesResult | null): Map<string, Patch
  *  reflete a métrica que a tabela está ordenando no momento (`sortKey`),
  *  ver `deltaPosicaoFor`/`SORT_KEY_LABELS` abaixo. `posicao === null`
  *  (métrica ausente num dos dois patches) trata igual a "sem variação",
- *  mesmo tratamento visual de 0. */
+ *  mesmo tratamento visual de 0.
+ *
+ *  Ajuste 21/08 (2ª rodada): a lógica já era "quantas posições o
+ *  campeão subiu/desceu", mas o número sozinho (ex: "▲ 63") ficava
+ *  ambíguo perto da coluna "Score" — parecia pontuação, não posição no
+ *  ranking. Sufixo "pos." deixa a unidade explícita sem mudar o
+ *  cálculo. */
 function VariationBadge({ posicao }: { posicao: number | null | undefined }) {
   if (posicao === undefined || posicao === null || posicao === 0) {
     return <span className="delta-position delta-position-none">—</span>
@@ -143,7 +149,7 @@ function VariationBadge({ posicao }: { posicao: number | null | undefined }) {
   const subiu = posicao > 0
   return (
     <span className={`delta-position ${subiu ? 'delta-position-up' : 'delta-position-down'}`}>
-      {subiu ? '▲' : '▼'} {Math.abs(posicao)}
+      {subiu ? '▲' : '▼'} {Math.abs(posicao)} pos.
     </span>
   )
 }
@@ -432,7 +438,7 @@ function ChampionsPage() {
               <SortableHeader label="Tier" sortKeyFor="score" currentKey={sortKey} currentDir={sortDir} onSort={handleSort} />
               {lane && (
                 <th
-                  title={`Posição no ranking por ${SORT_KEY_LABELS[sortKey]} dentro da rota, em relação ao patch anterior`}
+                  title={`Quantas posições o campeão subiu ou desceu no ranking por ${SORT_KEY_LABELS[sortKey]} dentro da rota, comparado ao patch anterior`}
                   className="col-hide-tablet"
                 >
                   Variação

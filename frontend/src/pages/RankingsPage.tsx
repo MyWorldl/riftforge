@@ -4,7 +4,7 @@ import FlagSelect from '../components/FlagSelect'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { useFilterParam } from '../hooks/useFilterParam'
 import { RANKINGS_REGIONS } from '../constants/regions'
-import { TIER_ICONS } from '../constants/tiers'
+import { TIER_ICONS, TIER_LABELS } from '../constants/tiers'
 
 const TIERS = [
   { value: '', label: 'Todos os tiers' },
@@ -12,12 +12,6 @@ const TIERS = [
   { value: 'GRANDMASTER', label: 'Grão-Mestre' },
   { value: 'MASTER', label: 'Mestre' },
 ]
-
-const TIER_LABELS: Record<string, string> = {
-  CHALLENGER: 'Desafiante',
-  GRANDMASTER: 'Grão-Mestre',
-  MASTER: 'Mestre',
-}
 
 function matchesSearch(row: RankingRow, search: string): boolean {
   if (!search) return true

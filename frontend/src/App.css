@@ -951,12 +951,6 @@
   white-space: nowrap;
 }
 
-.player-search-option-tier {
-  font-size: 12px;
-  color: var(--text);
-  opacity: 0.8;
-}
-
 .player-search-loading,
 .player-search-empty {
   padding: 6px 8px;
@@ -1223,6 +1217,9 @@
   border: 2px solid var(--border);
   border-radius: 10px;
   background: var(--code-bg);
+  /* Ajuste 21/08 (2ª rodada): agora clicável (abre o card
+     correspondente abaixo) — antes era só resumo de hover/foco. */
+  cursor: pointer;
   transition: border-color 0.15s ease;
 }
 
@@ -1593,6 +1590,22 @@
   align-items: center;
   gap: 4px;
   flex-shrink: 0;
+}
+
+/* Ajuste 21/08 (2ª rodada): "Maiores altas"/"Maiores quedas" lado a
+   lado (pedido do usuário), não empilhadas. Volta pra coluna única
+   abaixo de 768px — mesmo breakpoint de `.filters`. */
+.delta-card-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+  width: 100%;
+}
+
+@media (max-width: 767px) {
+  .delta-card-columns {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* Redesenho "Impacto no Score" (ajuste 21/08) — mesmo padrão de

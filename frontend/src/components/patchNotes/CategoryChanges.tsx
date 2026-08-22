@@ -88,23 +88,24 @@ const CATEGORY_SECTIONS: { key: PatchCategory; label: string; icon: ReactNode }[
   { key: 'ajuste', label: 'Ajuste', icon: <IconAjuste /> },
 ]
 
-/** Pedido do usuário (mockup próprio): cada categoria vira uma galeria
- *  compacta só de ícones. Sem `onClick` — não seleciona nada, é só o
- *  resumo do hover (`title`, tooltip nativo do navegador, aparece sem
- *  precisar clicar). `tabIndex` deixa o tooltip acessível por teclado
- *  também (foco mostra `title` do mesmo jeito que hover). */
+/** Ajuste 21/08 (2ª rodada): pedido do usuário — clicar no ícone abre
+ *  (e rola até) o card correspondente em `.patch-category-panels`
+ *  abaixo. Continua funcionando como resumo de hover/foco (`title`)
+ *  igual antes; o clique é um acréscimo, não substitui o tooltip. */
 function CategoryIcon({
   championId,
   changes,
   championsMeta,
   ddragonPatch,
   category,
+  onOpen,
 }: {
   championId: string
   changes: PatchChangeRow[]
   championsMeta: Record<string, ChampionMeta> | null
   ddragonPatch: string
   category: PatchCategory
+  onOpen: (championId: string) => void
 }) {
   const meta = championsMeta?.[championId]
   const { pos, neg, neutral } = countChangeDirections(changes)
@@ -117,7 +118,15 @@ function CategoryIcon({
     <span
       className={`patch-category-icon-btn patch-category-icon-btn-${category}`}
       title={summaryParts.length > 0 ? `${name} — ${summaryParts.join(' · ')}` : name}
+      role="button"
       tabIndex={0}
+      onClick={() => onOpen(championId)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onOpen(championId)
+        }
+      }}
     >
       {meta && ddragonPatch ? (
         <img src={championImageUrl(ddragonPatch, meta.image.full)} alt={name} width={40} height={40} loading="lazy" />
@@ -345,6 +354,11 @@ function ChampionChangeDetailBody({
  *  sem tingimento de fundo por categoria aqui (isso ficou só na
  *  galeria de ícones/`.patch-category-gallery-*` acima) — o card volta
  *  à cor neutra padrão (`--code-bg`/`--border`). */
+/** Ajuste 21/08 (2ª rodada): `expanded` deixou de ser estado local —
+ *  precisa ser controlável de fora (`CategoryIcon` na galeria acima
+ *  abre o card certo ao ser clicado), então subiu pra `ChangesByCategory`.
+ *  `id` no elemento raiz é o alvo do `scrollIntoView` disparado por
+ *  esse mesmo clique. */
 function SelectedChampionPanel({
   championId,
   changes,
@@ -352,6 +366,8 @@ function SelectedChampionPanel({
   ddragonPatch,
   scoreDeltas,
   abilities,
+  expanded,
+  onToggle,
 }: {
   championId: string
   changes: PatchChangeRow[]
@@ -359,22 +375,23 @@ function SelectedChampionPanel({
   ddragonPatch: string
   scoreDeltas: PatchDeltaRow[] | undefined
   abilities: Record<string, ChampionDetail>
+  expanded: boolean
+  onToggle: () => void
 }) {
-  const [expanded, setExpanded] = useState(false)
   const meta = championsMeta?.[championId]
   const { pos, neg, neutral } = countChangeDirections(changes)
-  const toggle = () => setExpanded((v) => !v)
   return (
     <div
+      id={`patch-champion-panel-${championId}`}
       className="patch-selected-panel"
       role="button"
       tabIndex={0}
       aria-expanded={expanded}
-      onClick={toggle}
+      onClick={onToggle}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault()
-          toggle()
+          onToggle()
         }
       }}
     >
@@ -432,6 +449,26 @@ export function ChangesByCategory({
   }
   const allEntries = CATEGORY_SECTIONS.flatMap(({ key }) => buckets[key])
 
+  // Ajuste 21/08 (2ª rodada): `Set`, não um único id — cada card
+  // continua guardando seu próprio estado de aberto/fechado (pedido
+  // original), só que agora vive aqui pra `CategoryIcon` conseguir
+  // abrir um específico de fora.
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
+
+  function openChampion(championId: string) {
+    setExpandedIds((prev) => new Set(prev).add(championId))
+    document.getElementById(`patch-champion-panel-${championId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
+
+  function toggleChampion(championId: string) {
+    setExpandedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(championId)) next.delete(championId)
+      else next.add(championId)
+      return next
+    })
+  }
+
   return (
     <>
       <div className="patch-category-columns">
@@ -452,6 +489,7 @@ export function ChangesByCategory({
                     championsMeta={championsMeta}
                     ddragonPatch={ddragonPatch}
                     category={key}
+                    onOpen={openChampion}
                   />
                 ))}
               </div>
@@ -469,6 +507,8 @@ export function ChangesByCategory({
             ddragonPatch={ddragonPatch}
             scoreDeltas={scoreDeltaIndex.get(championId)}
             abilities={abilities}
+            expanded={expandedIds.has(championId)}
+            onToggle={() => toggleChampion(championId)}
           />
         ))}
       </div>
