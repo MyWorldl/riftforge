@@ -711,6 +711,31 @@
   color: var(--text-h);
 }
 
+/* Ajuste 21/08: `<select>`/`<input>` nativos não tinham NENHUM sinal
+   visual de hover/foco além do que o navegador dá de graça (que varia
+   muito entre browsers, às vezes quase imperceptível) — `.flag-select-
+   trigger` já tinha esse tratamento (cursor + borda de destaque no
+   hover), isso só estende o mesmo pros filtros que ainda são nativos
+   (Patch em Campeões, campos de busca de texto). `select` ganha
+   `cursor: pointer` (é uma escolha entre opções, não digitação);
+   `input` mantém o cursor de texto padrão, que já é a affordance certa
+   pra ele. */
+.filters select {
+  cursor: pointer;
+}
+
+.filters select:hover,
+.filters input:hover {
+  border-color: var(--accent-border);
+}
+
+.filters select:focus-visible,
+.filters input:focus-visible {
+  border-color: var(--accent-border);
+  outline: 2px solid var(--accent-border);
+  outline-offset: 1px;
+}
+
 /* Item novo (revisão técnica §7.1): `flex-wrap` já evitava overflow
    horizontal, mas quebrar no meio de uma linha de filtros (2-3 por
    linha, larguras desencontradas) fica desalinhado — em coluna cada
@@ -829,12 +854,38 @@
   gap: 8px;
 }
 
+/* Estilo próprio, não herdado de `.filters input`/`.player-search-form
+   input` — em Jogador/Invocador o componente é usado solto no topo da
+   página (fora de `.filters`), então precisa da própria borda/fundo/
+   hover, senão cai pro estilo cru do navegador ali (achado ao revisar
+   este sprint, mesma classe de bug do botão acima). */
 .player-search-row input {
   flex: 1;
   min-width: 0;
+  font: inherit;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border-control);
+  background: var(--bg);
+  color: var(--text-h);
 }
 
-.player-search-submit {
+.player-search-row input:hover {
+  border-color: var(--accent-border);
+}
+
+.player-search-row input:focus-visible {
+  border-color: var(--accent-border);
+  outline: 2px solid var(--accent-border);
+  outline-offset: 1px;
+}
+
+/* `.player-search-input-submit`, não `.player-search-submit` — esse
+   nome já existia (botão de `AccountPage.tsx`/`ErrorBoundary.tsx`,
+   estilo próprio logo acima neste arquivo); reaproveitar o mesmo nome
+   aqui sobrescreveria o botão deles sem querer (achado ao revisar este
+   sprint — cascata do CSS deixa o último igual vencer). */
+.player-search-input-submit {
   font: inherit;
   padding: 6px 14px;
   border-radius: 6px;
@@ -845,7 +896,7 @@
   white-space: nowrap;
 }
 
-.player-search-submit:hover {
+.player-search-input-submit:hover {
   border-color: var(--accent-border);
 }
 

@@ -137,7 +137,7 @@ function PlayerSearchInput({
           onKeyDown={handleKeyDown}
         />
         {showSubmitButton && (
-          <button type="button" className="player-search-submit" onClick={submitFreeText}>
+          <button type="button" className="player-search-input-submit" onClick={submitFreeText}>
             Buscar
           </button>
         )}
