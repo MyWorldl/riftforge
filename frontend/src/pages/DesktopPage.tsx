@@ -1,4 +1,5 @@
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
+import desktopHero from '../assets/desktop-hero.svg'
 
 // Sprint 2 item 15 (revisão técnica §2.6): servido via GitHub Release em
 // vez de asset estático do site — o repositório é público desde rodada 29,
@@ -12,24 +13,22 @@ import { useDocumentTitle } from '../hooks/useDocumentTitle'
 // histórico do git (limpar exigiria `git filter-repo`, fora de escopo).
 const DOWNLOAD_BASE = 'https://github.com/MyWorldl/riftforge/releases/latest/download'
 
-// A própria página de release do GitHub já mostra o digest de cada asset
-// (aba "Assets" → ícone de informação) — o checksum aqui continua existindo
-// pra quem quiser conferir sem sair desta página. Gerado com sha256sum
-// sobre os artefatos antes de subir pra release (ver Sprint 2 item 15).
-const CHECKSUMS_SHA256 = {
-  exe: '4358d6cc59bb13325ecde859ea7703cb3d45270fe221b148462d33dc3ea13696',
-  msi: 'ec654f938ccfd95c59fb91ad8406bcf353ddc89c6efb3f195db2bb7835b15dc7',
-}
-
 function DesktopPage() {
   useDocumentTitle('Desktop — RiftForge')
   return (
     <main className="center">
       <h1>Desktop</h1>
+      {/* Ajuste 21/08: introdução reescrita pra tom mais convidativo —
+          antes era só uma frase técnica ("roda como aplicativo de
+          desktop, empacotado com Tauri"), sem dizer o benefício real
+          pra quem não sabe o que é Tauri. */}
       <p>
-        O RiftForge também roda como aplicativo de desktop (Windows), empacotado com Tauri e usando o
-        mesmo backend do site.
+        Leve o RiftForge pra área de trabalho: a mesma análise de campeões, patch notes e
+        classificações do site, num app leve que abre com um clique — sem precisar de aba de
+        navegador aberta.
       </p>
+
+      <img src={desktopHero} alt="" className="desktop-hero-image" width={260} height={180} />
 
       <div className="download-buttons">
         <a className="download-button" href={`${DOWNLOAD_BASE}/RiftForge_0.1.0_x64-setup.exe`}>
@@ -44,21 +43,6 @@ function DesktopPage() {
         Windows 64-bit. Os dois instalam a mesma versão (v0.1.0) — use o .exe se não tiver
         preferência, ou o .msi se seu ambiente exigir esse formato (ex: instalação via política de
         grupo).
-      </p>
-
-      <p className="download-checksums">
-        SHA-256 (.exe): <code>{CHECKSUMS_SHA256.exe}</code>
-        <br />
-        SHA-256 (.msi): <code>{CHECKSUMS_SHA256.msi}</code>
-      </p>
-
-      <p>
-        Prefere compilar você mesmo? O código-fonte fica em <code>frontend/src-tauri/</code> — veja
-        as instruções de build na seção "Desktop" do{' '}
-        <a href="https://github.com/MyWorldl/riftforge#readme" target="_blank" rel="noreferrer">
-          README do repositório
-        </a>
-        .
       </p>
     </main>
   )

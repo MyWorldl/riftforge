@@ -676,16 +676,11 @@
   color: var(--text);
 }
 
-.download-checksums {
-  font-size: 12px;
-  color: var(--text);
-  word-break: break-all;
-}
-
-.download-checksums code {
-  background: var(--code-bg);
-  padding: 1px 4px;
-  border-radius: 4px;
+/* Ajuste 21/08: ilustração nova acima do botão de download — `.center`
+   (container da página) já centraliza filhos em coluna com gap próprio,
+   só precisava existir a regra pra ter algo pra ancorar se necessário. */
+.desktop-hero-image {
+  display: block;
 }
 
 .filters {
