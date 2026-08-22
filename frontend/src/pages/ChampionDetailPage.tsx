@@ -313,7 +313,7 @@ function ChampionDetailPage() {
                 <strong>{formatPct(row.ban_rate)}</strong>
               </div>
               <div className="champion-detail-stat">
-                <span>Score</span>
+                <span>Pontuação</span>
                 <LayerContributionBar row={row} />
               </div>
             </div>

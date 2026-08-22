@@ -140,16 +140,22 @@ function buildDeltaIndex(patchNotes: PatchNotesResult | null): Map<string, Patch
  *  Ajuste 21/08 (2ª rodada): a lógica já era "quantas posições o
  *  campeão subiu/desceu", mas o número sozinho (ex: "▲ 63") ficava
  *  ambíguo perto da coluna "Score" — parecia pontuação, não posição no
- *  ranking. Sufixo "pos." deixa a unidade explícita sem mudar o
- *  cálculo. */
+ *  ranking.
+ *
+ *  Ajuste 21/08 (5ª rodada): pedido do usuário (mockup próprio) — a
+ *  Variação sai de coluna própria e vira parte da célula "Posição"
+ *  (número + selo lado a lado), então o sufixo "pos." da rodada
+ *  anterior não faz mais falta (a posição ao lado já deixa óbvio o que
+ *  é). "=" no lugar de "—" pra "sem mudança", mesmo símbolo do
+ *  mockup. */
 function VariationBadge({ posicao }: { posicao: number | null | undefined }) {
   if (posicao === undefined || posicao === null || posicao === 0) {
-    return <span className="delta-position delta-position-none">—</span>
+    return <span className="delta-position delta-position-none">=</span>
   }
   const subiu = posicao > 0
   return (
     <span className={`delta-position ${subiu ? 'delta-position-up' : 'delta-position-down'}`}>
-      {subiu ? '▲' : '▼'} {Math.abs(posicao)} pos.
+      {subiu ? '▲' : '▼'}{Math.abs(posicao)}
     </span>
   )
 }
@@ -157,7 +163,7 @@ function VariationBadge({ posicao }: { posicao: number | null | undefined }) {
 export type SortKey = 'score' | 'win_rate' | 'pick_rate' | 'ban_rate'
 
 const SORT_KEY_LABELS: Record<SortKey, string> = {
-  score: 'Score',
+  score: 'Pontuação',
   win_rate: 'Win Rate',
   pick_rate: 'Pick Rate',
   ban_rate: 'Ban Rate',
@@ -433,19 +439,19 @@ function ChampionsPage() {
           <thead>
             <tr>
               <th title="Selecionar para comparar (até 3)"></th>
-              <th>Posição</th>
+              <th
+                title={
+                  lane
+                    ? `Posição no placar, com a variação de quantas posições o campeão subiu ou desceu no ranking por ${SORT_KEY_LABELS[sortKey]} dentro da rota, comparado ao patch anterior`
+                    : undefined
+                }
+              >
+                Posição
+              </th>
               <th>Campeão</th>
               <SortableHeader label="Tier" sortKeyFor="score" currentKey={sortKey} currentDir={sortDir} onSort={handleSort} />
-              {lane && (
-                <th
-                  title={`Quantas posições o campeão subiu ou desceu no ranking por ${SORT_KEY_LABELS[sortKey]} dentro da rota, comparado ao patch anterior`}
-                  className="col-hide-tablet"
-                >
-                  Variação
-                </th>
-              )}
               {!lane && <th className="col-hide-tablet">Função</th>}
-              <th title="Contribuição de cada camada no score (Performance/Kit/Build/Meta)">Score</th>
+              <th title="Contribuição de cada camada no score (Performance/Kit/Build/Meta)">Pontuação</th>
               <SortableHeader label="Taxa de Vitória" sortKeyFor="win_rate" currentKey={sortKey} currentDir={sortDir} onSort={handleSort} />
               <SortableHeader label="Taxa de escolha" sortKeyFor="pick_rate" currentKey={sortKey} currentDir={sortDir} onSort={handleSort} className="col-hide-tablet" />
               <SortableHeader label="Taxa de banimento" sortKeyFor="ban_rate" currentKey={sortKey} currentDir={sortDir} onSort={handleSort} className="col-hide-tablet" />
@@ -464,7 +470,7 @@ function ChampionsPage() {
               const activePanel = expandedPanel?.key === key ? expandedPanel.type : null
               const toggle = (type: 'explain' | 'history') =>
                 setExpandedPanel(activePanel === type ? null : { key, type })
-              const colSpan = lane ? 10 : 11
+              const colSpan = lane ? 9 : 11
               return (
                 <Fragment key={key}>
                 <tr>
@@ -477,7 +483,12 @@ function ChampionsPage() {
                       aria-label={`Comparar ${meta?.name ?? row.champion_id}`}
                     />
                   </td>
-                  <td>{index + 1}</td>
+                  <td>
+                    <span className="posicao-cell">
+                      {index + 1}
+                      {lane && <VariationBadge posicao={deltaPosicaoFor(delta, sortKey)} />}
+                    </span>
+                  </td>
                   <td>
                     <Link to={detailHref(row)} className="champion-cell">
                       {meta && ddragonPatch && (
@@ -497,7 +508,6 @@ function ChampionsPage() {
                     <span className={`tier-badge tier-${row.score_tier}`}>{row.score_tier}</span>
                     {row.tier_provisorio && <span className="provisional-mark" title="Amostra pequena — tier provisório, teto em A">*</span>}
                   </td>
-                  {lane && <td className="col-hide-tablet"><VariationBadge posicao={deltaPosicaoFor(delta, sortKey)} /></td>}
                   {!lane && <td className="col-hide-tablet"><LaneCell lane={row.lane} /></td>}
                   <td><LayerContributionBar row={row} /></td>
                   <td>{formatPct(row.win_rate)}</td>

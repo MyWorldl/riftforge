@@ -2359,6 +2359,15 @@
   color: var(--warn);
 }
 
+/* Ajuste 21/08 (5ª rodada): pedido do usuário (mockup próprio) — a
+   Variação sai de coluna própria e fica junto da posição numérica,
+   mesma célula. */
+.posicao-cell {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
 .delta-position {
   font-weight: 600;
   font-size: 13px;

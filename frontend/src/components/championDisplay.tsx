@@ -397,7 +397,7 @@ export function ComparatorPanel({
                 </button>
               </div>
               <div className="comparator-stat">
-                <span>Score</span>
+                <span>Pontuação</span>
                 <strong>
                   {row.score_final.toFixed(1)}{' '}
                   <span className={`tier-badge tier-${row.score_tier}`}>{row.score_tier}</span>
