@@ -146,9 +146,11 @@ export default function CampeoesTab({
                 </td>
                 <td>
                   {c.score_atual ? (
-                    <span className={`tier-badge tier-${c.score_atual.score_tier}`}>
+                    <span
+                      className={`tier-badge tier-${c.score_atual.score_tier}`}
+                      title={c.score_atual.tier_provisorio ? 'Amostra pequena — tier provisório, teto em A' : undefined}
+                    >
                       {c.score_atual.score_tier}
-                      {c.score_atual.tier_provisorio ? '*' : ''}
                     </span>
                   ) : (
                     <span className="explain-sub">sem dado</span>

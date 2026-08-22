@@ -333,7 +333,7 @@ export function ScoreExplanationPanel({ row }: { row: ChampionScoreRow }) {
         })}
 
         <div className="explain-row explain-total">
-          <span className="explain-label">Score final</span>
+          <span className="explain-label">Pontuação final</span>
           <span className="explain-bar-cell" />
           <span className="explain-value">{row.score_final.toFixed(1)}</span>
         </div>

@@ -1797,12 +1797,6 @@
 .tier-badge.tier-D { background: var(--tier-d); }
 .tier-badge.tier-E { background: var(--tier-e); }
 
-.provisional-mark {
-  margin-left: 4px;
-  color: var(--text);
-  cursor: help;
-}
-
 .trap-badge {
   margin-left: 8px;
   padding: 1px 6px;
@@ -2257,7 +2251,7 @@
 
 .explain {
   background: var(--code-bg);
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   padding: 14px 16px;
 }
 
@@ -2276,7 +2270,7 @@
 .explain-rows {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 6px;
   font-size: 14px;
 }
 
@@ -2308,33 +2302,41 @@
   min-height: 14px;
 }
 
+/* Ajuste 21/08 (pedido do usuário, referência visual própria): trilho
+   visível atrás da barra (mesmo espírito de barra de progresso) +
+   pontas arredondadas em vez do retângulo reto — cada metade fecha em
+   pílula do lado de fora, reta só onde encontra a divisória central. */
 .explain-bar-half {
   display: flex;
   flex: 1;
-  height: 10px;
+  height: 12px;
   overflow: hidden;
+  background: var(--border);
 }
 
 .explain-bar-neg {
   justify-content: flex-end;
-  border-right: 1px solid var(--border);
+  border-right: 1px solid var(--border-control);
+  border-radius: 999px 0 0 999px;
 }
 
 .explain-bar-pos {
   justify-content: flex-start;
+  border-radius: 0 999px 999px 0;
 }
 
 .explain-bar {
   height: 100%;
-  border-radius: 2px;
 }
 
 .bar-pos {
-  background: var(--pos);
+  background-color: var(--pos);
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0));
 }
 
 .bar-neg {
-  background: var(--neg);
+  background-color: var(--neg);
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0));
 }
 
 .explain-value {
@@ -2673,18 +2675,19 @@
 
 .power-detail-bar-cell {
   display: flex;
-  height: 10px;
+  height: 12px;
   background: var(--border);
-  border-radius: 2px;
+  border-radius: 999px;
   overflow: hidden;
 }
 
 .power-detail-bar {
   height: 100%;
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0));
 }
 
-.bar-estrutural { background: var(--power-estrutural); }
-.bar-meta { background: var(--power-meta); }
+.bar-estrutural { background-color: var(--power-estrutural); }
+.bar-meta { background-color: var(--power-meta); }
 
 .power-detail-value {
   text-align: right;
@@ -2695,7 +2698,7 @@
 
 .history-chart {
   background: var(--code-bg);
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   padding: 14px 16px;
 }
 
@@ -2819,9 +2822,13 @@
   display: block;
 }
 
+/* Ajuste 21/08 (pedido do usuário, referência visual própria): linha de
+   grade tracejada em vez de sólida — leitura mais leve/"moderna", sem
+   competir visualmente com a curva. */
 .history-gridline {
   stroke: var(--border);
   stroke-width: 1;
+  stroke-dasharray: 4 4;
 }
 
 .history-gridlabel {
@@ -2831,12 +2838,14 @@
 
 .history-line {
   stroke: var(--accent);
-  stroke-width: 2;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .history-dot {
   stroke: var(--code-bg);
-  stroke-width: 1.5;
+  stroke-width: 2;
   cursor: help;
 }
 

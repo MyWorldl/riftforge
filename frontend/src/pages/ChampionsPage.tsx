@@ -505,8 +505,12 @@ function ChampionsPage() {
                     </Link>
                   </td>
                   <td>
-                    <span className={`tier-badge tier-${row.score_tier}`}>{row.score_tier}</span>
-                    {row.tier_provisorio && <span className="provisional-mark" title="Amostra pequena — tier provisório, teto em A">*</span>}
+                    <span
+                      className={`tier-badge tier-${row.score_tier}`}
+                      title={row.tier_provisorio ? 'Amostra pequena — tier provisório, teto em A' : undefined}
+                    >
+                      {row.score_tier}
+                    </span>
                   </td>
                   {!lane && <td className="col-hide-tablet"><LaneCell lane={row.lane} /></td>}
                   <td><LayerContributionBar row={row} /></td>

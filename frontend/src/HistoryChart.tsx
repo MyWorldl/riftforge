@@ -41,6 +41,27 @@ function xFor(index: number, total: number): number {
   return PADDING_LEFT + (usable * index) / (total - 1)
 }
 
+/** Ajuste 21/08 (pedido do usuário, referência visual própria): curva
+ *  suave em vez de segmentos retos entre os pontos — deixa o gráfico
+ *  menos "quebrado"/anguloso. Técnica de curva quadrática pelos pontos
+ *  médios (sem biblioteca externa): cada ponto intermediário vira o
+ *  controle de uma curva até o meio do caminho pro próximo ponto, só a
+ *  última curva termina no ponto real — passa perto de cada ponto sem
+ *  precisar de Catmull-Rom completo. */
+function smoothPath(points: { x: number; y: number }[]): string {
+  if (points.length < 2) return ''
+  let d = `M ${points[0].x.toFixed(1)} ${points[0].y.toFixed(1)}`
+  for (let i = 1; i < points.length - 1; i++) {
+    const midX = (points[i].x + points[i + 1].x) / 2
+    const midY = (points[i].y + points[i + 1].y) / 2
+    d += ` Q ${points[i].x.toFixed(1)} ${points[i].y.toFixed(1)} ${midX.toFixed(1)} ${midY.toFixed(1)}`
+  }
+  const last = points[points.length - 1]
+  const secondLast = points[points.length - 2]
+  d += ` Q ${secondLast.x.toFixed(1)} ${secondLast.y.toFixed(1)} ${last.x.toFixed(1)} ${last.y.toFixed(1)}`
+  return d
+}
+
 /** Opacidade reflete confiança relativa ao piso de segurança (30%) — não é
  *  um adorno, é a mesma trava do backend (§11) tornada visível: um ponto
  *  apagado é um ponto em que o tier ainda é provisório. */
@@ -67,9 +88,7 @@ export default function HistoryChart({ championId, championName, eloTier, lane }
     return <p className="empty-state">Só há dado de um patch pra {championName} nessa rota/elo ainda — sem histórico pra mostrar.</p>
   }
 
-  const linePath = points
-    .map((p, i) => `${i === 0 ? 'M' : 'L'} ${xFor(i, points.length).toFixed(1)} ${yFor(p.score_final).toFixed(1)}`)
-    .join(' ')
+  const linePath = smoothPath(points.map((p, i) => ({ x: xFor(i, points.length), y: yFor(p.score_final) })))
 
   // Muitos patches lado a lado colidem no rótulo — mostra só o que cabe
   // sem sobrepor, nunca menos que o primeiro e o último.
