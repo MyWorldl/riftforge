@@ -2836,12 +2836,35 @@
   fill: var(--text);
 }
 
+/* Ajuste 21/08 (pedido do usuário, escolheu a opção "A" de 3 mockups):
+   `stroke` sai daqui — vem do gradiente por tier via atributo `stroke`
+   no `<path>` (CSS de classe sobrescreveria o atributo, então a cor
+   fica de fora desta regra de propósito). */
 .history-line {
-  stroke: var(--accent);
   stroke-width: 2.5;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
+
+/* Área sob a curva (opção "A") — mesmo gradiente por tier da linha,
+   só com opacidade reduzida pra não brigar com o texto/pontos por
+   cima. */
+.history-area {
+  fill-opacity: 0.28;
+}
+
+/* Stops do gradiente por faixa de tier — mesmos tokens `--tier-*` já
+   usados em `.history-dot.tier-*`/`.tier-badge.tier-*`, pedido
+   explícito do usuário pra reaproveitar a paleta existente em vez de
+   cores novas. Classe em vez de atributo `stop-color` direto porque
+   atributos SVG não resolvem `var()`. */
+.history-tier-stop-GOD { stop-color: var(--tier-god); }
+.history-tier-stop-S { stop-color: var(--tier-s); }
+.history-tier-stop-A { stop-color: var(--tier-a); }
+.history-tier-stop-B { stop-color: var(--tier-b); }
+.history-tier-stop-C { stop-color: var(--tier-c); }
+.history-tier-stop-D { stop-color: var(--tier-d); }
+.history-tier-stop-E { stop-color: var(--tier-e); }
 
 .history-dot {
   stroke: var(--code-bg);

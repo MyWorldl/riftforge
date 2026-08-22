@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useId, useState } from 'react'
 import { fetchChampionHistory, type ChampionHistoryPoint } from './api/client'
 
 interface HistoryChartProps {
@@ -30,9 +30,34 @@ const TIER_LINES = [
 
 const CONFIANCA_PISO = 30
 
+// Ajuste 21/08 (pedido do usuário, escolheu a opção "A" de 3 mockups):
+// mesmas faixas de `TIER_LINES` acima, só que como intervalos [min, max]
+// pra colorir a linha/área por zona — GOD cobre até 100 (teto do eixo),
+// E cobre até 0 (piso do eixo), sem gap entre uma faixa e a próxima.
+const TIER_BANDS: { min: number; max: number; tier: string }[] = [
+  { min: 90, max: 100, tier: 'GOD' },
+  { min: 78, max: 90, tier: 'S' },
+  { min: 65, max: 78, tier: 'A' },
+  { min: 50, max: 65, tier: 'B' },
+  { min: 35, max: 50, tier: 'C' },
+  { min: 20, max: 35, tier: 'D' },
+  { min: 0, max: 20, tier: 'E' },
+]
+
 function yFor(score: number): number {
   const usable = HEIGHT - PADDING_TOP - PADDING_BOTTOM
   return PADDING_TOP + usable * (1 - score / 100)
+}
+
+/** Fração (0-1) da posição vertical de `score` dentro da área útil do
+ *  gráfico — usada como `offset` dos stops do gradiente abaixo, que usa
+ *  `gradientUnits="userSpaceOnUse"` com o vetor cravado exatamente nos
+ *  limites de `PADDING_TOP`/`HEIGHT - PADDING_BOTTOM` (mesma área onde
+ *  `yFor` desenha os pontos), então o resultado bate com a posição real
+ *  da linha, não com o SVG inteiro. */
+function gradientOffset(score: number): number {
+  const usable = HEIGHT - PADDING_TOP - PADDING_BOTTOM
+  return (yFor(score) - PADDING_TOP) / usable
 }
 
 function xFor(index: number, total: number): number {
@@ -62,6 +87,16 @@ function smoothPath(points: { x: number; y: number }[]): string {
   return d
 }
 
+/** Fecha a curva suave numa área preenchível — desce até o piso do
+ *  eixo (score 0) nas duas pontas e volta pro início, formando um
+ *  polígono fechado sob a linha (opção "A" escolhida pelo usuário). */
+function areaPath(lineD: string, points: { x: number; y: number }[]): string {
+  const first = points[0]
+  const last = points[points.length - 1]
+  const baseline = HEIGHT - PADDING_BOTTOM
+  return `${lineD} L ${last.x.toFixed(1)} ${baseline} L ${first.x.toFixed(1)} ${baseline} Z`
+}
+
 /** Opacidade reflete confiança relativa ao piso de segurança (30%) — não é
  *  um adorno, é a mesma trava do backend (§11) tornada visível: um ponto
  *  apagado é um ponto em que o tier ainda é provisório. */
@@ -73,6 +108,11 @@ function opacityFor(confianca: number): number {
 export default function HistoryChart({ championId, championName, eloTier, lane }: HistoryChartProps) {
   const [points, setPoints] = useState<ChampionHistoryPoint[] | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // Id único por instância — evita colidir com o id de outro
+  // `HistoryChart` que por acaso esteja montado ao mesmo tempo (o
+  // `url(#...)` do gradiente é global ao documento, não escopado ao
+  // componente).
+  const gradientId = `history-tier-gradient-${useId()}`
 
   useEffect(() => {
     setPoints(null)
@@ -88,7 +128,9 @@ export default function HistoryChart({ championId, championName, eloTier, lane }
     return <p className="empty-state">Só há dado de um patch pra {championName} nessa rota/elo ainda — sem histórico pra mostrar.</p>
   }
 
-  const linePath = smoothPath(points.map((p, i) => ({ x: xFor(i, points.length), y: yFor(p.score_final) })))
+  const linePoints = points.map((p, i) => ({ x: xFor(i, points.length), y: yFor(p.score_final) }))
+  const linePath = smoothPath(linePoints)
+  const areaFillPath = areaPath(linePath, linePoints)
 
   // Muitos patches lado a lado colidem no rótulo — mostra só o que cabe
   // sem sobrepor, nunca menos que o primeiro e o último.
@@ -100,6 +142,30 @@ export default function HistoryChart({ championId, championName, eloTier, lane }
         Evolução de {championName} — {lane} / {eloTier}
       </p>
       <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} className="history-svg" role="img" aria-label={`Histórico de score de ${championName}`}>
+        <defs>
+          {/* Ajuste 21/08 (pedido do usuário, escolheu a opção "A" de 3
+              mockups): gradiente vertical com degraus (2 stops no mesmo
+              offset em cada fronteira de tier) em vez de transição suave
+              entre cores — a linha/área ficam na cor exata do tier que
+              estão cruzando naquele instante, não uma mistura. Cores via
+              classe CSS (`.history-tier-stop-*`), não atributo `stop-
+              color` direto — atributo SVG não resolve `var()`, mesmo
+              motivo de `.history-dot.tier-*` já usar classe pra isso. */}
+          <linearGradient
+            id={gradientId}
+            gradientUnits="userSpaceOnUse"
+            x1="0"
+            y1={PADDING_TOP}
+            x2="0"
+            y2={HEIGHT - PADDING_BOTTOM}
+          >
+            {TIER_BANDS.flatMap((band) => [
+              <stop key={`${band.tier}-max`} offset={gradientOffset(band.max)} className={`history-tier-stop-${band.tier}`} />,
+              <stop key={`${band.tier}-min`} offset={gradientOffset(band.min)} className={`history-tier-stop-${band.tier}`} />,
+            ])}
+          </linearGradient>
+        </defs>
+
         {TIER_LINES.map((t) => (
           <g key={t.valor}>
             <line
@@ -115,7 +181,8 @@ export default function HistoryChart({ championId, championName, eloTier, lane }
           </g>
         ))}
 
-        <path d={linePath} className="history-line" fill="none" />
+        <path d={areaFillPath} fill={`url(#${gradientId})`} className="history-area" />
+        <path d={linePath} stroke={`url(#${gradientId})`} className="history-line" fill="none" />
 
         {points.map((p, i) => (
           <g key={`${p.patch}-${p.lane}`}>
