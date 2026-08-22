@@ -12,6 +12,7 @@ import { matchesNameSearch } from '../components/championDisplay'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { useFilterParam } from '../hooks/useFilterParam'
 import { CHAMPIONS_COUNTRY_OPTIONS, CHAMPIONS_ENABLED_REGIONS } from '../constants/regions'
+import { TIER_ICONS } from '../constants/tiers'
 import FlagSelect from '../components/FlagSelect'
 
 /** Sprint 4 item 23 (revisão técnica): página dedicada de matchups —
@@ -30,19 +31,6 @@ const LANES = [
   { value: 'BOTTOM', label: 'Atirador' },
   { value: 'UTILITY', label: 'Suporte' },
 ]
-
-const TIER_ICONS: Record<string, string> = {
-  IRON: '/tiers/iron.png',
-  BRONZE: '/tiers/bronze.png',
-  SILVER: '/tiers/silver.png',
-  GOLD: '/tiers/gold.png',
-  PLATINUM: '/tiers/platinum.png',
-  EMERALD: '/tiers/emerald.png',
-  DIAMOND: '/tiers/diamond.png',
-  MASTER: '/tiers/master.png',
-  GRANDMASTER: '/tiers/grandmaster.png',
-  CHALLENGER: '/tiers/challenger.png',
-}
 
 // Auditoria 16/08 §3.2: Platina entra como o segundo elo com coleta real,
 // ao lado de Ouro (mesma lista de `ChampionsPage.tsx`).

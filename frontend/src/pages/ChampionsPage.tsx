@@ -15,6 +15,7 @@ import FlagSelect from '../components/FlagSelect'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { useFilterParam } from '../hooks/useFilterParam'
 import { CHAMPIONS_COUNTRY_OPTIONS, CHAMPIONS_ENABLED_REGIONS } from '../constants/regions'
+import { TIER_ICONS } from '../constants/tiers'
 import HistoryChart from '../HistoryChart'
 import {
   ComparatorPanel,
@@ -41,24 +42,6 @@ const COUNTRY_SELECT_OPTIONS = CHAMPIONS_COUNTRY_OPTIONS.map((c) => ({
   ...c,
   disabled: !CHAMPIONS_ENABLED_REGIONS.includes(c.value),
 }))
-
-/** Item novo (revisão técnica §7.6): esses 10 PNGs (~95KB) só aparecem se
- *  o usuário abrir o dropdown de Tier — antes vinham como `import`
- *  (bundlados no chunk JS inicial via Vite), agora ficam em
- *  `public/tiers/` e são carregados só quando o `<img>` realmente
- *  renderiza, por caminho de string comum. */
-const TIER_ICONS: Record<string, string> = {
-  IRON: '/tiers/iron.png',
-  BRONZE: '/tiers/bronze.png',
-  SILVER: '/tiers/silver.png',
-  GOLD: '/tiers/gold.png',
-  PLATINUM: '/tiers/platinum.png',
-  EMERALD: '/tiers/emerald.png',
-  DIAMOND: '/tiers/diamond.png',
-  MASTER: '/tiers/master.png',
-  GRANDMASTER: '/tiers/grandmaster.png',
-  CHALLENGER: '/tiers/challenger.png',
-}
 
 const ELO_TIERS = [
   'IRON', 'BRONZE', 'SILVER', 'GOLD', 'PLATINUM',

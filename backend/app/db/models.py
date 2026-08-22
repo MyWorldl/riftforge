@@ -565,7 +565,13 @@ class PlayerRanking(Base):
         default=lambda: datetime.now(timezone.utc)
     )
 
-    __table_args__ = (UniqueConstraint("queue", "tier", "region", "puuid"),)
+    __table_args__ = (
+        UniqueConstraint("queue", "tier", "region", "puuid"),
+        # Ajuste 21/08 (busca "conforme digita" de jogador): tabela é
+        # pequena hoje, mas `game_name` é a coluna certa pra indexar já
+        # que toda busca filtra por ILIKE nela.
+        Index("ix_player_rankings_game_name", "game_name"),
+    )
 
 
 class ChampionMatchup(Base):

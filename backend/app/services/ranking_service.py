@@ -17,7 +17,7 @@ def get_rankings(
     limit: int = 1000,
     offset: int = 0,
 ) -> list[dict]:
-    """"Rankings" — lê só de `player_rankings`, nunca consulta a Riot em
+    """ "Rankings" — lê só de `player_rankings`, nunca consulta a Riot em
     tempo real. Ranking direto das ligas apex da própria Riot.
 
     `tier` omitido retorna os 3 tiers combinados, ordenados
@@ -33,7 +33,9 @@ def get_rankings(
     teto."""
     settings = settings or get_settings()
     region = region or settings.riot_platform_region
-    rows = RankingRepository(db).list(queue=queue, region=region, tier=tier, limit=limit, offset=offset)
+    rows = RankingRepository(db).list(
+        queue=queue, region=region, tier=tier, limit=limit, offset=offset
+    )
     rows.sort(key=lambda r: (_TIER_ORDER.get(r.tier, 99), r.rank_position))
 
     return [
@@ -49,6 +51,41 @@ def get_rankings(
             "wins": row.wins,
             "losses": row.losses,
             "delta_posicao": row.delta_posicao,
+        }
+        for row in rows
+    ]
+
+
+def search_players(
+    db: Session,
+    queue: str,
+    q: str,
+    region: str | None,
+    settings: Settings | None = None,
+    limit: int = 8,
+) -> list[dict]:
+    """Ajuste 21/08 (`PlayerSearchInput`, busca "conforme digita"): só
+    indexa `player_rankings` — as ligas apex já coletadas (Desafiante/
+    Grão-Mestre/Mestre, top N por elo/região), não é busca de qualquer
+    jogador do mundo (isso exigiria chamar a Riot por tecla digitada,
+    proibitivo mesmo com Production Key). String vazia/só espaço não
+    busca nada, evita devolver os N primeiros do ranking sem relação com
+    o que foi digitado."""
+    settings = settings or get_settings()
+    region = region or settings.riot_platform_region
+    needle = q.strip()
+    if not needle:
+        return []
+    rows = RankingRepository(db).search_by_name(
+        queue=queue, region=region, needle=needle, limit=limit
+    )
+    return [
+        {
+            "game_name": row.game_name,
+            "tag_line": row.tag_line,
+            "region": row.region,
+            "tier": row.tier,
+            "profile_icon_id": row.profile_icon_id,
         }
         for row in rows
     ]

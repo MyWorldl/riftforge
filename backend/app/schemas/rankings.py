@@ -17,3 +17,17 @@ class RankingRow(BaseModel):
     wins: int
     losses: int
     delta_posicao: int | None
+
+
+class PlayerSearchRow(BaseModel):
+    """Ajuste 21/08: busca "conforme digita" pra alimentar
+    `PlayerSearchInput` (Home/Invocador/Análise do Jogador). Só indexa
+    quem já está em `player_rankings` (ligas apex, top N por elo/região já
+    coletado) — não é busca de qualquer jogador do mundo, ver
+    `ranking_service.search_players`."""
+
+    game_name: str
+    tag_line: str
+    region: str
+    tier: str
+    profile_icon_id: int | None

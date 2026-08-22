@@ -343,6 +343,58 @@ def test_rankings_region_omitted_uses_overridden_settings(client, db_session):
     assert rows[0]["region"] == "euw1"
 
 
+def test_rankings_search_matches_substring_case_insensitive(client, db_session):
+    db_session.add_all(
+        [
+            PlayerRanking(
+                queue="RANKED_SOLO_5x5",
+                tier="CHALLENGER",
+                region="br1",
+                puuid="puuid-1",
+                game_name="MarleneDanadinha",
+                tag_line="666",
+                summoner_level=200,
+                profile_icon_id=1,
+                league_points=1200,
+                wins=100,
+                losses=80,
+                rank_position=1,
+                delta_posicao=None,
+            ),
+            PlayerRanking(
+                queue="RANKED_SOLO_5x5",
+                tier="GRANDMASTER",
+                region="br1",
+                puuid="puuid-2",
+                game_name="OutroJogador",
+                tag_line="BR1",
+                summoner_level=150,
+                profile_icon_id=2,
+                league_points=900,
+                wins=60,
+                losses=50,
+                rank_position=2,
+                delta_posicao=None,
+            ),
+        ]
+    )
+    db_session.commit()
+
+    response = client.get("/rankings/search?q=marlene&region=br1")
+    assert response.status_code == 200
+    rows = response.json()
+    assert len(rows) == 1
+    assert rows[0]["game_name"] == "MarleneDanadinha"
+    assert rows[0]["tag_line"] == "666"
+    assert "puuid" not in rows[0]
+
+
+def test_rankings_search_blank_query_returns_empty(client):
+    response = client.get("/rankings/search?q=%20&region=br1")
+    assert response.status_code == 200
+    assert response.json() == []
+
+
 def test_meta_coverage_empty_db(client):
     response = client.get("/meta/coverage?elo_tier=GOLD")
     assert response.status_code == 200

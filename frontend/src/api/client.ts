@@ -467,6 +467,27 @@ export async function fetchRankings(filters: RankingFilters, signal?: AbortSigna
   return request(`/rankings?${params}`, 'Falha ao buscar ranking', { signal })
 }
 
+/** Ajuste 21/08 (busca "conforme digita", `PlayerSearchInput`): só existe
+ *  pra quem já está em `player_rankings` (ligas apex já coletadas) — não
+ *  é busca de qualquer jogador do mundo, ver `GET /rankings/search`. */
+export interface PlayerSearchRow {
+  game_name: string
+  tag_line: string
+  region: string
+  tier: string
+  profile_icon_id: number | null
+}
+
+export async function fetchPlayerSearch(
+  q: string,
+  region?: string,
+  signal?: AbortSignal,
+): Promise<PlayerSearchRow[]> {
+  const params = new URLSearchParams({ q })
+  if (region) params.set('region', region)
+  return request(`/rankings/search?${params}`, 'Falha ao buscar jogador', { signal })
+}
+
 export function profileIconUrl(ddragonPatch: string, profileIconId: number): string {
   return `https://ddragon.leagueoflegends.com/cdn/${ddragonPatch}/img/profileicon/${profileIconId}.png`
 }
