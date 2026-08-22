@@ -9,35 +9,49 @@ import { LANE_LABELS } from '../championDisplay'
 
 const LANE_ORDER = ['TOP', 'JUNGLE', 'MIDDLE', 'BOTTOM', 'UTILITY']
 
-export function DeltaTable({ title, rows }: { title: string; rows: PatchDeltaRow[] }) {
+/** Ajuste 21/08 (redesenho "Impacto no Score"): tabela crua virou lista
+ *  de cards, mesmo padrão visual já usado em `.mastery-item`/
+ *  `.match-item` (ícone + informação principal + valor à direita), em
+ *  vez de inventar um layout novo. Ícone do campeão via
+ *  `championImageUrl` — mesmo dado que `TierChip` (abaixo) já usa nesta
+ *  página, só não estava chegando até aqui antes. */
+export function DeltaTable({
+  title,
+  rows,
+  championsMeta,
+  ddragonPatch,
+}: {
+  title: string
+  rows: PatchDeltaRow[]
+  championsMeta: Record<string, ChampionMeta> | null
+  ddragonPatch: string
+}) {
   if (rows.length === 0) return null
   return (
-    <div className="table-scroll">
+    <div>
       <p className="table-caption">{title}</p>
-      <table className="stats-table">
-        <thead>
-          <tr>
-            <th>Campeão</th>
-            <th>Rota</th>
-            <th>Score anterior</th>
-            <th>Score atual</th>
-            <th>Delta</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr key={`${row.champion_id}-${row.lane}`}>
-              <td>{row.champion_id}</td>
-              <td>{LANE_LABELS[row.lane] ?? row.lane}</td>
-              <td>{row.score_anterior.toFixed(1)}</td>
-              <td>{row.score_atual.toFixed(1)}</td>
-              <td className={row.delta >= 0 ? 'value-pos' : 'value-neg'}>
+      <ul className="delta-card-list">
+        {rows.map((row) => {
+          const meta = championsMeta?.[row.champion_id]
+          return (
+            <li className="delta-card" key={`${row.champion_id}-${row.lane}`}>
+              {meta && ddragonPatch && (
+                <img src={championImageUrl(ddragonPatch, meta.image.full)} alt="" width={36} height={36} loading="lazy" />
+              )}
+              <div className="delta-card-info">
+                <strong>{meta?.name ?? row.champion_id}</strong>
+                <span className="explain-sub">{LANE_LABELS[row.lane] ?? row.lane}</span>
+              </div>
+              <span className="delta-card-scores">
+                {row.score_anterior.toFixed(1)} → {row.score_atual.toFixed(1)}
+              </span>
+              <span className={`delta-card-pill ${row.delta >= 0 ? 'delta-card-pill-pos' : 'delta-card-pill-neg'}`}>
                 {row.delta >= 0 ? '+' : ''}{row.delta.toFixed(1)}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+              </span>
+            </li>
+          )
+        })}
+      </ul>
     </div>
   )
 }
@@ -45,6 +59,13 @@ export function DeltaTable({ title, rows }: { title: string; rows: PatchDeltaRow
 function groupByLane(rows: PatchDeltaRow[]): [string, PatchDeltaRow[]][] {
   const map = new Map<string, PatchDeltaRow[]>()
   for (const row of rows) {
+    // Ajuste 21/08: `resolved_position` pode vir "UNKNOWN" do backend
+    // (partida sem rota resolvida, ver `aggregate_stats.py`/
+    // `compute_build.py`) — pedido do usuário pra tirar isso do seletor
+    // de Rota. Não existe uma lista estática de opções aqui (é
+    // data-driven a partir das próprias linhas), então o filtro precisa
+    // ser sobre o dado, não sobre um array de opções fixo.
+    if (row.lane === 'UNKNOWN') continue
     const list = map.get(row.lane) ?? []
     list.push(row)
     map.set(row.lane, list)
@@ -137,8 +158,12 @@ export function TierChangeGroups({
   ddragonPatch: string
 }) {
   const [selectedLane, setSelectedLane] = useState<string | null>(null)
-  if (rows.length === 0) return null
   const groups = groupByLane(rows)
+  // Ajuste 21/08: `groups` pode ficar vazio mesmo com `rows.length > 0`
+  // agora que `groupByLane` descarta linhas UNKNOWN — checar o resultado
+  // filtrado, não o array bruto de entrada, senão `groups[0][0]` abaixo
+  // quebra (índice fora do array).
+  if (groups.length === 0) return null
   const activeLane = groups.find(([lane]) => lane === selectedLane)?.[0] ?? groups[0][0]
   const activeGroup = groups.find(([lane]) => lane === activeLane)
   if (!activeGroup) return null

@@ -1549,6 +1549,69 @@
   flex-shrink: 0;
 }
 
+/* Redesenho "Impacto no Score" (ajuste 21/08) — mesmo padrão de
+   `.mastery-item`/`.match-item` (ícone + info + valor à direita), em
+   vez da tabela crua que existia antes. */
+.delta-card-list {
+  list-style: none;
+  margin: var(--space-2) 0 var(--space-4);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.delta-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--code-bg);
+}
+
+.delta-card img {
+  flex-shrink: 0;
+  border-radius: 4px;
+}
+
+.delta-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.delta-card-scores {
+  font-size: 13px;
+  color: var(--text);
+  opacity: 0.85;
+  white-space: nowrap;
+}
+
+.delta-card-pill {
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-weight: 700;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.delta-card-pill-pos {
+  color: var(--pos);
+  background: var(--pos-bg);
+  border-color: var(--pos-border);
+}
+
+.delta-card-pill-neg {
+  color: var(--neg);
+  background: var(--neg-bg);
+  border-color: var(--neg-border);
+}
+
 .stats-table th,
 .stats-table td {
   padding: 8px 12px;

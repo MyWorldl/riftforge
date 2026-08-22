@@ -218,8 +218,8 @@ function PatchNotesPage() {
             Comparando patch <strong>{result.patch_anterior}</strong> → <strong>{result.patch_atual}</strong> ·{' '}
             {result.comparados} campeões comparados
           </p>
-          <DeltaTable title="Maiores altas" rows={result.altas} />
-          <DeltaTable title="Maiores quedas" rows={result.quedas} />
+          <DeltaTable title="Maiores altas" rows={result.altas} championsMeta={championsMeta} ddragonPatch={ddragonPatch} />
+          <DeltaTable title="Maiores quedas" rows={result.quedas} championsMeta={championsMeta} ddragonPatch={ddragonPatch} />
         </>
       )}
 
