@@ -1,7 +1,8 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import heroImage from '../assets/hero.svg'
 import FlagSelect from '../components/FlagSelect'
+import PlayerSearchInput from '../components/PlayerSearchInput'
 import { REGIONS } from '../constants/regions'
 import {
   championImageUrl,
@@ -66,10 +67,23 @@ function IconUser() {
   )
 }
 
+/** Ajuste 21/08 (página Invocador, nova) — mesmo ícone de lupa de
+ *  `AppLayout.tsx::IconSearch`, duplicado aqui (mesmo padrão local já
+ *  seguido pelos outros ícones deste arquivo). */
+function IconSearch() {
+  return (
+    <svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true">
+      <circle cx="7" cy="7" r="4.5" stroke="currentColor" strokeWidth="1.4" fill="none" />
+      <path d="M10.3 10.3 14 14" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+    </svg>
+  )
+}
+
 const SHORTCUTS = [
   { to: '/campeoes', label: 'Campeões', description: 'Placar de força por elo, rota e patch.', icon: <IconShield /> },
   { to: '/classificacoes', label: 'Classificações', description: 'Top jogadores por região e tier apex.', icon: <IconTrophy /> },
   { to: '/matchups', label: 'Matchups', description: 'Confrontos favoráveis e desfavoráveis por campeão.', icon: <IconSwords /> },
+  { to: '/invocador', label: 'Invocador', description: 'Veja o perfil de qualquer jogador, o seu incluso.', icon: <IconSearch /> },
   { to: '/jogador', label: 'Análise do Jogador', description: 'Seu histórico recente e roadmap de progressão.', icon: <IconUser /> },
 ]
 
@@ -199,22 +213,16 @@ function HomePage() {
   useDocumentTitle('RiftForge')
   const navigate = useNavigate()
   const [region, setRegion] = useState('br1')
-  const [riotId, setRiotId] = useState('')
   const [formError, setFormError] = useState<string | null>(null)
 
-  function handleSubmit(event: FormEvent) {
-    event.preventDefault()
-    const trimmed = riotId.trim()
-    const hashIndex = trimmed.lastIndexOf('#')
-    if (hashIndex <= 0 || hashIndex === trimmed.length - 1) {
-      setFormError('Use o formato Nome#Tag (ex: Fulano#BR1).')
-      return
-    }
+  // Ajuste 21/08: busca "conforme digita" (`PlayerSearchInput`) — leva
+  // pro Invocador (perfil geral de qualquer jogador), não mais direto
+  // pra Análise do Jogador. Texto livre "Nome#Tag" continua funcionando
+  // como fallback pra quem não está entre os jogadores já indexados.
+  function goToPlayer(targetRegion: string, gameName: string, tagLine: string) {
     setFormError(null)
-    const gameName = trimmed.slice(0, hashIndex)
-    const tagLine = trimmed.slice(hashIndex + 1)
     navigate(
-      `/jogador?region=${encodeURIComponent(region)}&gameName=${encodeURIComponent(gameName)}&tagLine=${encodeURIComponent(tagLine)}`,
+      `/invocador?region=${encodeURIComponent(targetRegion)}&gameName=${encodeURIComponent(gameName)}&tagLine=${encodeURIComponent(tagLine)}`,
     )
   }
 
@@ -242,22 +250,24 @@ function HomePage() {
         ))}
       </nav>
 
-      <form className="player-search-form" onSubmit={handleSubmit}>
+      <div className="player-search-form">
         <label>
           Região
           <FlagSelect options={REGIONS} value={region} onChange={setRegion} />
         </label>
         <label>
           Buscar
-          <input
-            type="text"
-            placeholder="Nome de jogador + #BR1"
-            value={riotId}
-            onChange={(e) => setRiotId(e.target.value)}
+          <PlayerSearchInput
+            region={region}
+            showSubmitButton
+            onSelect={(row) => goToPlayer(row.region, row.game_name, row.tag_line)}
+            onSubmitFreeText={(parsed) => {
+              if (parsed) goToPlayer(region, parsed.gameName, parsed.tagLine)
+              else setFormError('Use o formato Nome#Tag (ex: Fulano#BR1) ou escolha uma sugestão.')
+            }}
           />
         </label>
-        <button type="submit" className="player-search-submit">Buscar</button>
-      </form>
+      </div>
       {formError && <p className="error">{formError}</p>}
 
       <PatchHighlights />

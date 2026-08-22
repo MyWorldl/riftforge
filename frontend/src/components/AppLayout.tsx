@@ -39,6 +39,20 @@ function IconUser() {
   )
 }
 
+/** Ajuste 21/08 (página Invocador, nova): ícone distinto de `IconUser`
+ *  (Análise do Jogador) — os dois na sidebar ficariam visualmente
+ *  idênticos se reaproveitasse o mesmo, confundindo qual é qual. Lupa
+ *  comunica "buscar/ver o perfil de qualquer jogador" melhor que a
+ *  silhueta de pessoa, que já significa "seu progresso" na outra página. */
+function IconSearch() {
+  return (
+    <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
+      <circle cx="7" cy="7" r="4.5" stroke="currentColor" strokeWidth="1.4" fill="none" />
+      <path d="M10.3 10.3 14 14" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+    </svg>
+  )
+}
+
 function IconFileText() {
   return (
     <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
@@ -52,6 +66,7 @@ const NAV_ITEMS: { to: string; label: string; icon: ReactNode; end?: boolean }[]
   { to: '/', label: 'Home', icon: <IconHome />, end: true },
   { to: '/campeoes', label: 'Campeões', icon: <IconShield /> },
   { to: '/classificacoes', label: 'Classificações', icon: <IconTrophy /> },
+  { to: '/invocador', label: 'Invocador', icon: <IconSearch /> },
   { to: '/jogador', label: 'Análise do Jogador', icon: <IconUser /> },
   { to: '/patch-notes', label: 'Patch Notes', icon: <IconFileText /> },
 ]

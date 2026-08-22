@@ -2960,6 +2960,12 @@
   margin-bottom: 4px;
 }
 
+/* Ajuste 21/08 (badge de elo no Invocador, `SeasonProgressCard`). */
+.season-progress-tier-icon {
+  vertical-align: middle;
+  margin-right: 4px;
+}
+
 .champion-portrait {
   border-radius: 4px;
   vertical-align: middle;
