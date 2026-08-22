@@ -190,7 +190,7 @@ function RankingsPage() {
           <table className="stats-table">
             <thead>
               <tr>
-                <th>#</th>
+                <th>Posição</th>
                 <th>Invocador</th>
                 {showTierColumn && <th>Tier</th>}
                 <th>Nível</th>

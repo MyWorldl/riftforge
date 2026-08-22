@@ -433,7 +433,7 @@ function ChampionsPage() {
           <thead>
             <tr>
               <th title="Selecionar para comparar (até 3)"></th>
-              <th>#</th>
+              <th>Posição</th>
               <th>Campeão</th>
               <SortableHeader label="Tier" sortKeyFor="score" currentKey={sortKey} currentDir={sortDir} onSort={handleSort} />
               {lane && (

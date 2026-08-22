@@ -1078,18 +1078,31 @@
    fora da área visível mesmo em telas largas, sem indicar que dava pra
    rolar. Usa o espaço inteiro que `.center` já reserva (1126px) em vez
    de um teto menor arbitrário. */
+/* Ajuste 21/08 (4ª rodada): pedido do usuário — a lista "não fica
+   fechada", fica na mesma cor do fundo da página. `.table-scroll` vira
+   o cartão que fecha a tabela (fundo/borda/cantos), em vez de deixar
+   as linhas soltas direto sobre `--bg`. Afeta todas as tabelas que já
+   usam essa classe (Campeões, Classificações, abas de Análise do
+   Jogador/Invocador) — mesmo tratamento visual em vez de duplicar só
+   pra Campeões. */
 .table-scroll {
   position: relative;
   align-self: flex-start;
   width: 100%;
   max-width: 100%;
   overflow-x: auto;
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
 }
 
 /* Item novo (revisão técnica §7.1): tabelas continuam rolando na
    horizontal (não viram cards) — só reforça visualmente que há mais
    coluna pra ver, com um gradiente na borda direita em vez de deixar o
-   corte parecer acidental. Decorativo, sem afetar a11y. */
+   corte parecer acidental. Decorativo, sem afetar a11y. Gradiente
+   ajustado (ajuste 21/08) pra desvanecer no fundo do CARTÃO
+   (--code-bg), não mais no fundo da página (--bg) — senão a borda
+   direita do fade destoava do resto do cartão fechado. */
 .table-scroll::after {
   content: '';
   position: absolute;
@@ -1097,8 +1110,9 @@
   right: 0;
   bottom: 0;
   width: 20px;
-  background: linear-gradient(to right, transparent, var(--bg));
+  background: linear-gradient(to right, transparent, var(--code-bg));
   pointer-events: none;
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
 }
 
 .stats-table {
@@ -1698,6 +1712,20 @@
 .stats-table th {
   color: var(--text-h);
   font-weight: 600;
+}
+
+/* Ajuste 21/08 (4ª rodada), parte do cartão "fechado" acima: última
+   linha não repete a borda que já vem do próprio cartão (`.table-
+   scroll`), senão fica uma linha dupla logo acima da borda de baixo.
+   Hover sutil em `--bg` (cor da PÁGINA, diferente de `--code-bg` do
+   cartão) reforça que cada linha é um alvo interativo (ícones de
+   explicação/histórico), não só texto solto. */
+.stats-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.stats-table tbody tr:hover {
+  background: var(--bg);
 }
 
 /* Sprint 4 item 22b/19 (revisão técnica + pesquisa de design §1): a tabela
