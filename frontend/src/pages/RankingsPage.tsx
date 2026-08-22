@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { fetchChampions, fetchRankings, profileIconUrl, type RankingRow } from '../api/client'
 import FlagSelect from '../components/FlagSelect'
+import { PositionDeltaBadge } from '../components/positionDelta'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { useFilterParam } from '../hooks/useFilterParam'
 import { RANKINGS_REGIONS } from '../constants/regions'
@@ -23,20 +24,6 @@ function matchesSearch(row: RankingRow, search: string): boolean {
 function winRatePct(row: RankingRow): number {
   const total = row.wins + row.losses
   return Math.round((row.wins / Math.max(total, 1)) * 100)
-}
-
-/** Item novo (revisão técnica §5.2): ▲/▼ com a variação de posição desde a
- *  última coleta — `null` (jogador novo no ranking ou primeira coleta,
- *  ver `collect_rankings.py`) não desenha nada, em vez de fingir "sem
- *  mudança". */
-function DeltaPositionBadge({ delta }: { delta: number | null }) {
-  if (delta === null || delta === 0) return <span className="delta-position delta-position-none">—</span>
-  const subiu = delta > 0
-  return (
-    <span className={`delta-position ${subiu ? 'delta-position-up' : 'delta-position-down'}`}>
-      {subiu ? '▲' : '▼'} {Math.abs(delta)}
-    </span>
-  )
 }
 
 /** Anel de vitória/derrota: fatia proporcional à taxa real, vitória em
@@ -190,12 +177,11 @@ function RankingsPage() {
           <table className="stats-table">
             <thead>
               <tr>
-                <th>Posição</th>
+                <th title="Posição no ranking, com a variação de quantas posições o jogador subiu ou desceu desde a última coleta">Posição</th>
                 <th>Invocador</th>
                 {showTierColumn && <th>Tier</th>}
                 <th>Nível</th>
                 <th>LP</th>
-                <th>Variação</th>
                 <th>Taxa de Vitória</th>
               </tr>
             </thead>
@@ -204,7 +190,12 @@ function RankingsPage() {
                 const winRate = winRatePct(row)
                 return (
                   <tr key={`${row.tier}-${row.region}-${row.rank_position}`} className={`tier-stripe-${row.tier}`}>
-                    <td>{row.rank_position}</td>
+                    <td>
+                      <span className="posicao-cell">
+                        {row.rank_position}
+                        <PositionDeltaBadge posicao={row.delta_posicao} />
+                      </span>
+                    </td>
                     <td>
                       <div className="champion-cell">
                         {row.profile_icon_id && ddragonPatch && (
@@ -221,9 +212,9 @@ function RankingsPage() {
                     </td>
                     {showTierColumn && (
                       <td>
-                        <span className="tier-indicator">
+                        <span className="tier-indicator tier-indicator-lg">
                           {TIER_ICONS[row.tier] && (
-                            <img className="tier-indicator-icon" src={TIER_ICONS[row.tier]} alt="" width={16} height={16} />
+                            <img className="tier-indicator-icon" src={TIER_ICONS[row.tier]} alt="" width={22} height={22} />
                           )}
                           {TIER_LABELS[row.tier] ?? row.tier}
                         </span>
@@ -231,7 +222,6 @@ function RankingsPage() {
                     )}
                     <td>{row.summoner_level ?? '—'}</td>
                     <td>{row.league_points}</td>
-                    <td><DeltaPositionBadge delta={row.delta_posicao} /></td>
                     <td>
                       <div className="win-rate-cell">
                         <WinRateRing winRate={winRate} />

@@ -14,6 +14,7 @@ import {
   type PatchNotesResult,
 } from '../api/client'
 import FlagSelect from '../components/FlagSelect'
+import { PositionDeltaBadge } from '../components/positionDelta'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { useFilterParam } from '../hooks/useFilterParam'
 import { CHAMPIONS_COUNTRY_OPTIONS, CHAMPIONS_ENABLED_REGIONS } from '../constants/regions'
@@ -177,18 +178,11 @@ function buildCollectionCaption(summary: CollectionSummaryRow[] | null): string 
  *  (número + selo lado a lado), então o sufixo "pos." da rodada
  *  anterior não faz mais falta (a posição ao lado já deixa óbvio o que
  *  é). "=" no lugar de "—" pra "sem mudança", mesmo símbolo do
- *  mockup. */
-function VariationBadge({ posicao }: { posicao: number | null | undefined }) {
-  if (posicao === undefined || posicao === null || posicao === 0) {
-    return <span className="delta-position delta-position-none">=</span>
-  }
-  const subiu = posicao > 0
-  return (
-    <span className={`delta-position ${subiu ? 'delta-position-up' : 'delta-position-down'}`}>
-      {subiu ? '▲' : '▼'}{Math.abs(posicao)}
-    </span>
-  )
-}
+ *  mockup.
+ *
+ *  Ajuste 22/08: o selo em si (`PositionDeltaBadge`) virou componente
+ *  compartilhado (`components/positionDelta.tsx`) pra Classificações
+ *  reaproveitar a mesma lógica, ver comentário lá. */
 
 export type SortKey = 'score' | 'win_rate' | 'pick_rate' | 'ban_rate'
 
@@ -529,7 +523,7 @@ function ChampionsPage() {
                   <td>
                     <span className="posicao-cell">
                       {index + 1}
-                      {lane && <VariationBadge posicao={deltaPosicaoFor(delta, sortKey)} />}
+                      {lane && <PositionDeltaBadge posicao={deltaPosicaoFor(delta, sortKey)} />}
                     </span>
                   </td>
                   <td>

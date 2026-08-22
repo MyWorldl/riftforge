@@ -2513,6 +2513,17 @@
   flex-shrink: 0;
 }
 
+/* Ajuste 22/08 (pedido do usuário): só a coluna "Tier" da tabela de
+   Classificações — texto e ícone maiores que o padrão de
+   `.tier-indicator` (12px), que também é usado no dropdown de busca da
+   Home (`PlayerSearchInput`, espaço bem mais apertado, não deve crescer
+   junto). O ícone em si já cresce via `width`/`height` inline no JSX
+   (16px → 22px), igual ao padrão já usado ali (14px na Home, 16px aqui,
+   cada lugar com seu próprio tamanho). */
+.tier-indicator-lg {
+  font-size: 15px;
+}
+
 .tier-stripe-CHALLENGER td:first-child {
   border-left: 3px solid var(--rank-challenger);
 }
@@ -2566,12 +2577,17 @@
   color: var(--text);
 }
 
+/* Ajuste 22/08 (pedido do usuário): pódio alinhado com a lista abaixo —
+   antes tinha um teto próprio de 960px enquanto `.table-scroll` (a
+   lista) ocupa 100% do container (`.center`), então em telas largas o
+   pódio ficava mais estreito que a tabela, com a borda direita
+   desencontrada. Mesma largura/alinhamento dos dois agora. */
 .podium {
   display: flex;
   align-items: flex-end;
   gap: 12px;
   width: 100%;
-  max-width: 960px;
+  max-width: 100%;
   align-self: flex-start;
 }
 
@@ -2607,15 +2623,41 @@
   border-width: 2px;
   border-color: var(--podium-gold);
   background: linear-gradient(160deg, rgba(201, 162, 39, 0.22), var(--code-bg));
-  box-shadow: 0 0 12px rgba(201, 162, 39, 0.35);
+  animation: podium-pulse-gold 3.2s ease-in-out infinite;
 }
+/* Ajuste 22/08 (pedido do usuário, opção "C" de 3 mockups apresentados):
+   #1 e #2 ganham um brilho que "respira" devagar, no lugar do glow
+   estático que antes só existia no #1 — #3 fica com um glow fixo (mais
+   sutil que os outros dois), sem animar, pra não virar excesso de
+   movimento nos 3 ao mesmo tempo. */
 .podium-card.podium-2 {
   border-color: var(--podium-silver);
   background: linear-gradient(160deg, rgba(154, 160, 166, 0.14), var(--code-bg));
+  animation: podium-pulse-silver 3.2s ease-in-out infinite;
 }
 .podium-card.podium-3 {
   border-color: var(--podium-bronze);
   background: linear-gradient(160deg, rgba(181, 101, 29, 0.12), var(--code-bg));
+  box-shadow: 0 0 8px rgba(181, 101, 29, 0.18);
+}
+
+@keyframes podium-pulse-gold {
+  0%, 100% { box-shadow: 0 0 12px rgba(201, 162, 39, 0.28); }
+  50% { box-shadow: 0 0 26px rgba(201, 162, 39, 0.55); }
+}
+
+@keyframes podium-pulse-silver {
+  0%, 100% { box-shadow: 0 0 8px rgba(154, 160, 166, 0.18); }
+  50% { box-shadow: 0 0 18px rgba(154, 160, 166, 0.38); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .podium-card.podium-1,
+  .podium-card.podium-2 {
+    animation: none;
+  }
+  .podium-card.podium-1 { box-shadow: 0 0 14px rgba(201, 162, 39, 0.3); }
+  .podium-card.podium-2 { box-shadow: 0 0 10px rgba(154, 160, 166, 0.22); }
 }
 
 .podium-rank {
@@ -2632,19 +2674,20 @@
   margin: 4px 0;
 }
 
-/* Mesmo degradê rosa-carmim/roxo do anel de taxa de vitória, aplicado
-   igual nos três nomes do pódio (não varia por lugar) — pedido do
-   usuário a partir de uma referência visual. */
+/* Ajuste 22/08 (pedido do usuário): nome combina com a posição — ouro
+   no #1, prata no #2, bronze no #3 — no lugar do degradê rosa/roxo fixo
+   (mesmo usado no anel de vitória) que não variava por lugar. Reaproveita
+   `--podium-gold/-silver/-bronze`, os mesmos tokens já usados na borda e
+   no número da posição de cada card, então nome e moldura sempre
+   combinam. */
 .podium-name {
   font-size: 14px;
   font-weight: 700;
-  background: linear-gradient(90deg, var(--ring-win), var(--ring-loss));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
 }
 
-.podium-1 .podium-name { font-size: 16px; }
+.podium-1 .podium-name { font-size: 16px; color: var(--podium-gold); }
+.podium-2 .podium-name { color: var(--podium-silver); }
+.podium-3 .podium-name { color: var(--podium-bronze); }
 
 .podium-meta {
   font-size: 12px;
