@@ -129,20 +129,47 @@ function buildDeltaIndex(patchNotes: PatchNotesResult | null): Map<string, Patch
  *  (`patch_diff.py::_rank_by_lane`) só dentro da própria rota, por isso
  *  a coluna inteira some quando "Todas as rotas" está selecionado (ver
  *  `!lane` no cabeçalho/célula abaixo) — misturar posição de rotas
- *  diferentes não compara a mesma coisa. */
-function VariationBadge({ delta }: { delta: PatchDeltaRow | undefined }) {
-  if (!delta || delta.delta_posicao === 0) {
+ *  diferentes não compara a mesma coisa.
+ *
+ *  Ajuste 21/08: pedido do usuário — a posição não é mais fixa em score,
+ *  reflete a métrica que a tabela está ordenando no momento (`sortKey`),
+ *  ver `deltaPosicaoFor`/`SORT_KEY_LABELS` abaixo. `posicao === null`
+ *  (métrica ausente num dos dois patches) trata igual a "sem variação",
+ *  mesmo tratamento visual de 0. */
+function VariationBadge({ posicao }: { posicao: number | null | undefined }) {
+  if (posicao === undefined || posicao === null || posicao === 0) {
     return <span className="delta-position delta-position-none">—</span>
   }
-  const subiu = delta.delta_posicao > 0
+  const subiu = posicao > 0
   return (
     <span className={`delta-position ${subiu ? 'delta-position-up' : 'delta-position-down'}`}>
-      {subiu ? '▲' : '▼'} {Math.abs(delta.delta_posicao)}
+      {subiu ? '▲' : '▼'} {Math.abs(posicao)}
     </span>
   )
 }
 
 export type SortKey = 'score' | 'win_rate' | 'pick_rate' | 'ban_rate'
+
+const SORT_KEY_LABELS: Record<SortKey, string> = {
+  score: 'Score',
+  win_rate: 'Win Rate',
+  pick_rate: 'Pick Rate',
+  ban_rate: 'Ban Rate',
+}
+
+function deltaPosicaoFor(delta: PatchDeltaRow | undefined, sortKey: SortKey): number | null | undefined {
+  if (!delta) return undefined
+  switch (sortKey) {
+    case 'win_rate':
+      return delta.delta_posicao_win_rate
+    case 'pick_rate':
+      return delta.delta_posicao_pick_rate
+    case 'ban_rate':
+      return delta.delta_posicao_ban_rate
+    default:
+      return delta.delta_posicao
+  }
+}
 
 /** Item 5.1 (revisão técnica): ordenação por coluna client-side — a lista
  *  inteira já vem carregada de uma vez (nunca paginada, ver Lote B da
@@ -327,6 +354,16 @@ function ChampionsPage() {
         </label>
 
         <label>
+          Campeão
+          <input
+            type="text"
+            placeholder="Buscar por nome"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </label>
+
+        <label>
           Tier
           <FlagSelect options={TIER_SELECT_OPTIONS} value={eloTier} onChange={setEloTier} iconShape="contain" />
         </label>
@@ -339,16 +376,6 @@ function ChampionsPage() {
               <option key={p} value={p}>{p}</option>
             ))}
           </select>
-        </label>
-
-        <label>
-          Campeão
-          <input
-            type="text"
-            placeholder="Buscar por nome"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
         </label>
 
         {loading && <span className="filters-loading" role="status">Buscando...</span>}
@@ -403,7 +430,14 @@ function ChampionsPage() {
               <th>#</th>
               <th>Campeão</th>
               <SortableHeader label="Tier" sortKeyFor="score" currentKey={sortKey} currentDir={sortDir} onSort={handleSort} />
-              {lane && <th title="Posição no ranking por score dentro da rota, em relação ao patch anterior" className="col-hide-tablet">Variação</th>}
+              {lane && (
+                <th
+                  title={`Posição no ranking por ${SORT_KEY_LABELS[sortKey]} dentro da rota, em relação ao patch anterior`}
+                  className="col-hide-tablet"
+                >
+                  Variação
+                </th>
+              )}
               {!lane && <th className="col-hide-tablet">Função</th>}
               <th title="Contribuição de cada camada no score (Performance/Kit/Build/Meta)">Score</th>
               <SortableHeader label="Taxa de Vitória" sortKeyFor="win_rate" currentKey={sortKey} currentDir={sortDir} onSort={handleSort} />
@@ -457,7 +491,7 @@ function ChampionsPage() {
                     <span className={`tier-badge tier-${row.score_tier}`}>{row.score_tier}</span>
                     {row.tier_provisorio && <span className="provisional-mark" title="Amostra pequena — tier provisório, teto em A">*</span>}
                   </td>
-                  {lane && <td className="col-hide-tablet"><VariationBadge delta={delta} /></td>}
+                  {lane && <td className="col-hide-tablet"><VariationBadge posicao={deltaPosicaoFor(delta, sortKey)} /></td>}
                   {!lane && <td className="col-hide-tablet"><LaneCell lane={row.lane} /></td>}
                   <td><LayerContributionBar row={row} /></td>
                   <td>{formatPct(row.win_rate)}</td>

@@ -503,6 +503,13 @@ export interface PatchDeltaRow {
   posicao_anterior: number
   posicao_atual: number
   delta_posicao: number
+  /** Ajuste 21/08: mesma posição, ranqueada por Win/Pick/Ban Rate em vez
+   *  de score — "Variação" em Campeões usa o campo certo conforme o
+   *  `sortKey` ativo da tabela. `null` quando a métrica faltava num dos
+   *  dois patches comparados. */
+  delta_posicao_win_rate: number | null
+  delta_posicao_pick_rate: number | null
+  delta_posicao_ban_rate: number | null
 }
 
 export interface PatchNotesResult {

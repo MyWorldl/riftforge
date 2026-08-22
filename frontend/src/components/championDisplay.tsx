@@ -234,12 +234,14 @@ function PowerProfileDetail({ perfil }: { perfil: PowerProfile }) {
 export function SkillExpressionBadges({ skill }: { skill: ChampionScoreRow['skill_expression'] }) {
   if (!skill) return null
   const hint =
-    'Aproximação baseada na variação do KDA entre as partidas do campeão, não uma métrica oficial da Riot.'
+    'Teto Alto = quando o jogador manda bem, o resultado passa bem da mediana. ' +
+    'Piso Baixo = nos jogos ruins, o resultado cai bem abaixo da mediana. ' +
+    'Aproximação baseada na variação de KDA entre partidas do campeão, não é uma métrica oficial da Riot.'
   return (
     <div className="skill-expression-row" title={hint}>
-      <span className="skill-expression-label">Skill Expression:</span>
-      <span className={`skill-badge skill-level-${skill.ceiling_label}`}>Ceiling: {skill.ceiling_label}</span>
-      <span className={`skill-badge skill-level-${skill.floor_label}`}>Floor: {skill.floor_label}</span>
+      <span className="skill-expression-label">Expressão de Habilidade:</span>
+      <span className={`skill-badge skill-level-${skill.ceiling_label}`}>Teto: {skill.ceiling_label}</span>
+      <span className={`skill-badge skill-level-${skill.floor_label}`}>Piso: {skill.floor_label}</span>
       {skill.amostra_insuficiente && <span className="explain-sub">(amostra pequena)</span>}
     </div>
   )

@@ -7,12 +7,32 @@ from app.core.patch_diff import diff_patches
 
 def test_alta_e_queda_calculadas_corretamente():
     atual = [
-        {"champion_id": "Ahri", "lane": "MIDDLE", "score_final": 70.0, "score_tier": "S"},
-        {"champion_id": "Zed", "lane": "MIDDLE", "score_final": 40.0, "score_tier": "C"},
+        {
+            "champion_id": "Ahri",
+            "lane": "MIDDLE",
+            "score_final": 70.0,
+            "score_tier": "S",
+        },
+        {
+            "champion_id": "Zed",
+            "lane": "MIDDLE",
+            "score_final": 40.0,
+            "score_tier": "C",
+        },
     ]
     anterior = [
-        {"champion_id": "Ahri", "lane": "MIDDLE", "score_final": 60.0, "score_tier": "A"},
-        {"champion_id": "Zed", "lane": "MIDDLE", "score_final": 55.0, "score_tier": "B"},
+        {
+            "champion_id": "Ahri",
+            "lane": "MIDDLE",
+            "score_final": 60.0,
+            "score_tier": "A",
+        },
+        {
+            "champion_id": "Zed",
+            "lane": "MIDDLE",
+            "score_final": 55.0,
+            "score_tier": "B",
+        },
     ]
     result = diff_patches(atual, anterior)
     assert result["altas"][0]["champion_id"] == "Ahri"
@@ -26,8 +46,12 @@ def test_campeao_sem_combo_igual_no_patch_anterior_e_ignorado():
     # Zed jogou SELVA no patch atual mas só tinha score em MIDDLE antes —
     # não é uma "queda de 100%", é "sem dado comparável", então some do
     # diff em vez de contar como queda.
-    atual = [{"champion_id": "Zed", "lane": "JUNGLE", "score_final": 40.0, "score_tier": "C"}]
-    anterior = [{"champion_id": "Zed", "lane": "MIDDLE", "score_final": 55.0, "score_tier": "B"}]
+    atual = [
+        {"champion_id": "Zed", "lane": "JUNGLE", "score_final": 40.0, "score_tier": "C"}
+    ]
+    anterior = [
+        {"champion_id": "Zed", "lane": "MIDDLE", "score_final": 55.0, "score_tier": "B"}
+    ]
     result = diff_patches(atual, anterior)
     assert result["altas"] == []
     assert result["quedas"] == []
@@ -35,8 +59,22 @@ def test_campeao_sem_combo_igual_no_patch_anterior_e_ignorado():
 
 
 def test_delta_zero_nao_aparece_em_altas_nem_quedas():
-    atual = [{"champion_id": "Ahri", "lane": "MIDDLE", "score_final": 60.0, "score_tier": "A"}]
-    anterior = [{"champion_id": "Ahri", "lane": "MIDDLE", "score_final": 60.0, "score_tier": "A"}]
+    atual = [
+        {
+            "champion_id": "Ahri",
+            "lane": "MIDDLE",
+            "score_final": 60.0,
+            "score_tier": "A",
+        }
+    ]
+    anterior = [
+        {
+            "champion_id": "Ahri",
+            "lane": "MIDDLE",
+            "score_final": 60.0,
+            "score_tier": "A",
+        }
+    ]
     result = diff_patches(atual, anterior)
     assert result["altas"] == []
     assert result["quedas"] == []
@@ -45,11 +83,21 @@ def test_delta_zero_nao_aparece_em_altas_nem_quedas():
 
 def test_top_n_limita_altas_e_quedas_separadamente():
     atual = [
-        {"champion_id": f"C{i}", "lane": "MIDDLE", "score_final": 50.0 + i, "score_tier": "B"}
+        {
+            "champion_id": f"C{i}",
+            "lane": "MIDDLE",
+            "score_final": 50.0 + i,
+            "score_tier": "B",
+        }
         for i in range(5)
     ]
     anterior = [
-        {"champion_id": f"C{i}", "lane": "MIDDLE", "score_final": 50.0, "score_tier": "B"}
+        {
+            "champion_id": f"C{i}",
+            "lane": "MIDDLE",
+            "score_final": 50.0,
+            "score_tier": "B",
+        }
         for i in range(5)
     ]
     result = diff_patches(atual, anterior, top_n=2)
@@ -65,8 +113,18 @@ def test_quedas_ordenadas_da_maior_queda_para_a_menor():
         {"champion_id": "B", "lane": "TOP", "score_final": 55.0, "score_tier": "B"},
     ]
     anterior = [
-        {"champion_id": "A", "lane": "TOP", "score_final": 60.0, "score_tier": "A"},  # delta -20
-        {"champion_id": "B", "lane": "TOP", "score_final": 60.0, "score_tier": "A"},  # delta -5
+        {
+            "champion_id": "A",
+            "lane": "TOP",
+            "score_final": 60.0,
+            "score_tier": "A",
+        },  # delta -20
+        {
+            "champion_id": "B",
+            "lane": "TOP",
+            "score_final": 60.0,
+            "score_tier": "A",
+        },  # delta -5
     ]
     result = diff_patches(atual, anterior)
     assert [d["champion_id"] for d in result["quedas"]] == ["A", "B"]
@@ -93,8 +151,22 @@ def test_mudanca_de_tier_e_detectada_mesmo_com_delta_pequeno():
 
 
 def test_sem_mudanca_de_tier_lista_fica_vazia():
-    atual = [{"champion_id": "Ahri", "lane": "MIDDLE", "score_final": 65.0, "score_tier": "A"}]
-    anterior = [{"champion_id": "Ahri", "lane": "MIDDLE", "score_final": 60.0, "score_tier": "A"}]
+    atual = [
+        {
+            "champion_id": "Ahri",
+            "lane": "MIDDLE",
+            "score_final": 65.0,
+            "score_tier": "A",
+        }
+    ]
+    anterior = [
+        {
+            "champion_id": "Ahri",
+            "lane": "MIDDLE",
+            "score_final": 60.0,
+            "score_tier": "A",
+        }
+    ]
     result = diff_patches(atual, anterior)
     assert result["mudancas_tier"] == []
 
@@ -103,13 +175,33 @@ def test_posicao_calculada_dentro_da_propria_rota():
     # Ahri sobe de #2 pra #1 em MIDDLE só porque Zed caiu — Yasuo (TOP)
     # não deve interferir no ranking de MIDDLE nem ser afetado por ele.
     atual = [
-        {"champion_id": "Ahri", "lane": "MIDDLE", "score_final": 70.0, "score_tier": "S"},
-        {"champion_id": "Zed", "lane": "MIDDLE", "score_final": 40.0, "score_tier": "C"},
+        {
+            "champion_id": "Ahri",
+            "lane": "MIDDLE",
+            "score_final": 70.0,
+            "score_tier": "S",
+        },
+        {
+            "champion_id": "Zed",
+            "lane": "MIDDLE",
+            "score_final": 40.0,
+            "score_tier": "C",
+        },
         {"champion_id": "Yasuo", "lane": "TOP", "score_final": 90.0, "score_tier": "S"},
     ]
     anterior = [
-        {"champion_id": "Ahri", "lane": "MIDDLE", "score_final": 60.0, "score_tier": "A"},
-        {"champion_id": "Zed", "lane": "MIDDLE", "score_final": 65.0, "score_tier": "A"},
+        {
+            "champion_id": "Ahri",
+            "lane": "MIDDLE",
+            "score_final": 60.0,
+            "score_tier": "A",
+        },
+        {
+            "champion_id": "Zed",
+            "lane": "MIDDLE",
+            "score_final": 65.0,
+            "score_tier": "A",
+        },
         {"champion_id": "Yasuo", "lane": "TOP", "score_final": 90.0, "score_tier": "S"},
     ]
     result = diff_patches(atual, anterior)
@@ -123,3 +215,89 @@ def test_posicao_calculada_dentro_da_propria_rota():
     # Yasuo é o único em TOP nos dois patches — sempre #1, delta 0, e o
     # próprio delta de score 0 já o exclui de altas/quedas (ver teste
     # `test_delta_zero_nao_aparece_em_altas_nem_quedas`).
+
+
+def test_delta_posicao_por_win_rate_independente_de_score():
+    # Ajuste 21/08: "Variação" deixa de ser fixa em score. Aqui Ahri sobe
+    # de posição por Score (troca de #2 pra #1) mas CAI de posição por
+    # Win Rate (de #1 pra #2) — os dois precisam divergir de verdade pra
+    # provar que não é o mesmo cálculo reaproveitado.
+    atual = [
+        {
+            "champion_id": "Ahri",
+            "lane": "MIDDLE",
+            "score_final": 70.0,
+            "score_tier": "S",
+            "win_rate": 0.48,
+            "pick_rate": 0.1,
+            "ban_rate": 0.05,
+        },
+        {
+            "champion_id": "Zed",
+            "lane": "MIDDLE",
+            "score_final": 40.0,
+            "score_tier": "C",
+            "win_rate": 0.55,
+            "pick_rate": 0.2,
+            "ban_rate": 0.1,
+        },
+    ]
+    anterior = [
+        {
+            "champion_id": "Ahri",
+            "lane": "MIDDLE",
+            "score_final": 60.0,
+            "score_tier": "A",
+            "win_rate": 0.52,
+            "pick_rate": 0.1,
+            "ban_rate": 0.05,
+        },
+        {
+            "champion_id": "Zed",
+            "lane": "MIDDLE",
+            "score_final": 65.0,
+            "score_tier": "A",
+            "win_rate": 0.50,
+            "pick_rate": 0.2,
+            "ban_rate": 0.1,
+        },
+    ]
+    result = diff_patches(atual, anterior)
+    by_champion = {d["champion_id"]: d for d in result["altas"] + result["quedas"]}
+    assert by_champion["Ahri"]["delta_posicao"] == 1
+    assert by_champion["Ahri"]["delta_posicao_win_rate"] == -1
+    assert by_champion["Zed"]["delta_posicao"] == -1
+    assert by_champion["Zed"]["delta_posicao_win_rate"] == 1
+
+
+def test_delta_posicao_metrica_ausente_vira_none():
+    # Zed não tem win_rate no patch anterior (sem ChampionPerformanceScore
+    # pra ele naquele patch) — delta_posicao_win_rate fica None, não
+    # quebra nem inventa uma posição.
+    atual = [
+        {
+            "champion_id": "Zed",
+            "lane": "MIDDLE",
+            "score_final": 40.0,
+            "score_tier": "C",
+            "win_rate": 0.55,
+            "pick_rate": None,
+            "ban_rate": None,
+        },
+    ]
+    anterior = [
+        {
+            "champion_id": "Zed",
+            "lane": "MIDDLE",
+            "score_final": 65.0,
+            "score_tier": "A",
+            "win_rate": None,
+            "pick_rate": None,
+            "ban_rate": None,
+        },
+    ]
+    result = diff_patches(atual, anterior)
+    by_champion = {d["champion_id"]: d for d in result["altas"] + result["quedas"]}
+    assert by_champion["Zed"]["delta_posicao_win_rate"] is None
+    assert by_champion["Zed"]["delta_posicao_pick_rate"] is None
+    assert by_champion["Zed"]["delta_posicao_ban_rate"] is None

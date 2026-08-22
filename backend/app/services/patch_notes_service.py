@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session
 
 from app.core.patch_diff import diff_patches
 from app.repositories.patch_notes_repository import PatchNotesRepository
+from app.repositories.performance_repository import PerformanceRepository
 from app.repositories.player_roadmap_repository import PlayerRoadmapRepository
 from app.services.player_roadmap_service import resolve_identity
 
@@ -32,25 +33,35 @@ def get_patch_notes(db: Session, elo_tier: str, top_n: int, region: str) -> dict
     rows_atual = repo.list_scores(elo_tier, patch_atual, region)
     rows_anterior = repo.list_scores(elo_tier, patch_anterior, region)
 
+    # Ajuste 21/08: junta Win/Pick/Ban Rate (`ChampionPerformanceScore`,
+    # Camada 1) nos dois patches — mesmo padrão já usado em
+    # `score_service.py::list_scores` — pra `diff_patches` conseguir
+    # ranquear "Variação" por essas métricas, não só por score_final.
+    perf_repo = PerformanceRepository(db)
+    perf_atual = {
+        (r.patch, r.tier, r.lane, r.champion_id, r.region): r
+        for r in perf_repo.list_by_patch(elo_tier, patch_atual, region)
+    }
+    perf_anterior = {
+        (r.patch, r.tier, r.lane, r.champion_id, r.region): r
+        for r in perf_repo.list_by_patch(elo_tier, patch_anterior, region)
+    }
+
+    def _to_dict(r, perf_by_key: dict) -> dict:
+        perf = perf_by_key.get((r.patch, r.elo_tier, r.lane, r.champion_id, r.region))
+        return {
+            "champion_id": r.champion_id,
+            "lane": r.lane,
+            "score_final": r.score_final,
+            "score_tier": r.score_tier,
+            "win_rate": perf.win_rate_raw if perf else None,
+            "pick_rate": perf.pick_rate if perf else None,
+            "ban_rate": perf.ban_rate if perf else None,
+        }
+
     diff = diff_patches(
-        [
-            {
-                "champion_id": r.champion_id,
-                "lane": r.lane,
-                "score_final": r.score_final,
-                "score_tier": r.score_tier,
-            }
-            for r in rows_atual
-        ],
-        [
-            {
-                "champion_id": r.champion_id,
-                "lane": r.lane,
-                "score_final": r.score_final,
-                "score_tier": r.score_tier,
-            }
-            for r in rows_anterior
-        ],
+        [_to_dict(r, perf_atual) for r in rows_atual],
+        [_to_dict(r, perf_anterior) for r in rows_anterior],
         top_n=top_n,
     )
     return {"patch_atual": patch_atual, "patch_anterior": patch_anterior, **diff}
