@@ -98,16 +98,6 @@ function smoothPath(points: { x: number; y: number }[]): string {
   return d
 }
 
-/** Fecha a curva suave numa área preenchível — desce até o piso do
- *  eixo (score 0) nas duas pontas e volta pro início, formando um
- *  polígono fechado sob a linha (opção "A" escolhida pelo usuário). */
-function areaPath(lineD: string, points: { x: number; y: number }[]): string {
-  const first = points[0]
-  const last = points[points.length - 1]
-  const baseline = HEIGHT - PADDING_BOTTOM
-  return `${lineD} L ${last.x.toFixed(1)} ${baseline} L ${first.x.toFixed(1)} ${baseline} Z`
-}
-
 /** Opacidade reflete confiança relativa ao piso de segurança (30%) — não é
  *  um adorno, é a mesma trava do backend (§11) tornada visível: um ponto
  *  apagado é um ponto em que o tier ainda é provisório. */
@@ -141,7 +131,6 @@ export default function HistoryChart({ championId, championName, eloTier, lane }
 
   const linePoints = points.map((p, i) => ({ x: xFor(i, points.length), y: yFor(p.score_final) }))
   const linePath = smoothPath(linePoints)
-  const areaFillPath = areaPath(linePath, linePoints)
 
   // Muitos patches lado a lado colidem no rótulo — mostra só o que cabe
   // sem sobrepor, nunca menos que o primeiro e o último.
@@ -154,14 +143,15 @@ export default function HistoryChart({ championId, championName, eloTier, lane }
       </p>
       <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} className="history-svg" role="img" aria-label={`Histórico de score de ${championName}`}>
         <defs>
-          {/* Ajuste 21/08 (pedido do usuário, escolheu a opção "A" de 3
-              mockups): gradiente vertical com degraus (2 stops no mesmo
-              offset em cada fronteira de tier) em vez de transição suave
-              entre cores — a linha/área ficam na cor exata do tier que
-              estão cruzando naquele instante, não uma mistura. Cores via
-              classe CSS (`.history-tier-stop-*`), não atributo `stop-
-              color` direto — atributo SVG não resolve `var()`, mesmo
-              motivo de `.history-dot.tier-*` já usar classe pra isso. */}
+          {/* Ajuste 21/08 (área removida numa rodada seguinte, pedido do
+              usuário: só linha + bolinhas): gradiente vertical com
+              degraus (2 stops no mesmo offset em cada fronteira de
+              tier) em vez de transição suave entre cores — a LINHA
+              fica na cor exata do tier que está cruzando naquele
+              instante, não uma mistura. Cores via classe CSS
+              (`.history-tier-stop-*`), não atributo `stop-color`
+              direto — atributo SVG não resolve `var()`, mesmo motivo
+              de `.history-dot.tier-*` já usar classe pra isso. */}
           <linearGradient
             id={gradientId}
             gradientUnits="userSpaceOnUse"
@@ -192,7 +182,6 @@ export default function HistoryChart({ championId, championName, eloTier, lane }
           </g>
         ))}
 
-        <path d={areaFillPath} fill={`url(#${gradientId})`} className="history-area" />
         <path d={linePath} stroke={`url(#${gradientId})`} className="history-line" fill="none" />
 
         {points.map((p, i) => (

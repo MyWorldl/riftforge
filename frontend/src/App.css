@@ -2846,13 +2846,6 @@
   stroke-linejoin: round;
 }
 
-/* Área sob a curva (opção "A") — mesmo gradiente por tier da linha,
-   só com opacidade reduzida pra não brigar com o texto/pontos por
-   cima. */
-.history-area {
-  fill-opacity: 0.28;
-}
-
 /* Stops do gradiente por faixa de tier — ajuste 21/08 (2ª rodada,
    pedido do usuário: "cores mais vívidas"): trocado de `--tier-*` (os
    badges, escurecidos de propósito pra passar contraste com texto
